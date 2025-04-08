@@ -1,4 +1,4 @@
-package com.example.autapp
+package com.example.autapp.com.example.autapp.data.models
 
 class Teacher(
     firstName: String,

@@ -1,4 +1,5 @@
-package com.example.autapp
+package com.example.autapp.com.example.autapp.data.models
+
 import java.time.LocalDate
 
 class Student(
