@@ -1,4 +1,4 @@
-package com.example.autapp
+package com.example.autapp.ui.theme
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

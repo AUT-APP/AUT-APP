@@ -1,4 +1,4 @@
-package com.example.autapp
+package com.example.autapp.com.example.autapp.data.models
 
 open class User(
     var firstName: String,
