@@ -1,15 +1,12 @@
 package com.example.autapp.data.models
 
-class Course(
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "course_table")
+data class Course(
+    @PrimaryKey var courseId: Int, // not auto-generated as it's a course code which'll manually be added
     var name: String,
-    var id: Int,
     var title: String,
     var description: String
-) {
-    fun getId(): Int = id
-    fun getName(): String = name
-    fun getTitle(): String = title
-    fun getDescription(): String = description
-
-    fun setDescription(desc: String) { description = desc }
-}
+)
