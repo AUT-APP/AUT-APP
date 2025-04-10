@@ -1,0 +1,401 @@
+{
+  "name": "samsung_s25_ultra_login_page",
+  "version": 33,
+  "source-key": {
+    "type": "figma",
+    "file": "diall0dD5wVsdCAyNoQqJm",
+    "node": "108:38",
+    "version": "2205170461882548442",
+    "component-id": "2995268d4ff535bd9fa975f3aa6920c1ab28565a"
+  },
+  "default": "Samsung S25 Ultra Login Page",
+  "documentation": "Login Page used to login to the application",
+  "design": {
+    "atoms": [
+      {
+        "type": "group",
+        "id": "top_level",
+        "root": "true"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 15"
+      },
+      {
+        "type": "text",
+        "id": "Hello! Please login using your AUT credentials"
+      },
+      {
+        "type": "group",
+        "id": "Group 9"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 1"
+      },
+      {
+        "type": "text",
+        "id": "AUT"
+      },
+      {
+        "type": "group",
+        "id": "Group 10"
+      },
+      {
+        "type": "text",
+        "id": "Allows you to login to the app, takes you to aut login webpage"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 18"
+      },
+      {
+        "type": "text",
+        "id": "LOGIN"
+      },
+      {
+        "type": "group",
+        "id": "Group 13"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 19"
+      },
+      {
+        "type": "text",
+        "id": "AUT1"
+      }
+    ],
+    "modes": {
+      "Samsung S25 Ultra Login Page": {
+        "rules": [
+          {
+            "id": "top_level",
+            "is-structured": false,
+            "children": [
+              "Rectangle 15",
+              "Hello! Please login using your AUT credentials",
+              "Group 9",
+              "Rectangle 1",
+              "AUT",
+              "Group 10",
+              "Allows you to login to the app, takes you to aut login webpage"
+            ],
+            "background-color": {
+              "alpha": 1.0,
+              "hue": 0.0,
+              "saturation": 0.0,
+              "value": 1.0
+            }
+          },
+          {
+            "id": "Rectangle 15",
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 78.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 163.0
+              }
+            },
+            "vector-content": "rectangle_15.svg"
+          },
+          {
+            "id": "Hello! Please login using your AUT credentials",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 11.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 66.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 55.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 14.0
+              }
+            },
+            "text-content": "Hello!\nPlease login using your AUT credentials",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 5.0,
+            "line-height": 1.2189999580383302,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Group 9",
+            "border-radius": 5.0,
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 19.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 92.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 40.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 10.0
+              }
+            },
+            "is-structured": false,
+            "children": [
+              "Rectangle 18",
+              "LOGIN"
+            ],
+            "clip-content": false
+          },
+          {
+            "id": "Rectangle 1",
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 78.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 45.0
+              }
+            },
+            "vector-content": "rectangle_1.svg"
+          },
+          {
+            "id": "AUT",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 26.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 14.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 25.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 13.0
+              }
+            },
+            "color": {
+              "alpha": 1.0,
+              "hue": 0.0,
+              "saturation": 0.0,
+              "value": 1.0
+            },
+            "text-content": "AUT",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align": "left",
+            "text-align-vertical": "center",
+            "text-size": 10.0,
+            "line-height": 1.556640625,
+            "typeface": "Monoton"
+          },
+          {
+            "id": "Group 10",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 24.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 11.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 29.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 16.0
+              }
+            },
+            "is-structured": false,
+            "children": [
+              "Group 13"
+            ],
+            "clip-content": false
+          },
+          {
+            "id": "Allows you to login to the app, takes you to aut login webpage",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 3.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 106.0
+              }
+            },
+            "text-content": "Allows you to login to the app,\ntakes you to aut login webpage",
+            "overflow": "visible",
+            "text-align": "left",
+            "text-align-vertical": "center",
+            "text-size": 5.0,
+            "line-height": 1.1820000648498534,
+            "typeface": "ABeeZee"
+          },
+          {
+            "id": "Rectangle 18",
+            "border-radius": 5.0,
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 40.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 10.0
+              }
+            },
+            "vector-content": "rectangle_18.svg"
+          },
+          {
+            "id": "LOGIN",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 5.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 3.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 29.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 4.0
+              }
+            },
+            "color": {
+              "alpha": 1.0,
+              "hue": 0.0,
+              "saturation": 0.0,
+              "value": 1.0
+            },
+            "text-content": "LOGIN",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 5.0,
+            "line-height": 1.1962890625,
+            "typeface": "Molengo"
+          },
+          {
+            "id": "Group 13",
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 29.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 16.0
+              }
+            },
+            "is-structured": false,
+            "children": [
+              "Rectangle 19",
+              "AUT1"
+            ],
+            "clip-content": false
+          },
+          {
+            "id": "Rectangle 19",
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 29.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 16.0
+              }
+            },
+            "vector-content": "rectangle_19.svg"
+          },
+          {
+            "id": "AUT1",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 2.0714263916015625
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 2.526315689086914
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 25.89285659790039
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 10.947368621826172
+              }
+            },
+            "color": {
+              "alpha": 1.0,
+              "hue": 0.0,
+              "saturation": 0.0,
+              "value": 1.0
+            },
+            "text-content": "AUT",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align": "left",
+            "text-align-vertical": "center",
+            "text-size": 10.0,
+            "line-height": 1.556640625,
+            "typeface": "Monoton"
+          }
+        ]
+      }
+    }
+  },
+  "previews": [
+    {
+      "design": "Samsung S25 Ultra Login Page",
+      "size": {
+        "width": 77.5999984741211,
+        "height": 162.8000030517578
+      }
+    }
+  ],
+  "adin-component-search-paths": [],
+  "image-search-paths": [],
+  "vector-search-paths": []
+}

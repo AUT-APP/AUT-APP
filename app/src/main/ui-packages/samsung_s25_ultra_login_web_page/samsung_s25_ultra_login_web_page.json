@@ -1,0 +1,736 @@
+{
+  "name": "samsung_s25_ultra_login_web_page",
+  "version": 33,
+  "source-key": {
+    "type": "figma",
+    "file": "diall0dD5wVsdCAyNoQqJm",
+    "node": "101:38",
+    "version": "2205170461882548442",
+    "component-id": "b3ee86a6e6db35d39e6c53f2e1497ca2d5dc4985"
+  },
+  "default": "Samsung S25 Ultra Login WebPage",
+  "documentation": "login page\n",
+  "design": {
+    "atoms": [
+      {
+        "type": "group",
+        "id": "top_level",
+        "root": "true"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 20"
+      },
+      {
+        "type": "group",
+        "id": "Group 10"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 21"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 24"
+      },
+      {
+        "type": "text",
+        "id": "Username"
+      },
+      {
+        "type": "text",
+        "id": "AUT Login"
+      },
+      {
+        "type": "text",
+        "id": "Please login with your AUT Username and Password."
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 23"
+      },
+      {
+        "type": "text",
+        "id": "Password"
+      },
+      {
+        "type": "text",
+        "id": "Username1"
+      },
+      {
+        "type": "text",
+        "id": "Password1"
+      },
+      {
+        "type": "group",
+        "id": "Group 11"
+      },
+      {
+        "type": "text",
+        "id": "Forgotten password?"
+      },
+      {
+        "type": "text",
+        "id": "Remember to always log out by completely exiting your browser when you leave the computer. This will protect your personal information from being accessed by subsequent users."
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 25"
+      },
+      {
+        "type": "text",
+        "id": "ICT SERVICE DESK | (09)921 9888  | https://ithelp.aut.ac.nz"
+      },
+      {
+        "type": "text",
+        "id": "Takes you to the app dashboard"
+      },
+      {
+        "type": "group",
+        "id": "Group 14"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 19"
+      },
+      {
+        "type": "text",
+        "id": "AUT"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 18"
+      },
+      {
+        "type": "text",
+        "id": "LOGIN"
+      }
+    ],
+    "modes": {
+      "Samsung S25 Ultra Login WebPage": {
+        "rules": [
+          {
+            "id": "top_level",
+            "is-structured": false,
+            "children": [
+              "Rectangle 20",
+              "Group 10",
+              "Rectangle 21",
+              "Rectangle 24",
+              "Username",
+              "AUT Login",
+              "Please login with your AUT Username and Password.",
+              "Rectangle 23",
+              "Password",
+              "Username1",
+              "Password1",
+              "Group 11",
+              "Forgotten password?",
+              "Remember to always log out by completely exiting your browser when you leave the computer. This will protect your personal information from being accessed by subsequent users.",
+              "Rectangle 25",
+              "ICT SERVICE DESK | (09)921 9888  | https://ithelp.aut.ac.nz",
+              "Takes you to the app dashboard"
+            ],
+            "background-color": {
+              "alpha": 1.0,
+              "hue": 0.0,
+              "saturation": 0.0,
+              "value": 1.0
+            }
+          },
+          {
+            "id": "Rectangle 20",
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 80.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 15.0
+              }
+            },
+            "vector-content": "rectangle_20.svg"
+          },
+          {
+            "id": "Group 10",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 5.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 3.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 15.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 12.0
+              }
+            },
+            "is-structured": false,
+            "children": [
+              "Group 14"
+            ],
+            "clip-content": false
+          },
+          {
+            "id": "Rectangle 21",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 0.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 140.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 78.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 23.0
+              }
+            },
+            "vector-content": "rectangle_21.svg"
+          },
+          {
+            "id": "Rectangle 24",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 3.75
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 53.75
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 43.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 5.0
+              }
+            },
+            "vector-content": "rectangle_24.svg"
+          },
+          {
+            "id": "Username",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 5.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 55.0
+              }
+            },
+            "font-weight": 300.0,
+            "text-content": "Username",
+            "overflow": "visible",
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "AUT Login",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 4.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 24.0
+              }
+            },
+            "color": {
+              "alpha": 1.0,
+              "hue": 180.0,
+              "saturation": 1.0,
+              "value": 0.5019607843137255
+            },
+            "text-content": "AUT Login",
+            "overflow": "visible",
+            "text-align-vertical": "center",
+            "text-size": 7.0,
+            "line-height": 1.2189999989100866,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Please login with your AUT Username and Password.",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 4.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 36.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 66.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 11.0
+              }
+            },
+            "font-weight": 700.0,
+            "text-content": "Please login with your AUT Username and Password.",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align": "left",
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Rectangle 23",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 3.75
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 65.75
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 43.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 5.0
+              }
+            },
+            "vector-content": "rectangle_23.svg"
+          },
+          {
+            "id": "Password",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 5.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 67.0
+              }
+            },
+            "font-weight": 300.0,
+            "text-content": "Password",
+            "overflow": "visible",
+            "text-align": "left",
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Username1",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 4.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 49.0
+              }
+            },
+            "text-content": "Username",
+            "overflow": "visible",
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Password1",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 4.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 61.0
+              }
+            },
+            "text-content": "Password",
+            "overflow": "visible",
+            "text-align": "left",
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Group 11",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 15.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 75.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 23.765625
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 6.0
+              }
+            },
+            "is-structured": false,
+            "children": [
+              "Rectangle 18",
+              "LOGIN"
+            ],
+            "clip-content": false
+          },
+          {
+            "id": "Forgotten password?",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 15.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 88.0
+              }
+            },
+            "color": {
+              "alpha": 1.0,
+              "hue": 211.86602870813397,
+              "saturation": 0.9812206572769953,
+              "value": 0.8352941176470589
+            },
+            "text-content": "Forgotten password?",
+            "overflow": "visible",
+            "text-align": "left",
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat",
+            "underline": true
+          },
+          {
+            "id": "Remember to always log out by completely exiting your browser when you leave the computer. This will protect your personal information from being accessed by subsequent users.",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 4.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 96.0
+              }
+            },
+            "text-content": "Remember to always log out by\ncompletely exiting your browser when \nyou leave the computer. This will protect\nyour personal information from being \naccessed by subsequent users.",
+            "overflow": "visible",
+            "text-align": "left",
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Rectangle 25",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 0.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 127.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 78.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 13.0
+              }
+            },
+            "vector-content": "rectangle_25.svg"
+          },
+          {
+            "id": "ICT SERVICE DESK | (09)921 9888  | https://ithelp.aut.ac.nz",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 0.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 127.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 78.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 13.0
+              }
+            },
+            "color": {
+              "alpha": 1.0,
+              "hue": 0.0,
+              "saturation": 0.0,
+              "value": 1.0
+            },
+            "annotated-text-content": {
+              "text": " ICT SERVICE DESK | (09)921 9888 \n  | https://ithelp.aut.ac.nz",
+              "annotated-text-span-list": [
+                {
+                  "span-start": 0,
+                  "span-length": 18
+                },
+                {
+                  "span-start": 18,
+                  "span-length": 1,
+                  "annotated-text-style": {
+                    "color": {
+                      "alpha": 1.0,
+                      "hue": 0.0,
+                      "saturation": 0.0,
+                      "value": 0.3686274509803922
+                    }
+                  }
+                },
+                {
+                  "span-start": 19,
+                  "span-length": 13
+                },
+                {
+                  "span-start": 32,
+                  "span-length": 3,
+                  "annotated-text-style": {
+                    "color": {
+                      "alpha": 1.0,
+                      "hue": 0.0,
+                      "saturation": 0.0,
+                      "value": 0.7529411764705882
+                    }
+                  }
+                },
+                {
+                  "span-start": 35,
+                  "span-length": 2,
+                  "annotated-text-style": {
+                    "color": {
+                      "alpha": 1.0,
+                      "hue": 0.0,
+                      "saturation": 0.0,
+                      "value": 0.3686274509803922
+                    }
+                  }
+                },
+                {
+                  "span-start": 37,
+                  "span-length": 25
+                }
+              ]
+            },
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align": "left",
+            "text-align-vertical": "center",
+            "text-size": 4.0,
+            "line-height": 1.218999981880188,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Takes you to the app dashboard",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 37.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 73.0
+              }
+            },
+            "text-content": "Takes you to the \napp dashboard",
+            "overflow": "visible",
+            "text-align": "left",
+            "text-align-vertical": "center",
+            "text-size": 5.0,
+            "line-height": 1.1820000648498534,
+            "typeface": "ABeeZee"
+          },
+          {
+            "id": "Group 14",
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 15.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 12.0
+              }
+            },
+            "is-structured": false,
+            "children": [
+              "Rectangle 19",
+              "AUT"
+            ],
+            "clip-content": false
+          },
+          {
+            "id": "Rectangle 19",
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 15.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 12.0
+              }
+            },
+            "vector-content": "rectangle_19.svg"
+          },
+          {
+            "id": "AUT",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 0.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 2.4000000953674316
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 15.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 7.389473915100098
+              }
+            },
+            "color": {
+              "alpha": 1.0,
+              "hue": 0.0,
+              "saturation": 0.0,
+              "value": 1.0
+            },
+            "text-content": "AUT",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 5.0,
+            "line-height": 1.556640625,
+            "typeface": "Monoton"
+          },
+          {
+            "id": "Rectangle 18",
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 23.765625
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 6.0
+              }
+            },
+            "vector-content": "rectangle_18.svg"
+          },
+          {
+            "id": "LOGIN",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 3.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 2.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 17.230077743530273
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 2.4000000953674316
+              }
+            },
+            "color": {
+              "alpha": 1.0,
+              "hue": 0.0,
+              "saturation": 0.0,
+              "value": 1.0
+            },
+            "text-content": "LOGIN",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.1962890625,
+            "typeface": "Molengo"
+          }
+        ]
+      }
+    }
+  },
+  "previews": [
+    {
+      "design": "Samsung S25 Ultra Login WebPage",
+      "size": {
+        "width": 77.5999984741211,
+        "height": 162.8000030517578
+      }
+    }
+  ],
+  "adin-component-search-paths": [],
+  "image-search-paths": [],
+  "vector-search-paths": []
+}
