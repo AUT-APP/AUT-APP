@@ -1,0 +1,772 @@
+{
+  "name": "samsung_s25_ultra_chat_bot",
+  "version": 33,
+  "source-key": {
+    "type": "figma",
+    "file": "diall0dD5wVsdCAyNoQqJm",
+    "node": "110:210",
+    "version": "2205637973889494840",
+    "component-id": "045e08a066f2d1720f52d15e28ccba828ccb6bf8"
+  },
+  "default": "Samsung S25 Ultra Chat Bot",
+  "documentation": "AI Chatbot Page",
+  "design": {
+    "atoms": [
+      {
+        "type": "group",
+        "id": "top_level",
+        "root": "true"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 1"
+      },
+      {
+        "type": "group",
+        "id": "search"
+      },
+      {
+        "type": "group",
+        "id": "notifications"
+      },
+      {
+        "type": "image",
+        "id": "profile-icon-login-head-icon-vector 1"
+      },
+      {
+        "type": "group",
+        "id": "arrow_back"
+      },
+      {
+        "type": "text",
+        "id": "Chat Bot"
+      },
+      {
+        "type": "text",
+        "id": "ChatGPT-Powered AI"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 40"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 41"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 42"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 43"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 45"
+      },
+      {
+        "type": "vector",
+        "id": "Rectangle 44"
+      },
+      {
+        "type": "text",
+        "id": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis ."
+      },
+      {
+        "type": "text",
+        "id": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .1"
+      },
+      {
+        "type": "text",
+        "id": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .2"
+      },
+      {
+        "type": "text",
+        "id": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna"
+      },
+      {
+        "type": "text",
+        "id": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
+      },
+      {
+        "type": "text",
+        "id": "I need help with..."
+      },
+      {
+        "type": "group",
+        "id": "send"
+      },
+      {
+        "type": "vector",
+        "id": "icon"
+      },
+      {
+        "type": "vector",
+        "id": "icon1"
+      },
+      {
+        "type": "vector",
+        "id": "icon2"
+      },
+      {
+        "type": "vector",
+        "id": "icon3"
+      }
+    ],
+    "modes": {
+      "Samsung S25 Ultra Chat Bot": {
+        "rules": [
+          {
+            "id": "top_level",
+            "is-structured": false,
+            "children": [
+              "Rectangle 1",
+              "search",
+              "notifications",
+              "profile-icon-login-head-icon-vector 1",
+              "arrow_back",
+              "Chat Bot",
+              "ChatGPT-Powered AI",
+              "Rectangle 40",
+              "Rectangle 41",
+              "Rectangle 42",
+              "Rectangle 43",
+              "Rectangle 45",
+              "Rectangle 44",
+              "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .",
+              "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .1",
+              "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .2",
+              "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna",
+              "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore",
+              "I need help with...",
+              "send"
+            ],
+            "background-color": {
+              "alpha": 1.0,
+              "hue": 0.0,
+              "saturation": 0.0,
+              "value": 1.0
+            }
+          },
+          {
+            "id": "Rectangle 1",
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 78.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 21.0
+              }
+            },
+            "vector-content": "rectangle_1.svg"
+          },
+          {
+            "id": "search",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 55.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 8.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 5.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 5.0
+              }
+            },
+            "is-structured": false,
+            "children": [
+              "icon"
+            ],
+            "clip-content": false
+          },
+          {
+            "id": "notifications",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 62.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 8.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 5.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 5.0
+              }
+            },
+            "is-structured": false,
+            "children": [
+              "icon1"
+            ]
+          },
+          {
+            "id": "profile-icon-login-head-icon-vector 1",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 69.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 8.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 5.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 5.0
+              }
+            },
+            "image-content": "profile_icon_login_head_icon_vector_1.jpeg",
+            "scale": "cover"
+          },
+          {
+            "id": "arrow_back",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 1.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 5.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 11.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 11.0
+              }
+            },
+            "is-structured": false,
+            "children": [
+              "icon2"
+            ],
+            "clip-content": false
+          },
+          {
+            "id": "Chat Bot",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 8.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 8.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 50.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 5.0
+              }
+            },
+            "font-weight": 800.0,
+            "color": {
+              "alpha": 1.0,
+              "hue": 0.0,
+              "saturation": 0.0,
+              "value": 1.0
+            },
+            "text-content": "Chat Bot",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 6.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "ChatGPT-Powered AI",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 3.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 25.0
+              }
+            },
+            "text-content": "ChatGPT-Powered AI",
+            "overflow": "visible",
+            "text-align-vertical": "center",
+            "text-size": 5.0,
+            "line-height": 1.2189999580383302,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Rectangle 40",
+            "border-radius": 2.0,
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 27.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 38.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 49.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 28.0
+              }
+            },
+            "vector-content": "rectangle_40.svg"
+          },
+          {
+            "id": "Rectangle 41",
+            "border-radius": 2.0,
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 2.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 68.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 49.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 28.0
+              }
+            },
+            "vector-content": "rectangle_41.svg"
+          },
+          {
+            "id": "Rectangle 42",
+            "border-radius": 2.0,
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 2.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 68.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 49.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 28.0
+              }
+            },
+            "vector-content": "rectangle_42.svg"
+          },
+          {
+            "id": "Rectangle 43",
+            "border-radius": 2.0,
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 27.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 98.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 49.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 18.0
+              }
+            },
+            "vector-content": "rectangle_43.svg"
+          },
+          {
+            "id": "Rectangle 45",
+            "border-radius": 2.0,
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 3.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 120.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 49.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 18.0
+              }
+            },
+            "vector-content": "rectangle_45.svg"
+          },
+          {
+            "id": "Rectangle 44",
+            "border-radius": 2.0,
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 1.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 144.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 75.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 18.0
+              }
+            },
+            "vector-content": "rectangle_44.svg"
+          },
+          {
+            "id": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 28.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 40.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 48.0
+              },
+              "height-constraints": {
+                "sizing-mode": "shrink"
+              }
+            },
+            "text-content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .1",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 3.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 70.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 48.0
+              },
+              "height-constraints": {
+                "sizing-mode": "shrink"
+              }
+            },
+            "text-content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .2",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 3.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 70.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 48.0
+              },
+              "height-constraints": {
+                "sizing-mode": "shrink"
+              }
+            },
+            "text-content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis .",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 29.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 98.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 48.0
+              },
+              "height-constraints": {
+                "sizing-mode": "shrink"
+              }
+            },
+            "text-content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 3.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 122.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 48.0
+              },
+              "height-constraints": {
+                "sizing-mode": "shrink"
+              }
+            },
+            "text-content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "I need help with...",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": -6.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 146.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 48.0
+              },
+              "height-constraints": {
+                "sizing-mode": "shrink"
+              }
+            },
+            "text-content": "I need help with...",
+            "overflow": "visible",
+            "max-lines": -1,
+            "text-align-vertical": "center",
+            "text-size": 3.0,
+            "line-height": 1.219000021616618,
+            "typeface": "Montserrat"
+          },
+          {
+            "id": "send",
+            "alignment": {
+              "horizontal": {
+                "attachment": "start",
+                "offset": 64.0
+              },
+              "vertical": {
+                "attachment": "start",
+                "offset": 146.0
+              }
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "fixed",
+                "value": 10.0
+              },
+              "height-constraints": {
+                "sizing-mode": "fixed",
+                "value": 10.0
+              }
+            },
+            "is-structured": false,
+            "children": [
+              "icon3"
+            ]
+          },
+          {
+            "id": "icon",
+            "margin": 0.625,
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "proportional",
+                "value": 1.0
+              },
+              "height-constraints": {
+                "sizing-mode": "proportional",
+                "value": 1.0
+              }
+            },
+            "vector-content": "icon.svg"
+          },
+          {
+            "id": "icon1",
+            "margin": {
+              "left": 0.833343505859375,
+              "top": 0.4166717529296875,
+              "right": 0.8333232402801514,
+              "bottom": 0.41666173934936523
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "proportional",
+                "value": 1.0
+              },
+              "height-constraints": {
+                "sizing-mode": "proportional",
+                "value": 1.0
+              }
+            },
+            "vector-content": "icon1.svg"
+          },
+          {
+            "id": "icon2",
+            "margin": {
+              "left": 1.833343505859375,
+              "top": 1.8333282470703125,
+              "right": 1.8333230018615723,
+              "bottom": 1.8333382606506348
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "proportional",
+                "value": 1.0
+              },
+              "height-constraints": {
+                "sizing-mode": "proportional",
+                "value": 1.0
+              }
+            },
+            "vector-content": "icon2.svg"
+          },
+          {
+            "id": "icon3",
+            "margin": {
+              "left": 1.25,
+              "top": 1.6666679382324219,
+              "right": 0.8333330154418945,
+              "bottom": 1.6666650772094727
+            },
+            "size-constraints": {
+              "width-constraints": {
+                "sizing-mode": "proportional",
+                "value": 1.0
+              },
+              "height-constraints": {
+                "sizing-mode": "proportional",
+                "value": 1.0
+              }
+            },
+            "vector-content": "icon3.svg"
+          }
+        ]
+      }
+    }
+  },
+  "previews": [
+    {
+      "design": "Samsung S25 Ultra Chat Bot",
+      "size": {
+        "width": 77.5999984741211,
+        "height": 162.8000030517578
+      }
+    }
+  ],
+  "adin-component-search-paths": [],
+  "image-search-paths": [],
+  "vector-search-paths": []
+}
