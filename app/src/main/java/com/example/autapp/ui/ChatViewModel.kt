@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ChatViewModel : ViewModel() {
-    private val apiKey = "AIzaSyCPrI4G5qO157tuWeJ_cv_LK2CMs4diueM"
+    private val apiKey = "AIzaSyDYdquqUGmKiABClgrfpVR-WdpjozBZWcg"
     private val model = GenerativeModel(
         modelName = "gemini-1.5-pro",
         apiKey = apiKey
