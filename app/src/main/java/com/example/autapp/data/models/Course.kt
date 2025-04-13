@@ -5,8 +5,9 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "course_table")
 data class Course(
-    @PrimaryKey var courseId: Int, // not auto-generated as it's a course code which'll manually be added
+    @PrimaryKey var courseId: Int,
     var name: String,
     var title: String,
-    var description: String
+    var description: String,
+    var location: String? = null
 )
