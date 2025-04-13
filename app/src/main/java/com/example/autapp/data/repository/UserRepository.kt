@@ -9,12 +9,12 @@ class UserRepository(private val userDao: UserDao) {
         userDao.insertUser(user)
     }
 
-    suspend fun getUserByUsername(username: String): User? {
-        return userDao.getUserByUsername(username)
+    suspend fun checkUser(username: String, password: String): Boolean {
+        return userDao.checkUser(username, password) != null
     }
 
-    suspend fun getUserById(id: Int): User? {
-        return userDao.getUserById(id)
+    suspend fun getUserByUsername(username: String): User? {
+        return userDao.getUserByUsername(username)
     }
 
     suspend fun getAllUsers(): List<User> {
@@ -29,8 +29,7 @@ class UserRepository(private val userDao: UserDao) {
         userDao.updateUser(user)
     }
 
-    suspend fun checkUser(username: String, password: String): Boolean {
-        val user = userDao.checkUser(username, password)
-        return user != null
+    suspend fun deleteAll() {
+        userDao.deleteAll()
     }
 }
