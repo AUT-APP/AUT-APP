@@ -3,7 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.kapt)
-    id("com.google.relay") version "0.3.12"
+    // Remove com.google.relay if not used; comment out for now
+    // id("com.google.relay") version "0.3.12"
 }
 
 android {
@@ -39,22 +40,26 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.3" // Match your Kotlin version (e.g., 1.9.0)
+        kotlinCompilerExtensionVersion = "1.5.14" // Updated to match Kotlin 1.9.24
     }
 }
 
 dependencies {
+    // Core Android dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Compose dependencies
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation ("androidx.compose.material:material:1.6.7")
+    // Remove material1 to avoid conflicts with material3
+    // implementation("androidx.compose.material:material:1.6.7")
 
-    // Explicitly add Gson and Coroutines
+    // Gson and Coroutines
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
@@ -63,12 +68,16 @@ dependencies {
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
 
-    // Gemini API
-    implementation("com.google.ai.client.generativeai:generativeai:0.1.1")
+    // Navigation
+    implementation("androidx.navigation:navigation-compose:2.7.7")
 
     // ViewModel Compose integration
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
+    // Gemini API (keep for now, remove if unused)
+    implementation("com.google.ai.client.generativeai:generativeai:0.1.1")
+
+    // Testing dependencies
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
