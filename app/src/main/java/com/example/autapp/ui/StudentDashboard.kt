@@ -9,7 +9,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
@@ -32,106 +31,19 @@ import com.example.autapp.data.models.Assignment
 import com.example.autapp.data.models.Course
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StudentDashboard(viewModel: DashboardViewModel) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(8.dp)
-                    ) {
-                        Text(
-                            text = "AUT",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            color = Color.White,
-                            modifier = Modifier
-                                .background(Color.Black)
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search",
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Icon(
-                            imageVector = Icons.Outlined.Notifications,
-                            contentDescription = "Notifications",
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Person,
-                                contentDescription = "Profile",
-                                tint = Color.Black,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF2F7A78)
-                ),
-                modifier = Modifier.height(56.dp)
-            )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color.White
-            ) {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Home") },
-                    selected = true,
-                    onClick = { }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar") },
-                    selected = false,
-                    onClick = { }
-                )
-                NavigationBarItem(
-                    icon = {
-                        Icon(
-                            painter = painterResource(id = android.R.drawable.ic_menu_camera),
-                            contentDescription = "Camera"
-                        )
-                    },
-                    selected = false,
-                    onClick = { }
-                )
-                NavigationBarItem(
-                    icon = {
-                        Icon(
-                            painter = painterResource(id = android.R.drawable.ic_menu_directions),
-                            contentDescription = "Transport"
-                        )
-                    },
-                    selected = false,
-                    onClick = { }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Menu, contentDescription = "More") },
-                    selected = false,
-                    onClick = { }
-                )
-            }
-        }
-    ) { paddingValues ->
+fun StudentDashboard(
+    viewModel: DashboardViewModel,
+    paddingValues: PaddingValues
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
@@ -151,7 +63,7 @@ fun StudentDashboard(viewModel: DashboardViewModel) {
                         course = course,
                         modifier = Modifier
                             .weight(1f)
-                            .height(160.dp)
+                            .height(180.dp)
                     )
                 }
                 if (viewModel.courses.size < 2) {
@@ -260,7 +172,7 @@ fun ClassCard(
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    fontSize = 14.sp
+                    fontSize = 16.sp
                 )
                 Text(
                     text = course.title,
@@ -313,7 +225,7 @@ fun GradeCard(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

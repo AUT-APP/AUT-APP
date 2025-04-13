@@ -4,18 +4,29 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.autapp.data.database.AUTDatabase
-import com.example.autapp.data.repository.AssignmentRepository
-import com.example.autapp.data.repository.CourseRepository
-import com.example.autapp.data.repository.GradeRepository
-import com.example.autapp.data.repository.StudentRepository
-import com.example.autapp.data.repository.UserRepository
+import com.example.autapp.data.repository.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,6 +78,116 @@ fun AppContent(
     dashboardViewModel: DashboardViewModel
 ) {
     val navController = rememberNavController()
+
+    // Define the TopAppBar composable
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun AUTTopAppBar() {
+        TopAppBar(
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                ) {
+                    Text(
+                        text = "AUT",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp,
+                        color = Color.White,
+                        modifier = Modifier
+                            .background(Color.Black)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = "Search",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Icon(
+                        imageVector = Icons.Outlined.Notifications,
+                        contentDescription = "Notifications",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Person,
+                            contentDescription = "Profile",
+                            tint = Color.Black,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .align(Alignment.Center)
+                        )
+                    }
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color(0xFF2F7A78),
+                titleContentColor = Color.White,
+                actionIconContentColor = Color.White
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    // Define the Bottom NavigationBar composable
+    @Composable
+    fun AUTBottomBar() {
+        NavigationBar(
+            containerColor = Color.White,
+            contentColor = Color.Black
+        ) {
+            NavigationBarItem(
+                icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = Color.Black) },
+                selected = true,
+                onClick = { }
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar", tint = Color.Black) },
+                selected = false,
+                onClick = { }
+            )
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_camera),
+                        contentDescription = "Camera",
+                        tint = Color.Black
+                    )
+                },
+                selected = false,
+                onClick = { }
+            )
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_directions),
+                        contentDescription = "Transport",
+                        tint = Color.Black
+                    )
+                },
+                selected = false,
+                onClick = { }
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = Color.Black) },
+                selected = false,
+                onClick = { }
+            )
+        }
+    }
+
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
             LoginScreen(
@@ -81,7 +202,16 @@ fun AppContent(
         }
         composable("dashboard/{studentId}") { backStackEntry ->
             val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
-            StudentDashboard(viewModel = dashboardViewModel)
+            Scaffold(
+                topBar = { AUTTopAppBar() },
+                bottomBar = { AUTBottomBar() },
+                modifier = Modifier.fillMaxSize()
+            ) { paddingValues ->
+                StudentDashboard(
+                    viewModel = dashboardViewModel,
+                    paddingValues = paddingValues
+                )
+            }
         }
     }
 }
