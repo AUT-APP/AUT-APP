@@ -4,16 +4,13 @@ import com.example.autapp.data.dao.AssignmentDao
 import com.example.autapp.data.models.Assignment
 
 class AssignmentRepository(private val assignmentDao: AssignmentDao) {
+
     suspend fun insertAssignment(assignment: Assignment) {
         assignmentDao.insertAssignment(assignment)
     }
 
     suspend fun getAssignmentById(assignmentId: Int): Assignment? {
         return assignmentDao.getAssignmentById(assignmentId)
-    }
-
-    suspend fun getAssignmentsByCourse(courseId: Int): List<Assignment> {
-        return assignmentDao.getAssignmentsByCourse(courseId)
     }
 
     suspend fun getAllAssignments(): List<Assignment> {
@@ -28,7 +25,7 @@ class AssignmentRepository(private val assignmentDao: AssignmentDao) {
         assignmentDao.updateAssignment(assignment)
     }
 
-    suspend fun getAssignmentsByCourseSortedByDate(courseId: Int): List<Assignment> {
-        return assignmentDao.getAssignmentsByCourseSortedByDate(courseId)
+    suspend fun deleteAll() {
+        assignmentDao.deleteAll()
     }
 }

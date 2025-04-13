@@ -8,7 +8,6 @@ class GradeRepository(
     private val gradeDao: GradeDao,
     private val assignmentRepository: AssignmentRepository
 ) {
-    // CRUD Operations for Grade
     suspend fun insertGrade(grade: Grade) {
         val existingGrade = gradeDao.getGradesByAssignment(grade.assignmentId)
             .firstOrNull { it.studentId == grade.studentId }
@@ -42,7 +41,6 @@ class GradeRepository(
         gradeDao.updateGrade(grade)
     }
 
-    // Join Queries for Grade + Assignment
     suspend fun getGradesWithAssignments(studentId: Int): List<GradeDao.GradeWithAssignment> {
         return gradeDao.getGradesWithAssignments(studentId)
     }
@@ -59,33 +57,30 @@ class GradeRepository(
         return gradeDao.getGradesWithAssignmentsByType(studentId, type)
     }
 
-    // GPA Calculation
     suspend fun calculateGPA(studentId: Int): Double? {
-        val studentGrades = getGradesByStudent(studentId)
-        if (studentGrades.isEmpty()) return null
+        val gradesWithAssignments = getGradesWithAssignments(studentId)
+        if (gradesWithAssignments.isEmpty()) return null
 
-        val assignmentIds = studentGrades.map { it.assignmentId }.distinct()
-        val assignments = assignmentIds.mapNotNull { assignmentRepository.getAssignmentById(it) }
+        val creditsPerCourse = 15.0
+        val totalCredits = gradesWithAssignments.size * creditsPerCourse
 
-        val totalPoints = assignments.sumOf { it.weight }
-        if (totalPoints < 240.0) return null
+        if (totalCredits < 240.0) return null
 
-        val weightedGradeSum = studentGrades.sumOf { grade ->
-            val assignment = assignments.firstOrNull { it.assignmentId == grade.assignmentId }
-            if (assignment != null) {
-                val gradeValue = grade.getNumericValue()
-                gradeValue * assignment.weight
-            } else {
-                0.0
-            }
+        val weightedGradeSum = gradesWithAssignments.sumOf { gradeWithAssignment ->
+            val grade = gradeWithAssignment.grade
+            val numericValue = grade.getNumericValue().toDouble()
+            numericValue * creditsPerCourse
         }
 
-        val gpa = weightedGradeSum / totalPoints
+        val gpa = weightedGradeSum / totalCredits
         return round(gpa * 1000) / 1000
     }
 
-    // GPA Formatting
     fun formatGPA(gpa: Double?): String {
-        return if (gpa != null) "GPA: $gpa / 9.0" else "GPA: Not available (insufficient credits)"
+        return if (gpa != null) String.format("%.3f / 9.0", gpa) else "GPA: Not available (insufficient credits)"
+    }
+
+    suspend fun deleteAll() {
+        gradeDao.deleteAll()
     }
 }

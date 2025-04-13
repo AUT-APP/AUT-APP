@@ -22,4 +22,7 @@ interface CourseDao {
 
     @Update
     suspend fun updateCourse(course: Course)
+
+    @Query("DELETE FROM course_table")
+    suspend fun deleteAll()
 }

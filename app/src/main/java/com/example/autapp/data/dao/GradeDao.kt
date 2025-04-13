@@ -1,8 +1,9 @@
 package com.example.autapp.data.dao
 
 import androidx.room.*
-import com.example.autapp.data.models.Grade
 import com.example.autapp.data.models.Assignment
+import com.example.autapp.data.models.Grade
+import java.util.Date
 
 @Dao
 interface GradeDao {
@@ -27,10 +28,12 @@ interface GradeDao {
     @Update
     suspend fun updateGrade(grade: Grade)
 
-    // Added for sorting/filtering and efficiency
     data class GradeWithAssignment(
         @Embedded val grade: Grade,
-        @Relation(parentColumn = "assignmentId", entityColumn = "assignmentId")
+        @Relation(
+            parentColumn = "assignmentId",
+            entityColumn = "assignmentId"
+        )
         val assignment: Assignment
     )
 
@@ -39,7 +42,7 @@ interface GradeDao {
     suspend fun getGradesWithAssignments(studentId: Int): List<GradeWithAssignment>
 
     @Transaction
-    @Query("SELECT * FROM grade_table WHERE studentId = :studentId ORDER BY (SELECT due FROM assignment_table WHERE assignmentId = grade_table.assignmentId) DESC")
+    @Query("SELECT * FROM grade_table WHERE studentId = :studentId ORDER BY (SELECT due FROM assignment_table WHERE assignment_table.assignmentId = grade_table.assignmentId) DESC")
     suspend fun getGradesWithAssignmentsSortedByDate(studentId: Int): List<GradeWithAssignment>
 
     @Transaction
@@ -49,4 +52,7 @@ interface GradeDao {
     @Transaction
     @Query("SELECT * FROM grade_table WHERE studentId = :studentId AND assignmentId IN (SELECT assignmentId FROM assignment_table WHERE type = :type)")
     suspend fun getGradesWithAssignmentsByType(studentId: Int, type: String): List<GradeWithAssignment>
+
+    @Query("DELETE FROM grade_table")
+    suspend fun deleteAll()
 }
