@@ -30,6 +30,11 @@ import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.repository.*
 import com.example.autapp.ui.ChatScreen
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,13 +69,18 @@ class MainActivity : ComponentActivity() {
         loginViewModel.insertTestData()
 
         setContent {
-            AUTAPPTheme {
+            var isDarkTheme by remember { mutableStateOf(false) }
+
+            AUTAPPTheme(darkTheme = isDarkTheme, dynamicColor = false) {
                 AppContent(
                     loginViewModel = loginViewModel,
-                    dashboardViewModel = dashboardViewModel
+                    dashboardViewModel = dashboardViewModel,
+                    isDarkTheme = isDarkTheme,
+                    onToggleTheme = { isDarkTheme = !isDarkTheme }
                 )
             }
         }
+
         Log.d("MainActivity", "Content set")
     }
 }
@@ -78,7 +88,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppContent(
     loginViewModel: LoginViewModel,
-    dashboardViewModel: DashboardViewModel
+    dashboardViewModel: DashboardViewModel,
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -202,8 +214,11 @@ fun AppContent(
                     navController.navigate("dashboard/$studentId") {
                         popUpTo("login") { inclusive = true }
                     }
-                }
+                },
+                isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme
             )
+
         }
         composable("dashboard/{studentId}") { backStackEntry ->
             val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
