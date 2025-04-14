@@ -42,7 +42,7 @@ fun ChatScreen(
         TopAppBar(
             title = {
                 Text(
-                    text = "AUT ChatBot",
+                    text = "AUT Helpbot",
                     fontSize = 20.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),

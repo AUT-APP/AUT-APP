@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -25,8 +26,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.repository.*
+import com.example.autapp.ui.ChatScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -102,10 +105,12 @@ fun AppContent(
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = "Search",
+                        painter = painterResource(id = R.drawable.ic_chatbot),
+                        contentDescription = "AI Chat",
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { navController.navigate("chat") }
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Icon(
@@ -212,6 +217,9 @@ fun AppContent(
                     paddingValues = paddingValues
                 )
             }
+        }
+        composable("chat") {
+            ChatScreen()
         }
     }
 }
