@@ -29,13 +29,13 @@ import androidx.navigation.compose.rememberNavController
 import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.repository.*
+import com.example.autapp.ui.AUTTopAppBar
 import com.example.autapp.ui.chat.ChatScreen
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavController
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -218,7 +218,6 @@ fun AppContent(
         }
     }
 
-
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
             LoginScreen(
@@ -232,12 +231,18 @@ fun AppContent(
                 isDarkTheme = isDarkTheme,
                 onToggleTheme = onToggleTheme
             )
-
         }
         composable("dashboard/{studentId}") { backStackEntry ->
             val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
             Scaffold(
-                topBar = { AUTTopAppBar(isDarkTheme = isDarkTheme, navController = navController) },
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Dashboard",
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        showBackButton = false
+                    )
+                },
                 bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme) },
                 modifier = Modifier.fillMaxSize()
             ) { paddingValues ->
@@ -249,7 +254,9 @@ fun AppContent(
             }
         }
         composable("chat") {
-            ChatScreen()
+            ChatScreen(
+                navController = navController
+            )
         }
     }
 }
