@@ -29,11 +29,12 @@ import androidx.navigation.compose.rememberNavController
 import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.repository.*
-import com.example.autapp.ui.ChatScreen
+import com.example.autapp.ui.chat.ChatScreen
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.navigation.NavController
 
 
 class MainActivity : ComponentActivity() {
@@ -97,7 +98,15 @@ fun AppContent(
     // Define the TopAppBar composable
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun AUTTopAppBar() {
+    fun AUTTopAppBar(isDarkTheme: Boolean, navController: NavController) {
+        val containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFF2F7A78)
+        val titleTextColor = if (isDarkTheme) Color.White else Color.White
+        val actionIconColor = if (isDarkTheme) Color.White else Color.White
+        val autLabelBackground = if (isDarkTheme) Color.White else Color.Black
+        val autLabelTextColor = if (isDarkTheme) Color.Black else Color.White
+        val profileBackground = if (isDarkTheme) Color.DarkGray else Color.White
+        val profileIconColor = if (isDarkTheme) Color.White else Color.Black
+
         TopAppBar(
             title = {
                 Row(
@@ -110,16 +119,16 @@ fun AppContent(
                         text = "AUT",
                         fontWeight = FontWeight.Bold,
                         fontSize = 24.sp,
-                        color = Color.White,
+                        color = autLabelTextColor,
                         modifier = Modifier
-                            .background(Color.Black)
+                            .background(autLabelBackground)
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Icon(
                         painter = painterResource(id = R.drawable.ic_chatbot),
                         contentDescription = "AI Chat",
-                        tint = Color.White,
+                        tint = actionIconColor,
                         modifier = Modifier
                             .size(24.dp)
                             .clickable { navController.navigate("chat") }
@@ -128,7 +137,7 @@ fun AppContent(
                     Icon(
                         imageVector = Icons.Outlined.Notifications,
                         contentDescription = "Notifications",
-                        tint = Color.White,
+                        tint = actionIconColor,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
@@ -136,12 +145,12 @@ fun AppContent(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(Color.White)
+                            .background(profileBackground)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Person,
                             contentDescription = "Profile",
-                            tint = Color.Black,
+                            tint = profileIconColor,
                             modifier = Modifier
                                 .size(24.dp)
                                 .align(Alignment.Center)
@@ -150,28 +159,32 @@ fun AppContent(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color(0xFF2F7A78),
-                titleContentColor = Color.White,
-                actionIconContentColor = Color.White
+                containerColor = containerColor,
+                titleContentColor = titleTextColor,
+                actionIconContentColor = actionIconColor
             ),
             modifier = Modifier.fillMaxWidth()
         )
     }
 
+
     // Define the Bottom NavigationBar composable
     @Composable
-    fun AUTBottomBar() {
+    fun AUTBottomBar(isDarkTheme: Boolean) {
+        val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
+        val iconTint = if (isDarkTheme) Color.White else Color.Black
+
         NavigationBar(
-            containerColor = Color.White,
-            contentColor = Color.Black
+            containerColor = backgroundColor,
+            contentColor = iconTint
         ) {
             NavigationBarItem(
-                icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = Color.Black) },
+                icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = iconTint) },
                 selected = true,
                 onClick = { }
             )
             NavigationBarItem(
-                icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar", tint = Color.Black) },
+                icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar", tint = iconTint) },
                 selected = false,
                 onClick = { }
             )
@@ -180,7 +193,7 @@ fun AppContent(
                     Icon(
                         painter = painterResource(id = android.R.drawable.ic_menu_camera),
                         contentDescription = "Camera",
-                        tint = Color.Black
+                        tint = iconTint
                     )
                 },
                 selected = false,
@@ -191,19 +204,20 @@ fun AppContent(
                     Icon(
                         painter = painterResource(id = android.R.drawable.ic_menu_directions),
                         contentDescription = "Transport",
-                        tint = Color.Black
+                        tint = iconTint
                     )
                 },
                 selected = false,
                 onClick = { }
             )
             NavigationBarItem(
-                icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = Color.Black) },
+                icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = iconTint) },
                 selected = false,
                 onClick = { }
             )
         }
     }
+
 
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
@@ -223,13 +237,14 @@ fun AppContent(
         composable("dashboard/{studentId}") { backStackEntry ->
             val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
             Scaffold(
-                topBar = { AUTTopAppBar() },
-                bottomBar = { AUTBottomBar() },
+                topBar = { AUTTopAppBar(isDarkTheme = isDarkTheme, navController = navController) },
+                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme) },
                 modifier = Modifier.fillMaxSize()
             ) { paddingValues ->
                 StudentDashboard(
                     viewModel = dashboardViewModel,
-                    paddingValues = paddingValues
+                    paddingValues = paddingValues,
+                    isDarkTheme = isDarkTheme
                 )
             }
         }

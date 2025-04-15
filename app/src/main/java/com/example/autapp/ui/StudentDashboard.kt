@@ -34,12 +34,17 @@ import java.util.*
 @Composable
 fun StudentDashboard(
     viewModel: DashboardViewModel,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    isDarkTheme: Boolean
 ) {
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val textColor = MaterialTheme.colorScheme.onBackground
+
     Surface(
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues)
+            .padding(paddingValues),
+        color = backgroundColor
     ) {
         Column(
             modifier = Modifier
@@ -51,6 +56,7 @@ fun StudentDashboard(
                 text = "Upcoming...",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
+                color = textColor,
                 modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
             )
 
@@ -77,6 +83,7 @@ fun StudentDashboard(
                 text = "Grades",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
+                color = textColor,
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
@@ -106,6 +113,7 @@ fun StudentDashboard(
                 text = "Assignments",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
+                color = textColor,
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
@@ -122,12 +130,12 @@ fun StudentDashboard(
                 onClick = { },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2F7A78)
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Text(
                     text = "Click for More...",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
@@ -137,13 +145,14 @@ fun StudentDashboard(
             viewModel.errorMessage?.let {
                 Text(
                     text = it,
-                    color = Color.Red,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(16.dp)
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun ClassCard(
@@ -153,11 +162,10 @@ fun ClassCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        Column(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -172,33 +180,35 @@ fun ClassCard(
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    fontSize = 16.sp
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = course.title,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF2F7A78))
+                    .background(MaterialTheme.colorScheme.primary)
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     painter = painterResource(id = android.R.drawable.ic_dialog_map),
                     contentDescription = "Location",
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = course.location ?: "TBD",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -207,6 +217,7 @@ fun ClassCard(
         }
     }
 }
+
 
 @Composable
 fun GradeCard(
@@ -219,9 +230,7 @@ fun GradeCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF2F7A78)
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
     ) {
         Column(
             modifier = Modifier
@@ -231,26 +240,26 @@ fun GradeCard(
         ) {
             Text(
                 text = assignment.name,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = assignment.type,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = "Score: ${grade.score}",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = grade.grade,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
                 modifier = Modifier.padding(top = 8.dp)
@@ -259,15 +268,14 @@ fun GradeCard(
     }
 }
 
+
 @Composable
 fun GPASummaryCard(gpa: Double?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1D5E5C)
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Row(
             modifier = Modifier
@@ -279,21 +287,19 @@ fun GPASummaryCard(gpa: Double?) {
             Column {
                 Text(
                     text = "Current GPA",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "Semester 1, 2025",
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                     fontSize = 14.sp
                 )
             }
-            Column(
-                horizontalAlignment = Alignment.End
-            ) {
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = if (gpa != null) String.format("%.3f / 9.0", gpa) else "N/A",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -301,6 +307,7 @@ fun GPASummaryCard(gpa: Double?) {
         }
     }
 }
+
 
 @SuppressLint("WeekBasedYear")
 @Composable
@@ -314,20 +321,20 @@ fun AssignmentCard(
             onClick = { },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2F7A78)
+                containerColor = MaterialTheme.colorScheme.primary
             ),
             contentPadding = PaddingValues(16.dp)
         ) {
             Text(
                 text = formatDate(assignment.due),
-                color = Color.White
+                color = MaterialTheme.colorScheme.onPrimary
             )
         }
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(0.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White
+                containerColor = MaterialTheme.colorScheme.surface
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
@@ -341,12 +348,14 @@ fun AssignmentCard(
                     text = assignment.name,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Due ${formatTime(assignment.due)}",
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
