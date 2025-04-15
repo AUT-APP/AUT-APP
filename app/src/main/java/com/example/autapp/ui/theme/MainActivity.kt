@@ -29,12 +29,12 @@ import androidx.navigation.compose.rememberNavController
 import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.repository.*
-import com.example.autapp.ui.ChatScreen
+import com.example.autapp.ui.AUTTopAppBar
+import com.example.autapp.ui.chat.ChatScreen
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,70 +93,6 @@ fun AppContent(
     onToggleTheme: () -> Unit
 ) {
     val navController = rememberNavController()
-
-    // Define the TopAppBar composable
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun AUTTopAppBar() {
-        TopAppBar(
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                ) {
-                    Text(
-                        text = "AUT",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        color = Color.White,
-                        modifier = Modifier
-                            .background(Color.Black)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_chatbot),
-                        contentDescription = "AI Chat",
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable { navController.navigate("chat") }
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = "Notifications",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = "Profile",
-                            tint = Color.Black,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .align(Alignment.Center)
-                        )
-                    }
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color(0xFF2F7A78),
-                titleContentColor = Color.White,
-                actionIconContentColor = Color.White
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
 
     // Define the Bottom NavigationBar composable
     @Composable
@@ -218,12 +154,17 @@ fun AppContent(
                 isDarkTheme = isDarkTheme,
                 onToggleTheme = onToggleTheme
             )
-
         }
         composable("dashboard/{studentId}") { backStackEntry ->
             val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
             Scaffold(
-                topBar = { AUTTopAppBar() },
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Dashboard",
+                        navController = navController,
+                        showBackButton = false
+                    )
+                },
                 bottomBar = { AUTBottomBar() },
                 modifier = Modifier.fillMaxSize()
             ) { paddingValues ->
@@ -234,7 +175,9 @@ fun AppContent(
             }
         }
         composable("chat") {
-            ChatScreen()
+            ChatScreen(
+                navController = navController
+            )
         }
     }
 }

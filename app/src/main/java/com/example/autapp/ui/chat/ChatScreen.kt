@@ -14,17 +14,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.autapp.ui.chat.ChatMessage
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.autapp.ui.chat.ChatViewModel
+import androidx.navigation.NavController
+import com.example.autapp.ui.AUTTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    viewModel: ChatViewModel = viewModel()
+    viewModel: ChatViewModel = viewModel(),
+    navController: NavController
 ) {
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -35,26 +34,15 @@ fun ChatScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding() // This accounts for system bars including camera cutout
+            .systemBarsPadding()
     ) {
-        // Top Bar
-        TopAppBar(
-            title = {
-                Text(
-                    text = "AUT Helpbot",
-                    fontSize = 20.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            ),
+        AUTTopAppBar(
+            title = "Chatbot",
+            navController = navController,
+            showBackButton = true,
             modifier = Modifier.statusBarsPadding()
         )
 
-        // Chat messages
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -67,7 +55,7 @@ fun ChatScreen(
                 state = listState,
                 contentPadding = PaddingValues(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                reverseLayout = false // Messages start from top
+                reverseLayout = false
             ) {
                 items(messages) { message ->
                     ChatMessageItem(message)
@@ -75,7 +63,6 @@ fun ChatScreen(
             }
         }
 
-        // Input area
         ChatInput(
             messageText = messageText,
             onMessageTextChange = { messageText = it },
@@ -89,7 +76,6 @@ fun ChatScreen(
         )
     }
 
-    // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -119,7 +105,7 @@ fun ChatMessageItem(message: ChatMessage) {
     ) {
         Box(
             modifier = Modifier
-                .widthIn(max = 340.dp) // Maximum width for messages
+                .widthIn(max = 340.dp)
                 .clip(
                     RoundedCornerShape(
                         topStart = 16.dp,
@@ -150,8 +136,8 @@ fun ChatInput(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .navigationBarsPadding() // Account for navigation bar
-            .imePadding(), // Account for keyboard
+            .navigationBarsPadding()
+            .imePadding(),
         tonalElevation = 2.dp,
         color = MaterialTheme.colorScheme.surface
     ) {
@@ -194,4 +180,4 @@ fun ChatInput(
             }
         }
     }
-} 
+}
