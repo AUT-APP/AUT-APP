@@ -29,7 +29,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.repository.*
-import com.example.autapp.ui.AUTTopAppBar
 import com.example.autapp.ui.chat.ChatScreen
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -98,7 +97,12 @@ fun AppContent(
     // Define the TopAppBar composable
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun AUTTopAppBar(isDarkTheme: Boolean, navController: NavController) {
+    fun AUTTopAppBar(
+        isDarkTheme: Boolean,
+        navController: NavController,
+        title: String,
+        showBackButton: Boolean
+    ) {
         val containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFF2F7A78)
         val titleTextColor = if (isDarkTheme) Color.White else Color.White
         val actionIconColor = if (isDarkTheme) Color.White else Color.White
