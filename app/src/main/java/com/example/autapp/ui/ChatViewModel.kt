@@ -38,6 +38,7 @@ class ChatViewModel : ViewModel() {
         7. IT & WiFi Support
         8. Student Accommodation
         9. Greeting messages
+        
 
         Response Guidelines:
         - For greetings (hi, hello, etc.): Respond with "Hello! How can I help you today?"
