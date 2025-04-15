@@ -28,14 +28,16 @@ import com.example.autapp.R
 fun LoginScreen(
     viewModel: LoginViewModel,
     modifier: Modifier = Modifier,
-    onLoginSuccess: (Int) -> Unit = {}
+    onLoginSuccess: (Int) -> Unit = {},
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit
 ) {
     val TAG = "LoginScreen"
     Log.d(TAG, "LoginScreen composed")
 
-    // Define colors
-    val regularTeal = Color(0xFF008080)
-    val linkBlue = Color(0xFF0466D6)
+    // Use theme colors
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
 
     // Observe login result and trigger navigation on success
     LaunchedEffect(viewModel.loginResult) {
@@ -51,7 +53,7 @@ fun LoginScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         Column(
@@ -63,7 +65,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(45.dp)
-                    .background(regularTeal),
+                    .background(colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -71,10 +73,37 @@ fun LoginScreen(
                     style = TextStyle(
                         fontSize = 24.sp,
                         fontFamily = FontFamily(Font(R.font.monoton_regular)),
-                        color = Color.White
+                        color = colorScheme.onPrimary
                     )
                 )
             }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = if (isDarkTheme) "Dark Mode" else "Light Mode",
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
+                    color = colorScheme.onBackground,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Switch(
+                    checked = isDarkTheme,
+                    onCheckedChange = { onToggleTheme() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = colorScheme.onPrimary,
+                        checkedTrackColor = colorScheme.primary,
+                        uncheckedThumbColor = colorScheme.onPrimary,
+                        uncheckedTrackColor = Color.Gray
+                    )
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -85,12 +114,10 @@ fun LoginScreen(
             ) {
                 Text(
                     text = "Hello!\nPlease login using your AUT credentials",
-                    style = TextStyle(
-                        fontSize = 16.sp,
-                        fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
-                        textAlign = TextAlign.Center,
-                        color = Color(0xFF000000)
-                    )
+                    fontSize = 16.sp,
+                    fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
+                    textAlign = TextAlign.Center,
+                    color = colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
@@ -101,8 +128,11 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = regularTeal,
-                        unfocusedBorderColor = Color(0xFF666666)
+                        focusedBorderColor = colorScheme.primary,
+                        unfocusedBorderColor = colorScheme.outline,
+                        cursorColor = colorScheme.primary,
+                        focusedLabelColor = colorScheme.primary,
+                        unfocusedLabelColor = colorScheme.onSurface
                     )
                 )
                 OutlinedTextField(
@@ -115,85 +145,86 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = regularTeal,
-                        unfocusedBorderColor = Color(0xFF666666)
+                        focusedBorderColor = colorScheme.primary,
+                        unfocusedBorderColor = colorScheme.outline,
+                        cursorColor = colorScheme.primary,
+                        focusedLabelColor = colorScheme.primary,
+                        unfocusedLabelColor = colorScheme.onSurface
                     )
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
+
                 Button(
                     onClick = { viewModel.checkLogin() },
                     modifier = Modifier
                         .width(160.dp)
                         .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = regularTeal),
+                    colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
                     shape = RoundedCornerShape(5.dp)
                 ) {
                     Text(
                         text = "LOGIN",
-                        style = TextStyle(
-                            fontSize = 16.sp,
-                            fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        fontSize = 16.sp,
+                        fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onPrimary
                     )
                 }
+
                 viewModel.loginResult?.let {
                     Text(
                         text = it,
-                        style = TextStyle(
-                            fontSize = 14.sp,
-                            fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
-                            color = if (it.contains("successful")) regularTeal else Color.Red,
-                            textAlign = TextAlign.Center
-                        ),
+                        fontSize = 14.sp,
+                        fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
+                        color = if (it.contains("successful")) colorScheme.primary else Color.Red,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }
+
                 Text(
                     text = "Forgotten password?",
-                    style = TextStyle(
-                        fontSize = 14.sp,
-                        fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
-                        color = linkBlue,
-                        textDecoration = TextDecoration.Underline
-                    ),
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
+                    color = Color(0xFF0466D6),
+                    textDecoration = TextDecoration.Underline,
                     modifier = Modifier
                         .clickable { /* Handle forgotten password click */ }
                         .padding(vertical = 8.dp)
                 )
+
                 Spacer(modifier = Modifier.height(16.dp))
+
                 Text(
                     text = "Remember to always log out by\n" +
                             "completely exiting your browser when\n" +
                             "you leave the computer. This will protect\n" +
                             "your personal information from being\n" +
                             "accessed by subsequent users.",
-                    style = TextStyle(
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
-                        color = Color(0xFF666666),
-                        textAlign = TextAlign.Center,
-                        lineHeight = 16.sp
-                    ),
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
+                    color = colorScheme.onBackground.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center,
+                    lineHeight = 16.sp,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
+
                 Spacer(modifier = Modifier.weight(1f))
             }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(45.dp)
-                    .background(regularTeal),
+                    .background(colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "ICT SERVICE DESK | (09)921 9888",
-                    style = TextStyle(
-                        fontSize = 14.sp,
-                        fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
-                        color = Color.White
-                    )
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
+                    color = colorScheme.onPrimary
                 )
             }
         }
