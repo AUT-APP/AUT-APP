@@ -1,4 +1,4 @@
-package com.example.autapp.ui.theme
+package com.example.autapp.ui
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
