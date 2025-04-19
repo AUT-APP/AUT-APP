@@ -35,6 +35,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavController
+import com.example.autapp.ui.settings.SettingsScreen
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,242 +60,296 @@ class MainActivity : ComponentActivity() {
 
         // Initialize ViewModels
         val loginViewModelFactory = LoginViewModelFactory(
-            userRepository, studentRepository, courseRepository, assignmentRepository, gradeRepository
+            userRepository,
+            studentRepository,
+            courseRepository,
+            assignmentRepository,
+            gradeRepository
         )
-        val loginViewModel = ViewModelProvider(this, loginViewModelFactory)[LoginViewModel::class.java]
+        val loginViewModel =
+            ViewModelProvider(this, loginViewModelFactory)[LoginViewModel::class.java]
 
         val dashboardViewModelFactory = DashboardViewModelFactory(
             studentRepository, courseRepository, gradeRepository, assignmentRepository
         )
-        val dashboardViewModel = ViewModelProvider(this, dashboardViewModelFactory)[DashboardViewModel::class.java]
+        val dashboardViewModel =
+            ViewModelProvider(this, dashboardViewModelFactory)[DashboardViewModel::class.java]
 
         // Insert test data
         loginViewModel.insertTestData()
 
-        setContent {
-            var isDarkTheme by remember { mutableStateOf(false) }
+        val themeManager = ThemePreferenceManager(applicationContext)
+        val coroutineScope = CoroutineScope(Dispatchers.Main)
 
+        var isDarkTheme by mutableStateOf(false)
+
+        // Load saved theme preference
+        coroutineScope.launch {
+            themeManager.isDarkMode.collect {
+                isDarkTheme = it
+            }
+        }
+
+        setContent {
             AUTAPPTheme(darkTheme = isDarkTheme, dynamicColor = false) {
                 AppContent(
                     loginViewModel = loginViewModel,
                     dashboardViewModel = dashboardViewModel,
                     isDarkTheme = isDarkTheme,
-                    onToggleTheme = { isDarkTheme = !isDarkTheme }
+                    onToggleTheme = {
+                        val newTheme = !isDarkTheme
+                        isDarkTheme = newTheme
+                        coroutineScope.launch {
+                            themeManager.setDarkMode(newTheme)
+                        }
+                    }
                 )
             }
         }
-
-        Log.d("MainActivity", "Content set")
     }
-}
 
-@Composable
-fun AppContent(
-    loginViewModel: LoginViewModel,
-    dashboardViewModel: DashboardViewModel,
-    isDarkTheme: Boolean,
-    onToggleTheme: () -> Unit
-) {
-    val navController = rememberNavController()
 
-    // Define the TopAppBar composable
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun AUTTopAppBar(
+    fun AppContent(
+        loginViewModel: LoginViewModel,
+        dashboardViewModel: DashboardViewModel,
         isDarkTheme: Boolean,
-        navController: NavController,
-        title: String,
-        showBackButton: Boolean
+        onToggleTheme: () -> Unit
     ) {
-        val containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFF2F7A78)
-        val titleTextColor = if (isDarkTheme) Color.White else Color.White
-        val actionIconColor = if (isDarkTheme) Color.White else Color.White
-        val autLabelBackground = if (isDarkTheme) Color.White else Color.Black
-        val autLabelTextColor = if (isDarkTheme) Color.Black else Color.White
-        val profileBackground = if (isDarkTheme) Color.DarkGray else Color.White
-        val profileIconColor = if (isDarkTheme) Color.White else Color.Black
+        val navController = rememberNavController()
 
-        TopAppBar(
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                ) {
-                    Text(
-                        text = "AUT",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        color = autLabelTextColor,
+        // Define the TopAppBar composable
+        @OptIn(ExperimentalMaterial3Api::class)
+        @Composable
+        fun AUTTopAppBar(
+            isDarkTheme: Boolean,
+            navController: NavController,
+            title: String,
+            showBackButton: Boolean
+        ) {
+            val containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFF2F7A78)
+            val titleTextColor = if (isDarkTheme) Color.White else Color.White
+            val actionIconColor = if (isDarkTheme) Color.White else Color.White
+            val autLabelBackground = if (isDarkTheme) Color.White else Color.Black
+            val autLabelTextColor = if (isDarkTheme) Color.Black else Color.White
+            val profileBackground = if (isDarkTheme) Color.DarkGray else Color.White
+            val profileIconColor = if (isDarkTheme) Color.White else Color.Black
+
+            TopAppBar(
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .background(autLabelBackground)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_chatbot),
-                        contentDescription = "AI Chat",
-                        tint = actionIconColor,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable { navController.navigate("chat") }
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = "Notifications",
-                        tint = actionIconColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(profileBackground)
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
                     ) {
+                        Text(
+                            text = "AUT",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 24.sp,
+                            color = autLabelTextColor,
+                            modifier = Modifier
+                                .background(autLabelBackground)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
                         Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = "Profile",
-                            tint = profileIconColor,
+                            painter = painterResource(id = R.drawable.ic_chatbot),
+                            contentDescription = "AI Chat",
+                            tint = actionIconColor,
                             modifier = Modifier
                                 .size(24.dp)
-                                .align(Alignment.Center)
+                                .clickable { navController.navigate("chat") }
                         )
-                    }
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                titleContentColor = titleTextColor,
-                actionIconContentColor = actionIconColor
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-
-
-    // Define the Bottom NavigationBar composable
-    @Composable
-    fun AUTBottomBar(isDarkTheme: Boolean) {
-        val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
-        val iconTint = if (isDarkTheme) Color.White else Color.Black
-
-        NavigationBar(
-            containerColor = backgroundColor,
-            contentColor = iconTint
-        ) {
-            NavigationBarItem(
-                icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = iconTint) },
-                selected = true,
-                onClick = { }
-            )
-            NavigationBarItem(
-                icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar", tint = iconTint) },
-                selected = false,
-                onClick = { }
-            )
-            NavigationBarItem(
-                icon = {
-                    Icon(
-                        painter = painterResource(id = android.R.drawable.ic_menu_camera),
-                        contentDescription = "Camera",
-                        tint = iconTint
-                    )
-                },
-                selected = false,
-                onClick = { }
-            )
-            NavigationBarItem(
-                icon = {
-                    Icon(
-                        painter = painterResource(id = android.R.drawable.ic_menu_directions),
-                        contentDescription = "Transport",
-                        tint = iconTint
-                    )
-                },
-                selected = false,
-                onClick = { }
-            )
-            NavigationBarItem(
-                icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = iconTint) },
-                selected = false,
-                onClick = { }
-            )
-        }
-    }
-
-    NavHost(navController = navController, startDestination = "login") {
-        composable("login") {
-            LoginScreen(
-                viewModel = loginViewModel,
-                onLoginSuccess = { studentId ->
-                    dashboardViewModel.initialize(studentId)
-                    navController.navigate("dashboard/$studentId") {
-                        popUpTo("login") { inclusive = true }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            imageVector = Icons.Outlined.Notifications,
+                            contentDescription = "Notifications",
+                            tint = actionIconColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(profileBackground)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Person,
+                                contentDescription = "Profile",
+                                tint = profileIconColor,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .align(Alignment.Center)
+                            )
+                        }
                     }
                 },
-                isDarkTheme = isDarkTheme,
-                onToggleTheme = onToggleTheme
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = containerColor,
+                    titleContentColor = titleTextColor,
+                    actionIconContentColor = actionIconColor
+                ),
+                modifier = Modifier.fillMaxWidth()
             )
         }
-        composable("dashboard/{studentId}") { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
-            Scaffold(
-                topBar = {
-                    AUTTopAppBar(
-                        title = "Dashboard",
-                        isDarkTheme = isDarkTheme,
-                        navController = navController,
-                        showBackButton = false
-                    )
-                },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme) },
-                modifier = Modifier.fillMaxSize()
-            ) { paddingValues ->
-                StudentDashboard(
-                    viewModel = dashboardViewModel,
-                    paddingValues = paddingValues,
-                    isDarkTheme = isDarkTheme
+
+
+        // Define the Bottom NavigationBar composable
+        @Composable
+        fun AUTBottomBar(isDarkTheme: Boolean) {
+            val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
+            val iconTint = if (isDarkTheme) Color.White else Color.Black
+
+            NavigationBar(
+                containerColor = backgroundColor,
+                contentColor = iconTint
+            ) {
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            Icons.Outlined.Home,
+                            contentDescription = "Home",
+                            tint = iconTint
+                        )
+                    },
+                    selected = true,
+                    onClick = { }
+                )
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            Icons.Outlined.DateRange,
+                            contentDescription = "Calendar",
+                            tint = iconTint
+                        )
+                    },
+                    selected = false,
+                    onClick = { }
+                )
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            painter = painterResource(id = android.R.drawable.ic_menu_camera),
+                            contentDescription = "Camera",
+                            tint = iconTint
+                        )
+                    },
+                    selected = false,
+                    onClick = { }
+                )
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            painter = painterResource(id = android.R.drawable.ic_menu_directions),
+                            contentDescription = "Transport",
+                            tint = iconTint
+                        )
+                    },
+                    selected = false,
+                    onClick = { }
+                )
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            Icons.Default.Menu,
+                            contentDescription = "More",
+                            tint = iconTint
+                        )
+                    },
+                    selected = false,
+                    onClick = { navController.navigate("settings") }
                 )
             }
         }
-        composable("chat") {
-            ChatScreen(
-                navController = navController
-            )
+
+        NavHost(navController = navController, startDestination = "login") {
+            composable("login") {
+                LoginScreen(
+                    viewModel = loginViewModel,
+                    onLoginSuccess = { studentId ->
+                        dashboardViewModel.initialize(studentId)
+                        navController.navigate("dashboard/$studentId") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    },
+                )
+            }
+            composable("dashboard/{studentId}") { backStackEntry ->
+                val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+                Scaffold(
+                    topBar = {
+                        AUTTopAppBar(
+                            title = "Dashboard",
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            showBackButton = false
+                        )
+                    },
+                    bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme) },
+                    modifier = Modifier.fillMaxSize()
+                ) { paddingValues ->
+                    StudentDashboard(
+                        viewModel = dashboardViewModel,
+                        paddingValues = paddingValues,
+                        isDarkTheme = isDarkTheme
+                    )
+                }
+            }
+            composable("chat") {
+                ChatScreen(
+                    navController = navController
+                )
+            }
+            composable("settings") {
+                SettingsScreen(
+                    isDarkTheme = isDarkTheme,
+                    onToggleTheme = onToggleTheme
+                )
+            }
         }
     }
-}
 
-class LoginViewModelFactory(
-    private val userRepository: UserRepository,
-    private val studentRepository: StudentRepository,
-    private val courseRepository: CourseRepository,
-    private val assignmentRepository: AssignmentRepository,
-    private val gradeRepository: GradeRepository
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return LoginViewModel(userRepository, studentRepository, courseRepository, assignmentRepository, gradeRepository) as T
+    class LoginViewModelFactory(
+        private val userRepository: UserRepository,
+        private val studentRepository: StudentRepository,
+        private val courseRepository: CourseRepository,
+        private val assignmentRepository: AssignmentRepository,
+        private val gradeRepository: GradeRepository
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return LoginViewModel(
+                    userRepository,
+                    studentRepository,
+                    courseRepository,
+                    assignmentRepository,
+                    gradeRepository
+                ) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
-}
 
-class DashboardViewModelFactory(
-    private val studentRepository: StudentRepository,
-    private val courseRepository: CourseRepository,
-    private val gradeRepository: GradeRepository,
-    private val assignmentRepository: AssignmentRepository
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return DashboardViewModel(studentRepository, courseRepository, gradeRepository, assignmentRepository) as T
+    class DashboardViewModelFactory(
+        private val studentRepository: StudentRepository,
+        private val courseRepository: CourseRepository,
+        private val gradeRepository: GradeRepository,
+        private val assignmentRepository: AssignmentRepository
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return DashboardViewModel(
+                    studentRepository,
+                    courseRepository,
+                    gradeRepository,
+                    assignmentRepository
+                ) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

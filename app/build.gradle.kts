@@ -65,6 +65,7 @@ dependencies {
 
     // Room dependencies
     implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.navigation.compose)
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
 
@@ -78,6 +79,7 @@ dependencies {
     implementation("com.google.ai.client.generativeai:generativeai:0.1.1")
 
     // Testing dependencies
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -85,4 +87,5 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
 }
