@@ -15,7 +15,8 @@ class LoginViewModel(
     private val studentRepository: StudentRepository,
     private val courseRepository: CourseRepository,
     private val assignmentRepository: AssignmentRepository,
-    private val gradeRepository: GradeRepository
+    private val gradeRepository: GradeRepository,
+    private val timetableEntryRepository: TimetableEntryRepository
 ) : ViewModel() {
 
     var username by mutableStateOf("")
@@ -251,6 +252,269 @@ class LoginViewModel(
                         grade.assignmentId = insertedAssignment.assignmentId
                         gradeRepository.insertGrade(grade)
                     }
+                }
+
+                // Create timetable entries for each course
+                val csEntries = listOf(
+                    // Monday classes
+                    TimetableEntry(
+                        courseId = 101,
+                        dayOfWeek = 1, // Monday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB101",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 102,
+                        dayOfWeek = 1, // Monday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB102",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 103,
+                        dayOfWeek = 1, // Monday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB103",
+                        type = "Lecture"
+                    ),
+                    // Tuesday classes
+                    TimetableEntry(
+                        courseId = 104,
+                        dayOfWeek = 2, // Tuesday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB104",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 105,
+                        dayOfWeek = 2, // Tuesday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB105",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 106,
+                        dayOfWeek = 2, // Tuesday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB106",
+                        type = "Lecture"
+                    ),
+                    // Wednesday classes
+                    TimetableEntry(
+                        courseId = 107,
+                        dayOfWeek = 3, // Wednesday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB107",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 108,
+                        dayOfWeek = 3, // Wednesday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB108",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 109,
+                        dayOfWeek = 3, // Wednesday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB109",
+                        type = "Lecture"
+                    ),
+                    // Thursday classes
+                    TimetableEntry(
+                        courseId = 110,
+                        dayOfWeek = 4, // Thursday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB110",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 111,
+                        dayOfWeek = 4, // Thursday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB111",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 112,
+                        dayOfWeek = 4, // Thursday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB112",
+                        type = "Lecture"
+                    ),
+                    // Friday classes
+                    TimetableEntry(
+                        courseId = 113,
+                        dayOfWeek = 5, // Friday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB113",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 114,
+                        dayOfWeek = 5, // Friday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB114",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 115,
+                        dayOfWeek = 5, // Friday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB115",
+                        type = "Lecture"
+                    ),
+                    // Extra class on Monday afternoon
+                    TimetableEntry(
+                        courseId = 116,
+                        dayOfWeek = 1, // Monday
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 18)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB116",
+                        type = "Lecture"
+                    )
+                )
+
+                // Engineering Course Timetable (similar pattern but different times)
+                val engEntries = csEntries.map { entry ->
+                    TimetableEntry(
+                        courseId = entry.courseId + 100, // Add 100 to get engineering course IDs
+                        dayOfWeek = entry.dayOfWeek,
+                        startTime = entry.startTime,
+                        endTime = entry.endTime,
+                        room = "WB${entry.courseId + 100}",
+                        type = "Lecture"
+                    )
+                }
+
+                // Business Course Timetable (similar pattern but different times)
+                val busEntries = csEntries.map { entry ->
+                    TimetableEntry(
+                        courseId = entry.courseId + 200, // Add 200 to get business course IDs
+                        dayOfWeek = entry.dayOfWeek,
+                        startTime = entry.startTime,
+                        endTime = entry.endTime,
+                        room = "WB${entry.courseId + 200}",
+                        type = "Lecture"
+                    )
+                }
+
+                // Insert all timetable entries
+                (csEntries + engEntries + busEntries).forEach {
+                    timetableEntryRepository.insertTimetableEntry(it)
                 }
 
                 loginResult = "Test data inserted successfully"

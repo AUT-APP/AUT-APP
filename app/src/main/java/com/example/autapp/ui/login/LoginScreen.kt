@@ -29,6 +29,8 @@ fun LoginScreen(
     viewModel: LoginViewModel,
     modifier: Modifier = Modifier,
     onLoginSuccess: (Int) -> Unit = {},
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit,
 ) {
     val TAG = "LoginScreen"
     Log.d(TAG, "LoginScreen composed")
