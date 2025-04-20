@@ -12,6 +12,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.activity.viewModels
+import androidx.compose.runtime.*
+import androidx.navigation.navArgument
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.NavType
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,8 +45,54 @@ import com.example.autapp.ui.settings.SettingsScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.example.autapp.ui.calendar.CalendarViewModel
+import com.example.autapp.ui.calendar.CalendarScreen
+
 
 class MainActivity : ComponentActivity() {
+    private val loginViewModel: LoginViewModel by viewModels {
+        LoginViewModelFactory(
+            userRepository = UserRepository(AUTDatabase.getDatabase(this).userDao()),
+            studentRepository = StudentRepository(
+                studentDao = AUTDatabase.getDatabase(this).studentDao(),
+                userDao = AUTDatabase.getDatabase(this).userDao()
+            ),
+            courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
+            assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao()),
+            gradeRepository = GradeRepository(
+                AUTDatabase.getDatabase(this).gradeDao(),
+                AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
+            ),
+            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao())
+        )
+    }
+
+    private val dashboardViewModel: DashboardViewModel by viewModels {
+        DashboardViewModelFactory(
+            studentRepository = StudentRepository(
+                studentDao = AUTDatabase.getDatabase(this).studentDao(),
+                userDao = AUTDatabase.getDatabase(this).userDao()
+            ),
+            courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
+            gradeRepository = GradeRepository(
+                AUTDatabase.getDatabase(this).gradeDao(),
+                AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
+            ),
+            assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
+        )
+    }
+
+    private val calendarViewModel: CalendarViewModel by viewModels {
+        CalendarViewModelFactory(
+            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
+            studentRepository = StudentRepository(
+                studentDao = AUTDatabase.getDatabase(this).studentDao(),
+                userDao = AUTDatabase.getDatabase(this).userDao()
+            ),
+            eventRepository = EventRepository(AUTDatabase.getDatabase(this).eventDao())
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
@@ -61,6 +112,7 @@ class MainActivity : ComponentActivity() {
         val assignmentRepository = AssignmentRepository(db.assignmentDao())
         val gradeRepository = GradeRepository(db.gradeDao(), assignmentRepository)
         val timetableEntryRepository = TimetableEntryRepository(db.timetableEntryDao())
+        val eventRepository = EventRepository(db.eventDao())
         Log.d("MainActivity", "Repositories initialized")
 
         // Initialize ViewModels
@@ -101,6 +153,7 @@ class MainActivity : ComponentActivity() {
                 AppContent(
                     loginViewModel = loginViewModel,
                     dashboardViewModel = dashboardViewModel,
+                    calendarViewModel = calendarViewModel,
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = {
                         val newTheme = !isDarkTheme
@@ -119,6 +172,7 @@ class MainActivity : ComponentActivity() {
     fun AppContent(
         loginViewModel: LoginViewModel,
         dashboardViewModel: DashboardViewModel,
+        calendarViewModel: CalendarViewModel,
         isDarkTheme: Boolean,
         onToggleTheme: () -> Unit
     ) {
@@ -160,7 +214,7 @@ class MainActivity : ComponentActivity() {
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_chatbot),
+                            painter = painterResource(id = R.drawable.chatbot_assistant_icon),
                             contentDescription = "AI Chat",
                             tint = actionIconColor,
                             modifier = Modifier
@@ -204,35 +258,45 @@ class MainActivity : ComponentActivity() {
 
         // Define the Bottom NavigationBar composable
         @Composable
-        fun AUTBottomBar(isDarkTheme: Boolean) {
+        fun AUTBottomBar(isDarkTheme: Boolean, navController: NavController) {
             val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
             val iconTint = if (isDarkTheme) Color.White else Color.Black
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            val currentStudentId = navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
 
             NavigationBar(
                 containerColor = backgroundColor,
                 contentColor = iconTint
             ) {
                 NavigationBarItem(
-                    icon = {
-                        Icon(
-                            Icons.Outlined.Home,
-                            contentDescription = "Home",
-                            tint = iconTint
-                        )
-                    },
-                    selected = true,
-                    onClick = { }
+                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = iconTint) },
+                    selected = currentRoute?.startsWith("dashboard") == true,
+                    onClick = {
+                        if (currentStudentId != null && currentRoute?.startsWith("dashboard") != true) {
+                            navController.navigate("dashboard/$currentStudentId") {
+                                popUpTo("dashboard/$currentStudentId") { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
                 )
                 NavigationBarItem(
-                    icon = {
-                        Icon(
-                            Icons.Outlined.DateRange,
-                            contentDescription = "Calendar",
-                            tint = iconTint
-                        )
-                    },
-                    selected = false,
-                    onClick = { }
+                    icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar", tint = iconTint) },
+                    selected = currentRoute?.startsWith("calendar") == true,
+                    onClick = {
+                        Log.d("MainActivity", "Calendar icon clicked")
+                        if (currentStudentId != null && currentRoute?.startsWith("calendar") != true) {
+                            Log.d("MainActivity", "Navigating to calendar with student ID: $currentStudentId")
+                            calendarViewModel.initialize(currentStudentId)
+                            navController.navigate("calendar/$currentStudentId") {
+                                popUpTo("dashboard/$currentStudentId") { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        } else {
+                            Log.e("MainActivity", "Cannot navigate: currentStudentId is null")
+                        }
+                    }
                 )
                 NavigationBarItem(
                     icon = {
@@ -275,6 +339,7 @@ class MainActivity : ComponentActivity() {
                 LoginScreen(
                     viewModel = loginViewModel,
                     onLoginSuccess = { studentId ->
+                        Log.d("MainActivity", "Login successful with student ID: $studentId")
                         dashboardViewModel.initialize(studentId)
                         navController.navigate("dashboard/$studentId") {
                             popUpTo("login") { inclusive = true }
@@ -284,24 +349,63 @@ class MainActivity : ComponentActivity() {
                     onToggleTheme = onToggleTheme
                 )
             }
-            composable("dashboard/{studentId}") { backStackEntry ->
+            composable(
+                route = "dashboard/{studentId}",
+                arguments = listOf(
+                    navArgument("studentId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
                 val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+                Log.d("MainActivity", "Entering dashboard with student ID: $studentId")
                 Scaffold(
                     topBar = {
                         AUTTopAppBar(
+                            title = "Dashboard",
                             isDarkTheme = isDarkTheme,
                             navController = navController,
-                            title = "Dashboard",
                             showBackButton = false
                         )
                     },
-                    bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme) },
-                    modifier = Modifier.fillMaxSize()
-                ) { paddingValues ->
+                    bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                ) { innerPadding ->
                     StudentDashboard(
                         viewModel = dashboardViewModel,
-                        paddingValues = paddingValues,
+                        paddingValues = innerPadding,
                         isDarkTheme = isDarkTheme
+                    )
+                }
+            }
+            composable(
+                route = "calendar/{studentId}",
+                arguments = listOf(
+                    navArgument("studentId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+                Log.d("MainActivity", "Entering calendar with student ID: $studentId")
+                Scaffold(
+                    topBar = {
+                        AUTTopAppBar(
+                            title = "Calendar",
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            showBackButton = true
+                        )
+                    },
+                    bottomBar = {
+                        AUTBottomBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController
+                        )
+                    }
+                ) { paddingValues ->
+                    CalendarScreen(
+                        viewModel = calendarViewModel.apply {
+                            if (this.studentId != studentId) {
+                                initialize(studentId)
+                            }
+                        },
+                        paddingValues = paddingValues
                     )
                 }
             }
@@ -357,6 +461,24 @@ class MainActivity : ComponentActivity() {
                     courseRepository,
                     gradeRepository,
                     assignmentRepository
+                ) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
+        }
+    }
+
+    class CalendarViewModelFactory(
+        private val timetableEntryRepository: TimetableEntryRepository,
+        private val studentRepository: StudentRepository,
+        private val eventRepository: EventRepository
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(CalendarViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return CalendarViewModel(
+                    timetableEntryRepository,
+                    studentRepository,
+                    eventRepository
                 ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")

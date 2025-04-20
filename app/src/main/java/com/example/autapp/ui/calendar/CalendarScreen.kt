@@ -37,6 +37,7 @@ import java.time.ZoneId
 @Composable
 fun CalendarScreen(
     viewModel: CalendarViewModel,
+    paddingValues: PaddingValues,
     modifier: Modifier = Modifier
 ) {
     var showCalendarView by remember { mutableStateOf(viewModel.isCalendarView) }
@@ -45,7 +46,9 @@ fun CalendarScreen(
     var selectedEvent by remember { mutableStateOf<Event?>(null) }
 
     Column(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            .padding(paddingValues)
     ) {
         Row(
             modifier = Modifier
