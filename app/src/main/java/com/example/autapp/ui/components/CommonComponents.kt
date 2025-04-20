@@ -75,7 +75,7 @@ fun AUTTopAppBar(
                 Spacer(modifier = Modifier.weight(1f))
                 // Right-side icons
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_chatbot),
+                    painter = painterResource(id = R.drawable.chatbot_assistant_icon),
                     contentDescription = "AI Chat",
                     tint = Color.White,
                     modifier = Modifier

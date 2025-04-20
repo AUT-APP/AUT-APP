@@ -18,9 +18,11 @@ import com.example.autapp.data.models.*
         Course::class,
         StudentCourseCrossRef::class,
         Grade::class,
-        Assignment::class
+        Assignment::class,
+        TimetableEntry::class,
+        Event::class
     ],
-    version = 17, // Bumped to 15
+    version = 19,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -31,6 +33,8 @@ abstract class AUTDatabase : RoomDatabase() {
     abstract fun courseDao(): CourseDao
     abstract fun gradeDao(): GradeDao
     abstract fun assignmentDao(): AssignmentDao
+    abstract fun timetableEntryDao(): TimetableEntryDao
+    abstract fun eventDao(): EventDao
 
     companion object {
         @Volatile
@@ -42,7 +46,7 @@ abstract class AUTDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AUTDatabase::class.java,
-                    "AUT_database_v17" // Changed name to force new file
+                    "AUT_database_v18" // Changed name to force new file
                 )
                     .fallbackToDestructiveMigration()
                     .addCallback(object : RoomDatabase.Callback() {
