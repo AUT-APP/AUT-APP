@@ -13,19 +13,13 @@ class StudentRepository(
 ) {
 
     suspend fun insertStudent(student: Student) {
-        // First insert the user record
-        val user = User(
-            firstName = student.firstName,
-            lastName = student.lastName,
-            id = student.id,
-            role = student.role,
-            username = student.username,
-            password = student.password
-        )
-        userDao.insertUser(user)
-        
-        // Then insert the student record
-        studentDao.insertStudent(student)
+        try {
+            // Only insert the student record since User is already inserted
+            studentDao.insertStudent(student)
+        } catch (e: Exception) {
+            println("Error inserting student: ${e.message}")
+            throw e
+        }
     }
 
     suspend fun getStudentByUsername(username: String): Student? {

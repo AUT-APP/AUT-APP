@@ -1,9 +1,22 @@
 package com.example.autapp.data.models
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "student_table")
+@Entity(
+    tableName = "student_table",
+    foreignKeys = [
+        ForeignKey(
+            entity = User::class,
+            parentColumns = ["id"],
+            childColumns = ["id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index("id")]
+)
 class Student(
     firstName: String,
     lastName: String,

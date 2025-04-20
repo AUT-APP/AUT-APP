@@ -65,63 +65,35 @@ class LoginViewModel(
     fun insertTestData() {
         viewModelScope.launch {
             try {
-                // Clear existing data
-                try {
-                    gradeRepository.deleteAll()
-                    println("Grades deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete grades: ${e.message}")
-                }
-                try {
-                    assignmentRepository.deleteAll()
-                    println("Assignments deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete assignments: ${e.message}")
-                }
-                try {
-                    studentRepository.deleteAllCrossRefs()
-                    println("Cross-references deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete cross-references: ${e.message}")
-                }
-                try {
-                    courseRepository.deleteAll()
-                    println("Courses deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete courses: ${e.message}")
-                    throw e
-                }
-                try {
-                    studentRepository.deleteAll()
-                    println("Students deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete students: ${e.message}")
-                }
-                try {
-                    userRepository.deleteAll()
-                    println("Users deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete users: ${e.message}")
-                }
+                // Clear existing data in the correct order (most dependent first)
+                gradeRepository.deleteAll()
+                assignmentRepository.deleteAll()
+                studentRepository.deleteAllCrossRefs()
+                timetableEntryRepository.deleteAll()
+                courseRepository.deleteAll()
+                studentRepository.deleteAll()
+                userRepository.deleteAll()
 
-                // Insert User
+                // First create and insert the base User
                 val testUser = User(
                     firstName = "Test",
                     lastName = "Student",
+                    id = 1,
                     role = "Student",
                     username = "teststudent",
                     password = "password123"
                 )
                 userRepository.insertUser(testUser)
 
-                // Insert Student
+                // Then create and insert the Student with the same ID
                 val testStudent = Student(
                     firstName = "Test",
                     lastName = "Student",
+                    id = 1,
                     username = "teststudent",
                     password = "password123",
                     studentId = 1001,
-                    enrollmentDate = "2023-01-01",
+                    enrollmentDate = "2024-01-01",
                     major = "Computer Science",
                     yearOfStudy = 2,
                     gpa = 0.0
@@ -488,39 +460,16 @@ class LoginViewModel(
                     )
                 )
 
-                // Engineering Course Timetable (similar pattern but different times)
-                val engEntries = csEntries.map { entry ->
-                    TimetableEntry(
-                        courseId = entry.courseId + 100, // Add 100 to get engineering course IDs
-                        dayOfWeek = entry.dayOfWeek,
-                        startTime = entry.startTime,
-                        endTime = entry.endTime,
-                        room = "WB${entry.courseId + 100}",
-                        type = "Lecture"
-                    )
-                }
-
-                // Business Course Timetable (similar pattern but different times)
-                val busEntries = csEntries.map { entry ->
-                    TimetableEntry(
-                        courseId = entry.courseId + 200, // Add 200 to get business course IDs
-                        dayOfWeek = entry.dayOfWeek,
-                        startTime = entry.startTime,
-                        endTime = entry.endTime,
-                        room = "WB${entry.courseId + 200}",
-                        type = "Lecture"
-                    )
-                }
-
                 // Insert all timetable entries
-                (csEntries + engEntries + busEntries).forEach {
+                (csEntries).forEach {
                     timetableEntryRepository.insertTimetableEntry(it)
                 }
 
+                // Add assignments and grades for GPA calculation
                 loginResult = "Test data inserted successfully"
             } catch (e: Exception) {
                 loginResult = "Test data insertion failed: ${e.message}"
-                println("Insert test data error: ${e.stackTraceToString()}")
+                e.printStackTrace() // This will log the full stack trace but won't crash the app
             }
         }
     }

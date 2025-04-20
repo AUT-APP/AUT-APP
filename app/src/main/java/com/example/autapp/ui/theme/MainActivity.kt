@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.activity.viewModels
 import androidx.compose.runtime.*
@@ -47,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.example.autapp.ui.calendar.CalendarViewModel
 import com.example.autapp.ui.calendar.CalendarScreen
+import com.example.autapp.ui.calendar.ManageEventsScreen
 
 
 class MainActivity : ComponentActivity() {
@@ -185,7 +188,8 @@ class MainActivity : ComponentActivity() {
             isDarkTheme: Boolean,
             navController: NavController,
             title: String,
-            showBackButton: Boolean
+            showBackButton: Boolean,
+            actions: @Composable RowScope.() -> Unit = {}
         ) {
             val containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFF2F7A78)
             val titleTextColor = if (isDarkTheme) Color.White else Color.White
@@ -203,6 +207,15 @@ class MainActivity : ComponentActivity() {
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
                     ) {
+                        if (showBackButton) {
+                            IconButton(onClick = { navController.navigateUp() }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = actionIconColor
+                                )
+                            }
+                        }
                         Text(
                             text = "AUT",
                             fontWeight = FontWeight.Bold,
@@ -246,6 +259,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 },
+                actions = actions,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = containerColor,
                     titleContentColor = titleTextColor,
@@ -286,15 +300,13 @@ class MainActivity : ComponentActivity() {
                     selected = currentRoute?.startsWith("calendar") == true,
                     onClick = {
                         Log.d("MainActivity", "Calendar icon clicked")
-                        if (currentStudentId != null && currentRoute?.startsWith("calendar") != true) {
-                            Log.d("MainActivity", "Navigating to calendar with student ID: $currentStudentId")
-                            calendarViewModel.initialize(currentStudentId)
-                            navController.navigate("calendar/$currentStudentId") {
-                                popUpTo("dashboard/$currentStudentId") { inclusive = false }
+                        currentStudentId?.let { studentId ->
+                            Log.d("MainActivity", "Navigating to calendar with student ID: $studentId")
+                            calendarViewModel.initialize(studentId)
+                            navController.navigate("calendar/$studentId") {
+                                popUpTo("dashboard/$studentId") { inclusive = false }
                                 launchSingleTop = true
                             }
-                        } else {
-                            Log.e("MainActivity", "Cannot navigate: currentStudentId is null")
                         }
                     }
                 )
@@ -364,7 +376,9 @@ class MainActivity : ComponentActivity() {
                             isDarkTheme = isDarkTheme,
                             navController = navController,
                             showBackButton = false
-                        )
+                        ) {
+                            // Placeholder for actions
+                        }
                     },
                     bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
                 ) { innerPadding ->
@@ -383,6 +397,11 @@ class MainActivity : ComponentActivity() {
             ) { backStackEntry ->
                 val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
                 Log.d("MainActivity", "Entering calendar with student ID: $studentId")
+                
+                LaunchedEffect(studentId) {
+                    calendarViewModel.initialize(studentId)
+                }
+                
                 Scaffold(
                     topBar = {
                         AUTTopAppBar(
@@ -398,14 +417,43 @@ class MainActivity : ComponentActivity() {
                             navController = navController
                         )
                     }
-                ) { paddingValues ->
+                ) { innerPadding ->
                     CalendarScreen(
-                        viewModel = calendarViewModel.apply {
-                            if (this.studentId != studentId) {
-                                initialize(studentId)
-                            }
-                        },
-                        paddingValues = paddingValues
+                        viewModel = calendarViewModel,
+                        paddingValues = innerPadding,
+                        onNavigateToManageEvents = {
+                            navController.navigate("manage_events/$studentId")
+                        }
+                    )
+                }
+            }
+            composable(
+                route = "manage_events/{studentId}",
+                arguments = listOf(
+                    navArgument("studentId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+                
+                LaunchedEffect(studentId) {
+                    if (calendarViewModel.studentId != studentId) {
+                        calendarViewModel.initialize(studentId)
+                    }
+                }
+                
+                Scaffold(
+                    topBar = {
+                        AUTTopAppBar(
+                            title = "Manage Events",
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            showBackButton = true
+                        )
+                    }
+                ) { innerPadding ->
+                    ManageEventsScreen(
+                        viewModel = calendarViewModel,
+                        paddingValues = innerPadding
                     )
                 }
             }

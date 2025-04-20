@@ -22,7 +22,7 @@ import com.example.autapp.data.models.*
         TimetableEntry::class,
         Event::class
     ],
-    version = 19,
+    version = 20,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -46,14 +46,20 @@ abstract class AUTDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AUTDatabase::class.java,
-                    "AUT_database_v18" // Changed name to force new file
+                    "AUT_database_v20" // Updated database version
                 )
                     .fallbackToDestructiveMigration()
+                    .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
                     .addCallback(object : RoomDatabase.Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
-                            Log.d("AUTDatabase", "Database created") }
+                            Log.d("AUTDatabase", "Database created")
+                            // Enable foreign key constraints
+                            db.execSQL("PRAGMA foreign_keys = ON;")
+                        }
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             Log.d("AUTDatabase", "Database opened")
+                            // Enable foreign key constraints
+                            db.execSQL("PRAGMA foreign_keys = ON;")
                             // Log current tables for debugging
                             val tables = db.query("SELECT name FROM sqlite_master WHERE type='table'")
                             tables.use {
