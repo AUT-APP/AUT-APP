@@ -1,9 +1,14 @@
 package com.example.autapp.ui.theme
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -34,7 +39,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import com.example.autapp.ui.DashboardViewModel
+import com.example.autapp.util.NotificationHelper
+import androidx.navigation.compose.composable
+import com.example.autapp.data.models.Notification
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,16 +64,21 @@ class MainActivity : ComponentActivity() {
         val courseRepository = CourseRepository(db.courseDao())
         val assignmentRepository = AssignmentRepository(db.assignmentDao())
         val gradeRepository = GradeRepository(db.gradeDao(), assignmentRepository)
+        val notificationRepository = NotificationRepository(db.notificationDao())
         Log.d("MainActivity", "Repositories initialized")
+
+        // Initialize Notification channels TODO: Move to an application class for efficiency
+        NotificationHelper.createNotificationChannels(applicationContext)
+        Log.d("MainActivity", "Notification channels initialized")
 
         // Initialize ViewModels
         val loginViewModelFactory = LoginViewModelFactory(
-            userRepository, studentRepository, courseRepository, assignmentRepository, gradeRepository
+            userRepository, studentRepository, courseRepository, assignmentRepository, gradeRepository, notificationRepository
         )
         val loginViewModel = ViewModelProvider(this, loginViewModelFactory)[LoginViewModel::class.java]
 
         val dashboardViewModelFactory = DashboardViewModelFactory(
-            studentRepository, courseRepository, gradeRepository, assignmentRepository
+            studentRepository, courseRepository, gradeRepository, assignmentRepository, notificationRepository
         )
         val dashboardViewModel = ViewModelProvider(this, dashboardViewModelFactory)[DashboardViewModel::class.java]
 
@@ -94,6 +111,8 @@ fun AppContent(
 ) {
     val navController = rememberNavController()
 
+
+
     // Define the TopAppBar composable
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -110,6 +129,27 @@ fun AppContent(
         val autLabelTextColor = if (isDarkTheme) Color.Black else Color.White
         val profileBackground = if (isDarkTheme) Color.DarkGray else Color.White
         val profileIconColor = if (isDarkTheme) Color.White else Color.Black
+        val context = LocalContext.current
+
+        // State to track notification permission
+        var hasNotificationsPermission by remember {
+            mutableStateOf(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                } else {
+                    true // Permission is automatically granted on versions below Android 13
+                }
+            )
+        }
+
+        // Activity result launcher for permission request
+        val permissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { isGranted -> hasNotificationsPermission = isGranted }
+        )
 
         TopAppBar(
             title = {
@@ -141,9 +181,51 @@ fun AppContent(
                     Icon(
                         imageVector = Icons.Outlined.Notifications,
                         contentDescription = "Notifications",
-                        tint = actionIconColor,
-                        modifier = Modifier.size(24.dp)
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                                // Create a test notification
+                                val testNotification = Notification(
+                                    iconResId = R.drawable.ic_notification, // Replace with your notification icon
+                                    title = "Test Notification",
+                                    text = "This is a test notification!",
+                                    channelId = NotificationHelper.DEFAULT_CHANNEL_ID,
+                                    priority = NotificationCompat.PRIORITY_DEFAULT,
+                                    deepLinkUri = "myapp://dashboard"
+                                )
+                                // Push the notification
+                                NotificationHelper.pushNotification(
+                                    context = navController?.context ?: return@clickable,
+                                    notification = testNotification
+                                )
+                            }
                     )
+//                    Icon(
+//                        imageVector = Icons.Outlined.Notifications,
+//                        contentDescription = "Notifications",
+//                        tint = Color.White,
+//                        modifier = Modifier
+//                            .size(24.dp)
+//                            .clickable {
+//                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+//                                }
+//                                // Trigger notification when clicked
+//                                val testNotification = Notification(
+//                                    iconResId = R.drawable.ic_notification,
+//                                    title = "Test Notification",
+//                                    text = "This is a test notification.",
+//                                    priority = NotificationCompat.PRIORITY_HIGH,
+//                                    deepLinkUri = "myapp://dashboard",
+//                                    channelId = NotificationHelper.DEFAULT_CHANNEL_ID
+//                                )
+//                                NotificationHelper.pushNotification(context, testNotification)
+//                            }
+//                    )
                     Spacer(modifier = Modifier.width(16.dp))
                     Box(
                         modifier = Modifier
@@ -262,6 +344,11 @@ fun AppContent(
                 navController = navController
             )
         }
+        composable("notifications") {
+            ChatScreen(
+                navController = navController
+            )
+        }
     }
 }
 
@@ -270,12 +357,13 @@ class LoginViewModelFactory(
     private val studentRepository: StudentRepository,
     private val courseRepository: CourseRepository,
     private val assignmentRepository: AssignmentRepository,
-    private val gradeRepository: GradeRepository
+    private val gradeRepository: GradeRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return LoginViewModel(userRepository, studentRepository, courseRepository, assignmentRepository, gradeRepository) as T
+            return LoginViewModel(userRepository, studentRepository, courseRepository, assignmentRepository, gradeRepository, notificationRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
@@ -285,7 +373,8 @@ class DashboardViewModelFactory(
     private val studentRepository: StudentRepository,
     private val courseRepository: CourseRepository,
     private val gradeRepository: GradeRepository,
-    private val assignmentRepository: AssignmentRepository
+    private val assignmentRepository: AssignmentRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {

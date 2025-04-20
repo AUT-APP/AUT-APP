@@ -12,7 +12,7 @@ class Notification(
     var title: String,
     var text: String,
     var priority: Int = NotificationCompat.PRIORITY_DEFAULT,
-    var deepLinkUri: String,
+    var deepLinkUri: String? = null,
     var channelId: String,
     ) {
 }

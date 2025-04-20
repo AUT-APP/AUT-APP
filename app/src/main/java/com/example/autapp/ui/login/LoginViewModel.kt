@@ -3,8 +3,10 @@ package com.example.autapp.ui.theme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.app.NotificationCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.autapp.R
 import com.example.autapp.data.models.*
 import com.example.autapp.data.repository.*
 import kotlinx.coroutines.launch
@@ -15,7 +17,8 @@ class LoginViewModel(
     private val studentRepository: StudentRepository,
     private val courseRepository: CourseRepository,
     private val assignmentRepository: AssignmentRepository,
-    private val gradeRepository: GradeRepository
+    private val gradeRepository: GradeRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     var username by mutableStateOf("")
@@ -101,6 +104,12 @@ class LoginViewModel(
                     println("Users deleted")
                 } catch (e: Exception) {
                     println("Failed to delete users: ${e.message}")
+                }
+                try {
+                    notificationRepository.deleteAll()
+                    println("Notifications deleted")
+                } catch (e: Exception) {
+                    println("Failed to delete notifications: ${e.message}")
                 }
 
                 // Insert User
@@ -252,6 +261,19 @@ class LoginViewModel(
                         gradeRepository.insertGrade(grade)
                     }
                 }
+
+                // Test notification
+                val testNotification = Notification(
+                    iconResId = R.drawable.ic_notification,
+                    title = "Test Notification",
+                    text = "This is a test notification.",
+                    priority = NotificationCompat.PRIORITY_HIGH,
+                    deepLinkUri = "myapp://dashboard",
+                    channelId = "test_channel"
+                )
+
+                notificationRepository.insertNotification(testNotification)
+
 
                 loginResult = "Test data inserted successfully"
             } catch (e: Exception) {

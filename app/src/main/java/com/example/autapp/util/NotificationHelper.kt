@@ -14,14 +14,29 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.autapp.R
 import com.example.autapp.data.models.Notification
-import com.example.autapp.ui.DashboardViewModel // Example activity to open
 
 object NotificationHelper {
 
-    // Channel constants (define these preferably in a constants file or companion object)
+    // Channel constants
     const val DEFAULT_CHANNEL_ID = "default_channel"
     const val DEFAULT_CHANNEL_NAME = "Default Notifications"
     const val DEFAULT_CHANNEL_DESC = "General app notifications"
+
+    const val HIGH_PRIORITY_CHANNEL_ID = "high_priority_channel"
+    const val HIGH_PRIORITY_CHANNEL_NAME = "High Priority Notifications"
+    const val HIGH_PRIORITY_CHANNEL_DESC = "Urgent app notifications"
+
+    /*
+    fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permissionState = rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
+
+            LaunchedEffect(Unit) {
+                permissionState.launchPermissionRequest()
+            }
+        }
+    }
+    */
 
     /**
      * Creates notification channels. Call this early, e.g., in Application.onCreate().
@@ -36,17 +51,22 @@ object NotificationHelper {
                 NotificationManager.IMPORTANCE_DEFAULT // Adjust importance as needed
             ).apply {
                 description = DEFAULT_CHANNEL_DESC
-                // Configure other channel settings here (sound, vibration, etc.)
             }
 
-            // Add more channels if needed (e.g., for different priorities/types)
-            // val highPriorityChannel = ...
+            // High Priority Channel
+            val highPriorityChannel = NotificationChannel(
+                HIGH_PRIORITY_CHANNEL_ID,
+                HIGH_PRIORITY_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = HIGH_PRIORITY_CHANNEL_DESC
+            }
 
             val notificationManager: NotificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
             notificationManager.createNotificationChannel(defaultChannel)
-            // notificationManager.createNotificationChannel(highPriorityChannel)
+            notificationManager.createNotificationChannel(highPriorityChannel)
         }
     }
 
@@ -57,27 +77,22 @@ object NotificationHelper {
     fun pushNotification(context: Context, notification: Notification) {
         val notificationManager = NotificationManagerCompat.from(context)
 
-        // --- Permission Check ---
-        // This check should ideally happen *before* calling pushNotification,
-        // in the Activity/Fragment that triggers it.
+        // Permission Check
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ActivityCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // Log an error or handle the missing permission appropriately.
-            // DO NOT try to request permission from here directly.
-            // It's better to inform the user or prevent the action earlier.
+            // Log an error or handle missing permission
             println("Error: POST_NOTIFICATIONS permission missing.")
             return
         }
 
-        // --- Create PendingIntent for touch action ---
+        // Create PendingIntent for touch action
         val pendingIntent: PendingIntent? = notification.deepLinkUri?.let { uriString ->
             try {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriString)).apply {
-                    //setPackage(com.example.autapp.ui.DashboardViewModel)
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }
 
@@ -92,11 +107,10 @@ object NotificationHelper {
                 println("Error creating PendingIntent from URI: ${e.message}")
                 null // Fallback to no intent or a default intent
             }
-        } // If deepLinkUri is null, pendingIntent will be null.
+        }
 
         // Build the notification
         val builder = NotificationCompat.Builder(context, notification.channelId)
-            // Use icon resource ID from stored data
             .setSmallIcon(notification.iconResId)
             .setContentTitle(notification.title)
             .setContentText(notification.text)
@@ -108,7 +122,7 @@ object NotificationHelper {
             builder.setContentIntent(it)
         }
 
-        // This allows updating/cancelling this specific notification later.
+        // This allows updating/cancelling this specific notification later
         notificationManager.notify(notification.notificationId, builder.build())
     }
 

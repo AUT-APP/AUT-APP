@@ -18,9 +18,10 @@ import com.example.autapp.data.models.*
         Course::class,
         StudentCourseCrossRef::class,
         Grade::class,
-        Assignment::class
+        Assignment::class,
+        Notification::class
     ],
-    version = 17, // Bumped to 15
+    version = 18, // Bumped to 15
     exportSchema = false
 )
 @TypeConverters(Converters::class)
