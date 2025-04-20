@@ -23,27 +23,44 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.autapp.data.dao.TimetableEntryDao
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.YearMonth
-import java.time.format.TextStyle
+import org.threeten.bp.DayOfWeek
+import org.threeten.bp.LocalDate
+import org.threeten.bp.YearMonth
+import org.threeten.bp.ZoneId
+import org.threeten.bp.format.TextStyle
 import java.util.*
 import java.text.SimpleDateFormat
-import java.time.format.DateTimeFormatter
+import org.threeten.bp.format.DateTimeFormatter
 import com.example.autapp.data.models.Event
-import java.time.ZoneId
+import java.util.Calendar
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 
 @Composable
 fun CalendarScreen(
     viewModel: CalendarViewModel,
     paddingValues: PaddingValues,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateToManageEvents: () -> Unit
 ) {
-    var showCalendarView by remember { mutableStateOf(viewModel.isCalendarView) }
+    val uiState by viewModel.uiState.collectAsState()
+    val navigateToManageEvents by viewModel.navigateToManageEvents.collectAsState()
+    var showCalendarView by remember { mutableStateOf(uiState.isCalendarView) }
     var showAddEventDialog by remember { mutableStateOf(false) }
     var showAddTodoDialog by remember { mutableStateOf(false) }
     var selectedEvent by remember { mutableStateOf<Event?>(null) }
+
+    LaunchedEffect(navigateToManageEvents) {
+        if (navigateToManageEvents) {
+            onNavigateToManageEvents()
+            viewModel.onManageEventsNavigated()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -75,34 +92,43 @@ fun CalendarScreen(
                         contentDescription = "Add Todo"
                     )
                 }
-            IconButton(onClick = {
-                showCalendarView = !showCalendarView
-                viewModel.toggleView()
-            }) {
-                Icon(
-                    imageVector = if (showCalendarView)
-                        Icons.AutoMirrored.Filled.ViewList else Icons.Default.CalendarMonth,
-                    contentDescription = if (showCalendarView) 
-                        "Switch to List View" else "Switch to Calendar View"
-                )
+                IconButton(onClick = { 
+                    // Navigate to manage events screen
+                    viewModel.navigateToManageEvents()
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Manage Events"
+                    )
+                }
+                IconButton(onClick = {
+                    showCalendarView = !showCalendarView
+                    viewModel.toggleView()
+                }) {
+                    Icon(
+                        imageVector = if (showCalendarView)
+                            Icons.AutoMirrored.Filled.ViewList else Icons.Default.CalendarMonth,
+                        contentDescription = if (showCalendarView) 
+                            "Switch to List View" else "Switch to Calendar View"
+                    )
                 }
             }
         }
 
-        if (viewModel.isLoading) {
+        if (uiState.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }
-        } else if (viewModel.errorMessage != null) {
+        } else if (uiState.errorMessage != null) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = viewModel.errorMessage ?: "Unknown error",
+                    text = uiState.errorMessage ?: "Unknown error",
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyLarge
                 )
@@ -110,34 +136,24 @@ fun CalendarScreen(
         } else {
             if (showCalendarView) {
                 CalendarView(
-                    viewModel = viewModel,
+                    uiState = uiState,
+                    onDateSelected = viewModel::updateSelectedDate,
                     onEventClick = { selectedEvent = it }
                 )
             } else {
                 TimetableView(
-                    viewModel = viewModel,
+                    uiState = uiState,
                     onEventClick = { selectedEvent = it }
                 )
             }
         }
     }
 
-    if (showAddEventDialog) {
-        EventDialog(
-            event = null,
-            isToDoList = false,
-            onDismiss = { showAddEventDialog = false },
-            onSave = { event ->
-                viewModel.addEvent(event)
-                showAddEventDialog = false
-            }
-        )
-    }
-
     if (showAddTodoDialog) {
         EventDialog(
             event = null,
             isToDoList = true,
+            selectedDate = uiState.selectedDate,
             onDismiss = { showAddTodoDialog = false },
             onSave = { event ->
                 viewModel.addEvent(event)
@@ -150,6 +166,7 @@ fun CalendarScreen(
         EventDialog(
             event = event,
             isToDoList = event.isToDoList,
+            selectedDate = uiState.selectedDate,
             onDismiss = { selectedEvent = null },
             onSave = { updatedEvent ->
                 viewModel.updateEvent(updatedEvent)
@@ -161,15 +178,29 @@ fun CalendarScreen(
             }
         )
     }
+
+    if (showAddEventDialog) {
+        EventDialog(
+            event = null,
+            isToDoList = false,
+            selectedDate = uiState.selectedDate,
+            onDismiss = { showAddEventDialog = false },
+            onSave = { event ->
+                viewModel.addEvent(event)
+                showAddEventDialog = false
+            }
+        )
+    }
 }
 
 @Composable
 fun CalendarView(
-    viewModel: CalendarViewModel,
+    uiState: CalendarUiState,
+    onDateSelected: (LocalDate) -> Unit,
     onEventClick: (Event) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var currentYearMonth by remember { mutableStateOf(YearMonth.from(viewModel.selectedDate)) }
+    var currentYearMonth by remember { mutableStateOf(YearMonth.from(uiState.selectedDate)) }
     
     Column(
         modifier = modifier.fillMaxWidth()
@@ -241,21 +272,21 @@ fun CalendarView(
                             .clip(CircleShape)
                             .background(
                                 when {
-                                    date == viewModel.selectedDate -> MaterialTheme.colorScheme.primary
+                                    date == uiState.selectedDate -> MaterialTheme.colorScheme.primary
                                     date.month == currentYearMonth.month -> Color.Transparent
                                     else -> Color.Transparent
                                 }
                             )
                             .clickable(
                                 enabled = date.month == currentYearMonth.month,
-                                onClick = { viewModel.updateSelectedDate(date) }
+                                onClick = { onDateSelected(date) }
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = date.dayOfMonth.toString(),
                             color = when {
-                                date == viewModel.selectedDate -> MaterialTheme.colorScheme.onPrimary
+                                date == uiState.selectedDate -> MaterialTheme.colorScheme.onPrimary
                                 date.month == currentYearMonth.month -> MaterialTheme.colorScheme.onSurface
                                 else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                             }
@@ -270,23 +301,20 @@ fun CalendarView(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Selected date entries
-        val selectedDateEntries = viewModel.timetableEntries
+        val selectedDateEntries = uiState.timetableEntries
             .filter { entry ->
-                entry.entry.dayOfWeek == viewModel.selectedDate.dayOfWeek.value
+                entry.entry.dayOfWeek == uiState.selectedDate.dayOfWeek.value
             }
             .distinctBy { entry -> 
                 "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
             }
             .sortedBy { it.entry.startTime }
 
-        val selectedDateEvents = viewModel.events.filter { event ->
-            val eventDate = LocalDate.ofInstant(event.date.toInstant(), ZoneId.systemDefault())
-            eventDate == viewModel.selectedDate
-        }.sortedBy { it.startTime }
+        val selectedDateEvents = uiState.filteredEvents.sortedBy { it.startTime }
 
         if (selectedDateEntries.isNotEmpty() || selectedDateEvents.isNotEmpty()) {
             Text(
-                text = "Schedule for ${viewModel.selectedDate.format(DateTimeFormatter.ofPattern("EEEE, d MMMM"))}",
+                text = "Schedule for ${uiState.selectedDate.format(DateTimeFormatter.ofPattern("EEEE, d MMMM"))}",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
@@ -330,18 +358,34 @@ fun CalendarView(
 fun EventDialog(
     event: Event?,
     isToDoList: Boolean,
+    selectedDate: LocalDate,
     onDismiss: () -> Unit,
     onSave: (Event) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
     var title by remember { mutableStateOf(event?.title ?: "") }
-    var date by remember { mutableStateOf(event?.date ?: Date()) }
+    var date by remember { mutableStateOf(event?.date ?: selectedDate.toDate()) }
     var startTime by remember { mutableStateOf(event?.startTime) }
     var endTime by remember { mutableStateOf(event?.endTime) }
     var location by remember { mutableStateOf(event?.location ?: "") }
     var details by remember { mutableStateOf(event?.details ?: "") }
     var frequency by remember { mutableStateOf(event?.frequency ?: "Does not repeat") }
     var showFrequencyMenu by remember { mutableStateOf(false) }
+    
+    // State for date and time pickers
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showStartTimePicker by remember { mutableStateOf(false) }
+    var showEndTimePicker by remember { mutableStateOf(false) }
+    var showTimeError by remember { mutableStateOf(false) }
+
+    // Convert Date to Calendar for easier manipulation
+    val calendar = Calendar.getInstance().apply { time = date }
+    val startCalendar = Calendar.getInstance().apply { 
+        startTime?.let { time = it }
+    }
+    val endCalendar = Calendar.getInstance().apply {
+        endTime?.let { time = it }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -379,12 +423,11 @@ fun EventDialog(
                         label = { Text("Date") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 8.dp),
+                            .padding(bottom = 8.dp)
+                            .clickable { showDatePicker = true },
                         readOnly = true,
                         trailingIcon = {
-                            IconButton(onClick = {
-                                // Show date picker
-                            }) {
+                            IconButton(onClick = { showDatePicker = true }) {
                                 Icon(Icons.Default.DateRange, "Select date")
                             }
                         }
@@ -398,35 +441,47 @@ fun EventDialog(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         OutlinedTextField(
-                            value = startTime?.let { SimpleDateFormat("HH:mm", Locale.getDefault()).format(it) } ?: "",
+                            value = startTime?.let { 
+                                SimpleDateFormat("h:mm a", Locale.getDefault()).format(it) 
+                            } ?: "",
                             onValueChange = {},
                             label = { Text("Start time") },
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(end = 8.dp),
+                                .padding(end = 8.dp)
+                                .clickable { showStartTimePicker = true },
                             readOnly = true,
                             trailingIcon = {
-                                IconButton(onClick = {
-                                    // Show time picker
-                                }) {
+                                IconButton(onClick = { showStartTimePicker = true }) {
                                     Icon(Icons.Default.Schedule, "Select start time")
                                 }
                             }
                         )
 
                         OutlinedTextField(
-                            value = endTime?.let { SimpleDateFormat("HH:mm", Locale.getDefault()).format(it) } ?: "",
+                            value = endTime?.let { 
+                                SimpleDateFormat("h:mm a", Locale.getDefault()).format(it) 
+                            } ?: "",
                             onValueChange = {},
                             label = { Text("End time") },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { showEndTimePicker = true },
                             readOnly = true,
                             trailingIcon = {
-                                IconButton(onClick = {
-                                    // Show time picker
-                                }) {
+                                IconButton(onClick = { showEndTimePicker = true }) {
                                     Icon(Icons.Default.Schedule, "Select end time")
                                 }
                             }
+                        )
+                    }
+
+                    if (showTimeError) {
+                        Text(
+                            text = "End time must be after start time",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
 
@@ -504,13 +559,13 @@ fun EventDialog(
                                 eventId = event?.eventId ?: 0,
                                 title = title,
                                 date = date,
-                                startTime = startTime,
-                                endTime = endTime,
+                                startTime = if (isToDoList) null else startTime,
+                                endTime = if (isToDoList) null else endTime,
                                 location = location.takeIf { it.isNotBlank() },
                                 details = details.takeIf { it.isNotBlank() },
                                 isToDoList = isToDoList,
                                 frequency = frequency.takeIf { it != "Does not repeat" },
-                                studentId = event?.studentId ?: 0 // This should be set from the current user
+                                studentId = event?.studentId ?: 0
                             )
                             onSave(newEvent)
                         },
@@ -522,11 +577,151 @@ fun EventDialog(
             }
         }
     }
+
+    // Date Picker Dialog
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = date.time
+        )
+        
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let {
+                        val newDate = Calendar.getInstance().apply {
+                            timeInMillis = it
+                            // Preserve the original time
+                            set(Calendar.HOUR_OF_DAY, calendar.get(Calendar.HOUR_OF_DAY))
+                            set(Calendar.MINUTE, calendar.get(Calendar.MINUTE))
+                        }
+                        date = newDate.time
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    // Time Picker Dialogs
+    if (showStartTimePicker) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = startCalendar.get(Calendar.HOUR_OF_DAY),
+            initialMinute = startCalendar.get(Calendar.MINUTE)
+        )
+        
+        TimePickerDialog(
+            onDismissRequest = { showStartTimePicker = false },
+            onConfirm = {
+                val newStartTime = Calendar.getInstance().apply {
+                    time = date // Use the selected date
+                    set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                    set(Calendar.MINUTE, timePickerState.minute)
+                }
+                
+                // Validate that start time is before end time if end time exists
+                if (endTime != null && newStartTime.time.after(endTime)) {
+                    showTimeError = true
+                } else {
+                    showTimeError = false
+                    startTime = newStartTime.time
+                }
+                showStartTimePicker = false
+            }
+        ) {
+            TimePicker(state = timePickerState)
+        }
+    }
+
+    if (showEndTimePicker) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = endCalendar.get(Calendar.HOUR_OF_DAY),
+            initialMinute = endCalendar.get(Calendar.MINUTE)
+        )
+        
+        TimePickerDialog(
+            onDismissRequest = { showEndTimePicker = false },
+            onConfirm = {
+                val newEndTime = Calendar.getInstance().apply {
+                    time = date // Use the selected date
+                    set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                    set(Calendar.MINUTE, timePickerState.minute)
+                }
+                
+                // Validate that end time is after start time if start time exists
+                if (startTime != null && newEndTime.time.before(startTime)) {
+                    showTimeError = true
+                } else {
+                    showTimeError = false
+                    endTime = newEndTime.time
+                }
+                showEndTimePicker = false
+            }
+        ) {
+            TimePicker(state = timePickerState)
+        }
+    }
+}
+
+@Composable
+fun TimePickerDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = 6.dp,
+            modifier = Modifier
+                .width(IntrinsicSize.Min)
+                .height(IntrinsicSize.Min)
+                .background(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surface
+                )
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                content()
+                Row(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismissRequest) {
+                        Text("Cancel")
+                    }
+                    TextButton(onClick = onConfirm) {
+                        Text("OK")
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
 fun TimetableView(
-    viewModel: CalendarViewModel,
+    uiState: CalendarUiState,
     onEventClick: (Event) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -538,8 +733,8 @@ fun TimetableView(
             .padding(horizontal = 16.dp)
     ) {
         // Get all entries and events for next two weeks
-        val nextTwoWeeksEntries = viewModel.timetableEntries
-        val nextTwoWeeksEvents = viewModel.events
+        val nextTwoWeeksEntries = uiState.timetableEntries
+        val nextTwoWeeksEvents = uiState.events
 
         if (nextTwoWeeksEntries.isEmpty() && nextTwoWeeksEvents.isEmpty()) {
             item {
@@ -573,8 +768,7 @@ fun TimetableView(
                 
                 // Get events for this day
                 val eventsForDay = nextTwoWeeksEvents.filter { event ->
-                    val eventDate = LocalDate.ofInstant(event.date.toInstant(), ZoneId.systemDefault())
-                    eventDate == date
+                    event.date.toLocalDate() == date
                 }
                 
                 // Combine and sort all entries
@@ -611,12 +805,12 @@ fun TimetableView(
                     entries.forEach { entry ->
                         when (entry) {
                             is TimetableEntryDao.TimetableEntryWithCourse -> {
-                        TimetableEntryCard(
-                            entry = entry,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                        )
+                                TimetableEntryCard(
+                                    entry = entry,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                )
                             }
                             is Event -> {
                                 EventCard(
@@ -811,9 +1005,21 @@ private fun Date.format(): String {
     return formatter.format(this)
 }
 
+private fun Date.toLocalDate(): LocalDate {
+    return org.threeten.bp.Instant.ofEpochMilli(time)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+}
+
+private fun LocalDate.toDate(): Date {
+    return Date(this.atStartOfDay(ZoneId.systemDefault())
+        .toInstant()
+        .toEpochMilli())
+}
+
 private fun generateDaysForMonth(yearMonth: YearMonth): List<LocalDate?> {
     val firstOfMonth = yearMonth.atDay(1)
-    // Adjust for Sunday start (Sunday = 7 in Java Time, we want it to be 0)
+    // Adjust for Sunday start (Sunday = 7 in ThreeTenABP, we want it to be 0)
     val firstDayOfWeek = if (firstOfMonth.dayOfWeek == DayOfWeek.SUNDAY) 0 else firstOfMonth.dayOfWeek.value
     
     val days = mutableListOf<LocalDate?>()
