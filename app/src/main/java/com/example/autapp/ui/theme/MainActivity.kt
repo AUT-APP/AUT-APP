@@ -53,10 +53,14 @@ class MainActivity : ComponentActivity() {
 
         // Initialize repositories
         val userRepository = UserRepository(db.userDao())
-        val studentRepository = StudentRepository(db.studentDao())
+        val studentRepository = StudentRepository(
+            studentDao = db.studentDao(),
+            userDao = db.userDao()
+        )
         val courseRepository = CourseRepository(db.courseDao())
         val assignmentRepository = AssignmentRepository(db.assignmentDao())
         val gradeRepository = GradeRepository(db.gradeDao(), assignmentRepository)
+        val timetableEntryRepository = TimetableEntryRepository(db.timetableEntryDao())
         Log.d("MainActivity", "Repositories initialized")
 
         // Initialize ViewModels
@@ -65,7 +69,8 @@ class MainActivity : ComponentActivity() {
             studentRepository,
             courseRepository,
             assignmentRepository,
-            gradeRepository
+            gradeRepository,
+            timetableEntryRepository
         )
         val loginViewModel =
             ViewModelProvider(this, loginViewModelFactory)[LoginViewModel::class.java]
@@ -275,6 +280,8 @@ class MainActivity : ComponentActivity() {
                             popUpTo("login") { inclusive = true }
                         }
                     },
+                    isDarkTheme = isDarkTheme,
+                    onToggleTheme = onToggleTheme
                 )
             }
             composable("dashboard/{studentId}") { backStackEntry ->
@@ -282,9 +289,9 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     topBar = {
                         AUTTopAppBar(
-                            title = "Dashboard",
                             isDarkTheme = isDarkTheme,
                             navController = navController,
+                            title = "Dashboard",
                             showBackButton = false
                         )
                     },
@@ -317,7 +324,8 @@ class MainActivity : ComponentActivity() {
         private val studentRepository: StudentRepository,
         private val courseRepository: CourseRepository,
         private val assignmentRepository: AssignmentRepository,
-        private val gradeRepository: GradeRepository
+        private val gradeRepository: GradeRepository,
+        private val timetableEntryRepository: TimetableEntryRepository
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
@@ -327,7 +335,8 @@ class MainActivity : ComponentActivity() {
                     studentRepository,
                     courseRepository,
                     assignmentRepository,
-                    gradeRepository
+                    gradeRepository,
+                    timetableEntryRepository
                 ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
