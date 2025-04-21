@@ -172,28 +172,28 @@ fun BookingDetailsScreen(
                         value = "$level - $spaceId",
                         textColor = textColor
                     )
-                    Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+                    HorizontalDivider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
                     DetailRow(
                         icon = Icons.Default.LocationCity,
                         label = "Campus",
                         value = campus,
                         textColor = textColor
                     )
-                    Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+                    HorizontalDivider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
                     DetailRow(
                         icon = Icons.Default.Home,
                         label = "Building",
                         value = building,
                         textColor = textColor
                     )
-                    Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+                    HorizontalDivider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
                     DetailRow(
                         icon = Icons.Default.CalendarToday,
                         label = "Date",
                         value = formattedDate,
                         textColor = textColor
                     )
-                    Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+                    HorizontalDivider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
                     DetailRow(
                         icon = Icons.Default.AccessTime,
                         label = "Time",

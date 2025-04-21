@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -441,8 +442,8 @@ fun EventDialog(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         OutlinedTextField(
-                            value = startTime?.let { 
-                                SimpleDateFormat("h:mm a", Locale.getDefault()).format(it) 
+                            value = startTime?.let {
+                                SimpleDateFormat("h:mm a", Locale.getDefault()).format(it)
                             } ?: "",
                             onValueChange = {},
                             label = { Text("Start time") },
@@ -459,8 +460,8 @@ fun EventDialog(
                         )
 
                         OutlinedTextField(
-                            value = endTime?.let { 
-                                SimpleDateFormat("h:mm a", Locale.getDefault()).format(it) 
+                            value = endTime?.let {
+                                SimpleDateFormat("h:mm a", Locale.getDefault()).format(it)
                             } ?: "",
                             onValueChange = {},
                             label = { Text("End time") },
@@ -511,7 +512,10 @@ fun EventDialog(
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showFrequencyMenu) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor()
+                                .menuAnchor(
+                                    type = MenuAnchorType.PrimaryNotEditable, // Use this for non-editable fields
+                                    enabled = true
+                                )
                         )
                         ExposedDropdownMenu(
                             expanded = showFrequencyMenu,
@@ -529,7 +533,6 @@ fun EventDialog(
                         }
                     }
                 }
-
                 // Details
                 OutlinedTextField(
                     value = details,

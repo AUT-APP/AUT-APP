@@ -194,21 +194,21 @@ fun BookingCard(booking: Booking, onCancel: () -> Unit, isDarkTheme: Boolean) {
                 value = booking.campus,
                 textColor = textColor
             )
-            Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+            HorizontalDivider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
             DetailRow(
                 icon = Icons.Default.Home,
                 label = "Building",
                 value = booking.building,
                 textColor = textColor
             )
-            Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+            HorizontalDivider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
             DetailRow(
                 icon = Icons.Default.CalendarToday,
                 label = "Date",
                 value = SimpleDateFormat("dd MMM yyyy").format(booking.bookingDate),
                 textColor = textColor
             )
-            Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+            HorizontalDivider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
             DetailRow(
                 icon = Icons.Default.AccessTime,
                 label = "Time",
