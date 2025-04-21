@@ -1,4 +1,5 @@
 package com.example.autapp.ui.booking
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.autapp.data.models.Booking
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -37,7 +39,8 @@ fun BookingDetailsScreen(
     campus: String,
     building: String,
     isDarkTheme: Boolean,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() } // Pass from parent
 ) {
     var durationMinutes by remember { mutableStateOf(30) }
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -47,7 +50,6 @@ fun BookingDetailsScreen(
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
     var showConfirmation by remember { mutableStateOf(false) }
     var pendingBooking by remember { mutableStateOf<Booking?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val isValidInput = spaceId.isNotEmpty() && level.isNotEmpty() && date.isNotEmpty() &&
             timeSlot.isNotEmpty() && studentId != 0 && durationMinutes > 0 &&
@@ -82,28 +84,30 @@ fun BookingDetailsScreen(
         Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, -1) }.time
     ) || (isToday && slotStartTime.after(Date())))
 
-// Show error message in Snackbar when errorMessage changes
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let {
-            snackbarHostState.showSnackbar(
-                message = it,
-                actionLabel = "Dismiss",
-                duration = SnackbarDuration.Long
-            )
-            viewModel.clearErrorMessage()
-        }
-    }
-
-// Navigate back and show success message when booking is successful
-    LaunchedEffect(bookingSuccess) {
-        if (bookingSuccess) {
-            snackbarHostState.showSnackbar(
-                message = "Booking created successfully!",
-                actionLabel = "OK",
-                duration = SnackbarDuration.Short
-            )
-            navController.popBackStack()
-            viewModel.clearBookingSuccess() // Reset success state
+    // Handle error and success messages
+    LaunchedEffect(errorMessage, bookingSuccess) {
+        when {
+            errorMessage != null -> {
+                Log.d("BookingDetailsScreen", "Showing error: $errorMessage")
+                snackbarHostState.showSnackbar(
+                    message = errorMessage!!,
+                    actionLabel = "Dismiss",
+                    duration = SnackbarDuration.Long
+                )
+                viewModel.clearErrorMessage()
+            }
+            bookingSuccess -> {
+                Log.d("BookingDetailsScreen", "Showing success message")
+                snackbarHostState.showSnackbar(
+                    message = "Booking created successfully!",
+                    actionLabel = "OK",
+                    duration = SnackbarDuration.Short
+                )
+                // Delay navigation to ensure Snackbar is visible
+                delay(1000L)
+                navController.popBackStack()
+                viewModel.clearBookingSuccess()
+            }
         }
     }
 
@@ -113,148 +117,142 @@ fun BookingDetailsScreen(
         }
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(containerColor)
-                .padding(innerPadding)
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            if (!isValidInput || !isDateValid) {
-                Text(
-                    text = when {
-                        !isValidInput -> "Invalid booking details provided"
-                        !isDateValid -> "Booking date must be today (future time) or within the next 30 days"
-                        else -> "Invalid input"
-                    },
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(containerColor)
+            .padding(paddingValues) // Use padding from outer Scaffold
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        if (!isValidInput || !isDateValid) {
+            Text(
+                text = when {
+                    !isValidInput -> "Invalid booking details provided"
+                    !isDateValid -> "Booking date must be today (future time) or within the next 30 days"
+                    else -> "Invalid input"
+                },
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDarkTheme) Color(0xFF006060) else Color(0xFF006B6B),
+                    contentColor = textColor
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDarkTheme) Color(0xFF006060) else Color(0xFF006B6B),
-                        contentColor = textColor
-                    )
-                ) {
-                    Text("Go Back")
-                }
-            } else {
-                Text(
-                    text = "Booking Details",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp)),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isDarkTheme) Color(0xFF242424) else Color.White
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        DetailRow(
-                            icon = Icons.Default.MeetingRoom,
-                            label = "Study Space",
-                            value = "$level - $spaceId",
-                            textColor = textColor
-                        )
-                        Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
-                        DetailRow(
-                            icon = Icons.Default.LocationCity,
-                            label = "Campus",
-                            value = campus,
-                            textColor = textColor
-                        )
-                        Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
-                        DetailRow(
-                            icon = Icons.Default.Home,
-                            label = "Building",
-                            value = building,
-                            textColor = textColor
-                        )
-                        Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
-                        DetailRow(
-                            icon = Icons.Default.CalendarToday,
-                            label = "Date",
-                            value = formattedDate,
-                            textColor = textColor
-                        )
-                        Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
-                        DetailRow(
-                            icon = Icons.Default.AccessTime,
-                            label = "Time",
-                            value = timeSlot,
-                            textColor = textColor
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Duration",
-                    fontWeight = FontWeight.Medium,
-                    color = textColor,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                DurationDropdown(
-                    selectedDuration = durationMinutes,
-                    onDurationSelected = { durationMinutes = it },
-                    availableDurations = availableDurations,
-                    textColor = textColor,
-                    isDarkTheme = isDarkTheme
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        val calendar = Calendar.getInstance().apply { time = parsedDate }
-                        calendar.set(Calendar.HOUR_OF_DAY, hour)
-                        calendar.set(Calendar.MINUTE, minute)
-                        calendar.set(Calendar.SECOND, 0)
-                        calendar.set(Calendar.MILLISECOND, 0)
-                        val startTime = calendar.time
-                        calendar.add(Calendar.MINUTE, durationMinutes)
-                        val endTime = calendar.time
-
-                        pendingBooking = Booking(
-                            bookingId = 0,
-                            studentId = studentId,
-                            roomId = spaceId,
-                            building = building,
-                            campus = campus,
-                            level = level,
-                            bookingDate = parsedDate,
-                            startTime = startTime,
-                            endTime = endTime,
-                            status = "ACTIVE"
-                        )
-                        showConfirmation = true
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = isValidInput && availableDurations.isNotEmpty() && isDateValid,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDarkTheme) Color(0xFF006060) else Color(0xFF006B6B),
-                        contentColor = textColor
-                    )
-                ) {
-                    Text("Create Booking")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+            ) {
+                Text("Go Back")
             }
+        } else {
+            Text(
+                text = "Booking Details",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp)),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDarkTheme) Color(0xFF242424) else Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    DetailRow(
+                        icon = Icons.Default.MeetingRoom,
+                        label = "Study Space",
+                        value = "$level - $spaceId",
+                        textColor = textColor
+                    )
+                    Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+                    DetailRow(
+                        icon = Icons.Default.LocationCity,
+                        label = "Campus",
+                        value = campus,
+                        textColor = textColor
+                    )
+                    Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+                    DetailRow(
+                        icon = Icons.Default.Home,
+                        label = "Building",
+                        value = building,
+                        textColor = textColor
+                    )
+                    Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+                    DetailRow(
+                        icon = Icons.Default.CalendarToday,
+                        label = "Date",
+                        value = formattedDate,
+                        textColor = textColor
+                    )
+                    Divider(color = textColor.copy(alpha = 0.1f), thickness = 1.dp)
+                    DetailRow(
+                        icon = Icons.Default.AccessTime,
+                        label = "Time",
+                        value = timeSlot,
+                        textColor = textColor
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Duration",
+                fontWeight = FontWeight.Medium,
+                color = textColor,
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            DurationDropdown(
+                selectedDuration = durationMinutes,
+                onDurationSelected = { durationMinutes = it },
+                availableDurations = availableDurations,
+                textColor = textColor,
+                isDarkTheme = isDarkTheme
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    val calendar = Calendar.getInstance().apply { time = parsedDate }
+                    calendar.set(Calendar.HOUR_OF_DAY, hour)
+                    calendar.set(Calendar.MINUTE, minute)
+                    calendar.set(Calendar.SECOND, 0)
+                    calendar.set(Calendar.MILLISECOND, 0)
+                    val startTime = calendar.time
+                    calendar.add(Calendar.MINUTE, durationMinutes)
+                    val endTime = calendar.time
+
+                    pendingBooking = Booking(
+                        bookingId = 0,
+                        studentId = studentId,
+                        roomId = spaceId,
+                        building = building,
+                        campus = campus,
+                        level = level,
+                        bookingDate = parsedDate,
+                        startTime = startTime,
+                        endTime = endTime,
+                        status = "ACTIVE"
+                    )
+                    showConfirmation = true
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = isValidInput && availableDurations.isNotEmpty() && isDateValid,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDarkTheme) Color(0xFF006060) else Color(0xFF006B6B),
+                    contentColor = textColor
+                )
+            ) {
+                Text("Create Booking")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
@@ -285,6 +283,7 @@ fun BookingDetailsScreen(
                 TextButton(
                     onClick = {
                         pendingBooking?.let { booking ->
+                            Log.d("BookingDetailsScreen", "Confirming booking: $booking")
                             viewModel.createBooking(
                                 studentId = booking.studentId,
                                 spaceId = booking.roomId,
@@ -295,7 +294,6 @@ fun BookingDetailsScreen(
                                 startTime = booking.startTime,
                                 endTime = booking.endTime
                             )
-                            // Clear pendingBooking to prevent re-submission
                             pendingBooking = null
                             showConfirmation = false
                         }
@@ -320,8 +318,8 @@ fun BookingDetailsScreen(
             textContentColor = textColor
         )
     }
-
-}@Composable
+}
+@Composable
 fun DurationDropdown(
     selectedDuration: Int,
     onDurationSelected: (Int) -> Unit,

@@ -150,6 +150,18 @@ class MainActivity : ComponentActivity() {
                 // Insert test students
                 val students = listOf(
                     Student(
+                        firstName = "Test",
+                        lastName = "Student",
+                        studentId = 1000,
+                        username = "teststudent",
+                        password = "password123",
+                        role = "Student",
+                        enrollmentDate = "2024-01-01",
+                        major = "Computer Science",
+                        yearOfStudy = 2,
+                        gpa = 0.0
+                    ),
+                    Student(
                         firstName = "John",
                         lastName = "Doe",
                         studentId = 1,
@@ -236,6 +248,7 @@ class MainActivity : ComponentActivity() {
 
                 // Insert student-course relationships
                 val studentCourseCrossRefs = listOf(
+                    StudentCourseCrossRef(studentId = 1000, courseId = 1), // Test student enrolled in COMP101
                     StudentCourseCrossRef(studentId = 1, courseId = 1),
                     StudentCourseCrossRef(studentId = 1, courseId = 2),
                     StudentCourseCrossRef(studentId = 2, courseId = 2),
@@ -306,6 +319,13 @@ class MainActivity : ComponentActivity() {
                 val grades = listOf(
                     Grade(
                         assignmentId = 1,
+                        studentId = 1000, // Test student grade
+                        _score = 90.0,
+                        grade = "A",
+                        feedback = "Excellent project submission."
+                    ),
+                    Grade(
+                        assignmentId = 1,
                         studentId = 1,
                         _score = 85.0,
                         grade = "A",
@@ -352,9 +372,9 @@ class MainActivity : ComponentActivity() {
                 val users = userRepository.getAllUsers()
                 val retrievedStudents = withContext(Dispatchers.IO) { studentRepository.getAllStudents() }
                 Log.d("MainActivity", "Inserted ${users.size} users: $users")
-                Log.d("MainActivity", "Inserted ${students.size} students: $students")
+                Log.d("MainActivity", "Inserted ${retrievedStudents.size} students: $retrievedStudents")
 
-                if (students.isEmpty()) {
+                if (retrievedStudents.isEmpty()) {
                     Log.e("MainActivity", "No students were inserted!")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@MainActivity, "Failed to insert test students!", Toast.LENGTH_LONG).show()
@@ -784,6 +804,7 @@ fun AppContent(
             val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
             val campus = backStackEntry.arguments?.getString("campus") ?: ""
             val building = backStackEntry.arguments?.getString("building") ?: ""
+            val snackbarHostState = remember { SnackbarHostState() } // Define here
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -793,7 +814,13 @@ fun AppContent(
                         showBackButton = true
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) },
+                snackbarHost = {
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(16.dp) // Ensure visibility
+                    )
+                }
             ) { paddingValues ->
                 BookingDetailsScreen(
                     viewModel = bookingViewModel,
@@ -806,7 +833,8 @@ fun AppContent(
                     campus = campus,
                     building = building,
                     isDarkTheme = isDarkTheme,
-                    paddingValues = paddingValues
+                    paddingValues = paddingValues,
+                    snackbarHostState = snackbarHostState // Pass to BookingDetailsScreen
                 )
             }
         }

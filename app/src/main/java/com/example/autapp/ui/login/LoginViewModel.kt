@@ -82,34 +82,6 @@ class LoginViewModel(
                 userRepository.deleteAll()
                 Log.d("LoginViewModel", "Users deleted")
 
-                // Insert test User
-                val testUser = User(
-                    firstName = "Test",
-                    lastName = "Student",
-                    role = "Student",
-                    username = "teststudent",
-                    password = "password123"
-                )
-                val userIdLong = userRepository.insertUser(testUser)
-                val userId = userIdLong.toInt()
-                Log.d("LoginViewModel", "Inserted test user: ${testUser.username} with ID: $userId")
-
-                // Insert test Student with matching user ID
-                val testStudent = Student(
-                    id = userId,
-                    firstName = "Test",
-                    lastName = "Student",
-                    username = "teststudent",
-                    password = "password123",
-                    role = "Student",
-                    studentId = 1001,
-                    enrollmentDate = "2024-01-01",
-                    major = "Computer Science",
-                    yearOfStudy = 2,
-                    gpa = 0.0
-                )
-                studentRepository.insertStudent(testStudent)
-                Log.d("LoginViewModel", "Inserted test student: ${testStudent.firstName} ${testStudent.lastName}")
 
                 // Insert Courses
                 val courses = listOf(
