@@ -20,9 +20,11 @@ import com.example.autapp.data.models.*
         Grade::class,
         Assignment::class,
         TimetableEntry::class,
-        Event::class
+        Event::class,
+        Booking::class,
+        StudySpace:: class
     ],
-    version = 20,
+    version = 21,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -35,18 +37,19 @@ abstract class AUTDatabase : RoomDatabase() {
     abstract fun assignmentDao(): AssignmentDao
     abstract fun timetableEntryDao(): TimetableEntryDao
     abstract fun eventDao(): EventDao
+    abstract fun bookingDao(): BookingDao
+    abstract fun studySpaceDao(): StudySpaceDao
 
     companion object {
         @Volatile
         private var INSTANCE: AUTDatabase? = null
-
         fun getDatabase(context: Context): AUTDatabase {
             return INSTANCE ?: synchronized(this) {
                 Log.d("AUTDatabase", "Building new database instance")
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AUTDatabase::class.java,
-                    "AUT_database_v20" // Updated database version
+                    "AUT_database_v21" // Updated database version
                 )
                     .fallbackToDestructiveMigration()
                     .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)

@@ -17,20 +17,21 @@ import androidx.room.PrimaryKey
     ],
     indices = [Index("id")]
 )
-class Student(
-    firstName: String,
-    lastName: String,
-    id: Int = 0,
-    username: String,
-    password: String,
+data class Student(
+    var id: Int = 0,
+    var firstName: String,
+    var lastName: String,
+    var username: String,
+    var password: String,
+    var role: String = "Student",
     @PrimaryKey var studentId: Int,
     var enrollmentDate: String,
     var major: String,
     var yearOfStudy: Int,
     var gpa: Double
-) : User(firstName, lastName, id, "Student", username, password) {
+) {
     override fun toString(): String {
-        return "Student(firstName='$firstName', lastName='$lastName', id=$id, role='$role', username='$username', password='$password', " +
+        return "Student(id=$id, firstName='$firstName', lastName='$lastName', role='$role', username='$username', password='$password', " +
                 "studentId=$studentId, enrollmentDate='$enrollmentDate', major='$major', yearOfStudy=$yearOfStudy, gpa=$gpa)"
     }
 }

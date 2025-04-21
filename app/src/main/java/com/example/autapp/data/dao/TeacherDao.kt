@@ -11,6 +11,9 @@ interface TeacherDao {
     @Query("SELECT * FROM teacher_table WHERE username = :username")
     suspend fun getTeacherByUsername(username: String): Teacher?
 
+    @Query("SELECT * FROM teacher_table WHERE teacherId = :teacherId")
+    suspend fun getTeacherById(teacherId: Int): Teacher?
+
     @Query("SELECT * FROM teacher_table")
     suspend fun getAllTeachers(): List<Teacher>
 

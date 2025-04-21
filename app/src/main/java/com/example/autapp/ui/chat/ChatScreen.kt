@@ -15,15 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.autapp.ui.AUTTopAppBar
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    viewModel: ChatViewModel = viewModel(),
-    navController: NavController
+    viewModel: ChatViewModel,
+    navController: NavController,
+    paddingValues: PaddingValues
 ) {
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -33,16 +31,9 @@ fun ChatScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(paddingValues)
             .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
     ) {
-        AUTTopAppBar(
-            title = "Chatbot",
-            navController = navController,
-            showBackButton = true,
-            modifier = Modifier.statusBarsPadding()
-        )
-
         Box(
             modifier = Modifier
                 .weight(1f)

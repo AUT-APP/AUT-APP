@@ -1,22 +1,24 @@
 package com.example.autapp.data.models
 
 import androidx.room.Entity
+import androidx.room.PrimaryKey
 
 @Entity(tableName = "teacher_table")
-class Teacher(
-    firstName: String,
-    lastName: String,
-    id: Int = 0,
-    username: String,
-    password: String,
+data class Teacher(
+    var firstName: String,
+    var lastName: String,
+    var username: String,
+    var password: String,
+    var role: String = "Teacher",
+    @PrimaryKey(autoGenerate = true) var teacherId: Int = 0,
     var department: String,
     var officeHours: String,
     var courses: MutableList<String> = mutableListOf()
-) : User(firstName, lastName, id, "Teacher", username, password) {
+) {
     fun displayTeacherInfo(): String {
         return """
                Name: $firstName $lastName
-               ID: $id
+               Teacher ID: $teacherId
                Role: $role  
                Department: $department
                Office Hours: $officeHours
@@ -25,7 +27,7 @@ class Teacher(
     }
 
     override fun toString(): String {
-        return "Teacher(firstName='$firstName', lastName='$lastName', id=$id, role='$role', username='$username', password='$password', " +
-                "department='$department', officeHours='$officeHours', courses=$courses)"
+        return "Teacher(firstName='$firstName', lastName='$lastName', role='$role', username='$username', password='$password', " +
+                "teacherId=$teacherId, department='$department', officeHours='$officeHours', courses=$courses)"
     }
 }

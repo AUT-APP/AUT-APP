@@ -6,7 +6,7 @@ import com.example.autapp.data.models.User
 @Dao
 interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertUser(user: User)
+    suspend fun insertUser(user: User): Long
 
     @Query("SELECT * FROM user_table WHERE username = :username AND password = :password")
     suspend fun checkUser(username: String, password: String): User?

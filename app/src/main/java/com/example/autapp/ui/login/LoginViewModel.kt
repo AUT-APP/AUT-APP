@@ -1,5 +1,6 @@
 package com.example.autapp.ui.theme
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -7,7 +8,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.autapp.data.models.*
 import com.example.autapp.data.repository.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 
 class LoginViewModel(
@@ -65,33 +68,40 @@ class LoginViewModel(
     fun insertTestData() {
         viewModelScope.launch {
             try {
-                // Clear existing data in the correct order (most dependent first)
+                // Clear existing data
                 gradeRepository.deleteAll()
+                Log.d("LoginViewModel", "Grades deleted")
                 assignmentRepository.deleteAll()
-                studentRepository.deleteAllCrossRefs()
+                Log.d("LoginViewModel", "Assignments deleted")
                 timetableEntryRepository.deleteAll()
+                Log.d("LoginViewModel", "Timetable entries deleted")
                 courseRepository.deleteAll()
+                Log.d("LoginViewModel", "Courses deleted")
                 studentRepository.deleteAll()
+                Log.d("LoginViewModel", "Students and cross-references deleted")
                 userRepository.deleteAll()
+                Log.d("LoginViewModel", "Users deleted")
 
-                // First create and insert the base User
+                // Insert test User
                 val testUser = User(
                     firstName = "Test",
                     lastName = "Student",
-                    id = 1,
                     role = "Student",
                     username = "teststudent",
                     password = "password123"
                 )
-                userRepository.insertUser(testUser)
+                val userIdLong = userRepository.insertUser(testUser)
+                val userId = userIdLong.toInt()
+                Log.d("LoginViewModel", "Inserted test user: ${testUser.username} with ID: $userId")
 
-                // Then create and insert the Student with the same ID
+                // Insert test Student with matching user ID
                 val testStudent = Student(
+                    id = userId,
                     firstName = "Test",
                     lastName = "Student",
-                    id = 1,
                     username = "teststudent",
                     password = "password123",
+                    role = "Student",
                     studentId = 1001,
                     enrollmentDate = "2024-01-01",
                     major = "Computer Science",
@@ -99,8 +109,9 @@ class LoginViewModel(
                     gpa = 0.0
                 )
                 studentRepository.insertStudent(testStudent)
+                Log.d("LoginViewModel", "Inserted test student: ${testStudent.firstName} ${testStudent.lastName}")
 
-                // Insert Courses (16 courses, 15 credits each = 240 credits)
+                // Insert Courses
                 val courses = listOf(
                     Course(101, "CS101", "Introduction to Programming", "Basic programming", "WZ101"),
                     Course(102, "CS102", "Data Structures", "Advanced data structures", "WZ102"),
@@ -119,13 +130,17 @@ class LoginViewModel(
                     Course(115, "CS115", "Parallel Computing", "Parallel systems", "WZ115"),
                     Course(116, "CS116", "Ethics in Computing", "Ethical issues", "WZ116")
                 )
-                courses.forEach { courseRepository.insertCourse(it) }
+                courses.forEach {
+                    courseRepository.insertCourse(it)
+                    Log.d("LoginViewModel", "Inserted course: ${it.name}")
+                }
 
                 // Link Student to Courses
                 courses.forEach { course ->
                     studentRepository.insertStudentCourseCrossRef(
                         StudentCourseCrossRef(studentId = 1001, courseId = course.courseId)
                     )
+                    Log.d("LoginViewModel", "Linked student 1001 to course ${course.courseId}")
                 }
 
                 // Set up dates
@@ -163,24 +178,10 @@ class LoginViewModel(
                     )
                 )
 
-                // Past assignments with grades (16 grades, diverse types)
+                // Past assignments with grades
                 val gradeScores = listOf(
-                    95.0, // A+
-                    92.0, // A+
-                    88.0, // A
-                    86.0, // A
-                    83.0, // A-
-                    81.0, // A-
-                    78.0, // B+
-                    76.0, // B+
-                    73.0, // B
-                    71.0, // B
-                    68.0, // B-
-                    66.0, // B-
-                    63.0, // C+
-                    58.0, // C
-                    53.0, // C-
-                    45.0  // D
+                    95.0, 92.0, 88.0, 86.0, 83.0, 81.0, 78.0, 76.0,
+                    73.0, 71.0, 68.0, 66.0, 63.0, 58.0, 53.0, 45.0
                 )
 
                 val pastAssignments = courses.mapIndexed { index, course ->
@@ -203,7 +204,7 @@ class LoginViewModel(
                             assignmentId = 0,
                             studentId = 1001,
                             _score = gradeScores[index],
-                            grade = "", // Auto-set by Grade logic
+                            grade = "",
                             feedback = "Feedback for ${course.name}"
                         )
                     )
@@ -212,6 +213,7 @@ class LoginViewModel(
                 // Insert assignments
                 (upcomingAssignments + pastAssignments.map { it.first }).forEach {
                     assignmentRepository.insertAssignment(it)
+                    Log.d("LoginViewModel", "Inserted assignment: ${it.name}")
                 }
 
                 // Insert grades
@@ -223,15 +225,15 @@ class LoginViewModel(
                     if (insertedAssignment != null) {
                         grade.assignmentId = insertedAssignment.assignmentId
                         gradeRepository.insertGrade(grade)
+                        Log.d("LoginViewModel", "Inserted grade for assignment: ${assignment.name}")
                     }
                 }
 
-                // Create timetable entries for each course
+                // Create timetable entries
                 val csEntries = listOf(
-                    // Monday classes
                     TimetableEntry(
                         courseId = 101,
-                        dayOfWeek = 1, // Monday
+                        dayOfWeek = 1,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 9)
                             set(Calendar.MINUTE, 0)
@@ -245,7 +247,7 @@ class LoginViewModel(
                     ),
                     TimetableEntry(
                         courseId = 102,
-                        dayOfWeek = 1, // Monday
+                        dayOfWeek = 1,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 11)
                             set(Calendar.MINUTE, 30)
@@ -259,7 +261,7 @@ class LoginViewModel(
                     ),
                     TimetableEntry(
                         courseId = 103,
-                        dayOfWeek = 1, // Monday
+                        dayOfWeek = 1,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 14)
                             set(Calendar.MINUTE, 0)
@@ -271,10 +273,9 @@ class LoginViewModel(
                         room = "WB103",
                         type = "Lecture"
                     ),
-                    // Tuesday classes
                     TimetableEntry(
                         courseId = 104,
-                        dayOfWeek = 2, // Tuesday
+                        dayOfWeek = 2,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 9)
                             set(Calendar.MINUTE, 0)
@@ -288,7 +289,7 @@ class LoginViewModel(
                     ),
                     TimetableEntry(
                         courseId = 105,
-                        dayOfWeek = 2, // Tuesday
+                        dayOfWeek = 2,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 11)
                             set(Calendar.MINUTE, 30)
@@ -302,7 +303,7 @@ class LoginViewModel(
                     ),
                     TimetableEntry(
                         courseId = 106,
-                        dayOfWeek = 2, // Tuesday
+                        dayOfWeek = 2,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 14)
                             set(Calendar.MINUTE, 0)
@@ -314,10 +315,9 @@ class LoginViewModel(
                         room = "WB106",
                         type = "Lecture"
                     ),
-                    // Wednesday classes
                     TimetableEntry(
                         courseId = 107,
-                        dayOfWeek = 3, // Wednesday
+                        dayOfWeek = 3,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 9)
                             set(Calendar.MINUTE, 0)
@@ -331,7 +331,7 @@ class LoginViewModel(
                     ),
                     TimetableEntry(
                         courseId = 108,
-                        dayOfWeek = 3, // Wednesday
+                        dayOfWeek = 3,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 11)
                             set(Calendar.MINUTE, 30)
@@ -345,7 +345,7 @@ class LoginViewModel(
                     ),
                     TimetableEntry(
                         courseId = 109,
-                        dayOfWeek = 3, // Wednesday
+                        dayOfWeek = 3,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 14)
                             set(Calendar.MINUTE, 0)
@@ -357,10 +357,9 @@ class LoginViewModel(
                         room = "WB109",
                         type = "Lecture"
                     ),
-                    // Thursday classes
                     TimetableEntry(
                         courseId = 110,
-                        dayOfWeek = 4, // Thursday
+                        dayOfWeek = 4,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 9)
                             set(Calendar.MINUTE, 0)
@@ -374,7 +373,7 @@ class LoginViewModel(
                     ),
                     TimetableEntry(
                         courseId = 111,
-                        dayOfWeek = 4, // Thursday
+                        dayOfWeek = 4,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 11)
                             set(Calendar.MINUTE, 30)
@@ -388,7 +387,7 @@ class LoginViewModel(
                     ),
                     TimetableEntry(
                         courseId = 112,
-                        dayOfWeek = 4, // Thursday
+                        dayOfWeek = 4,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 14)
                             set(Calendar.MINUTE, 0)
@@ -400,10 +399,9 @@ class LoginViewModel(
                         room = "WB112",
                         type = "Lecture"
                     ),
-                    // Friday classes
                     TimetableEntry(
                         courseId = 113,
-                        dayOfWeek = 5, // Friday
+                        dayOfWeek = 5,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 9)
                             set(Calendar.MINUTE, 0)
@@ -417,7 +415,7 @@ class LoginViewModel(
                     ),
                     TimetableEntry(
                         courseId = 114,
-                        dayOfWeek = 5, // Friday
+                        dayOfWeek = 5,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 11)
                             set(Calendar.MINUTE, 30)
@@ -431,7 +429,7 @@ class LoginViewModel(
                     ),
                     TimetableEntry(
                         courseId = 115,
-                        dayOfWeek = 5, // Friday
+                        dayOfWeek = 5,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 14)
                             set(Calendar.MINUTE, 0)
@@ -443,10 +441,9 @@ class LoginViewModel(
                         room = "WB115",
                         type = "Lecture"
                     ),
-                    // Extra class on Monday afternoon
                     TimetableEntry(
                         courseId = 116,
-                        dayOfWeek = 1, // Monday
+                        dayOfWeek = 1,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 16)
                             set(Calendar.MINUTE, 30)
@@ -460,16 +457,25 @@ class LoginViewModel(
                     )
                 )
 
-                // Insert all timetable entries
-                (csEntries).forEach {
+                csEntries.forEach {
                     timetableEntryRepository.insertTimetableEntry(it)
+                    Log.d("LoginViewModel", "Inserted timetable entry for course ${it.courseId}")
                 }
 
-                // Add assignments and grades for GPA calculation
-                loginResult = "Test data inserted successfully"
+                // Verify insertions
+                val users = userRepository.getAllUsers()
+                val students = withContext(Dispatchers.IO) { studentRepository.getAllStudents() }
+                Log.d("LoginViewModel", "Inserted ${users.size} users: $users")
+                Log.d("LoginViewModel", "Inserted ${students.size} students: $students")
+
+                loginResult = if (students.isNotEmpty()) {
+                    "Test data inserted successfully"
+                } else {
+                    "Test data insertion failed: No students inserted"
+                }
             } catch (e: Exception) {
                 loginResult = "Test data insertion failed: ${e.message}"
-                e.printStackTrace() // This will log the full stack trace but won't crash the app
+                Log.e("LoginViewModel", "Error inserting test data: ${e.message}", e)
             }
         }
     }

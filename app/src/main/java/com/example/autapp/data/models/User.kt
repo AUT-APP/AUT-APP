@@ -1,10 +1,9 @@
 package com.example.autapp.data.models
-
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "user_table")
-open class User(
+data class User(
     var firstName: String,
     var lastName: String,
     @PrimaryKey(autoGenerate = true)
@@ -17,3 +16,4 @@ open class User(
         return "User(firstName='$firstName', lastName='$lastName', id=$id, role='$role', username='$username', password='$password')"
     }
 }
+
