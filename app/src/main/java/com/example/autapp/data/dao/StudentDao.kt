@@ -1,6 +1,7 @@
 package com.example.autapp.data.dao
 
 import androidx.room.*
+import com.example.autapp.data.models.CourseWithEnrollmentInfo
 import com.example.autapp.data.models.Student
 import com.example.autapp.data.models.StudentCourseCrossRef
 import com.example.autapp.data.models.StudentWithCourses
@@ -28,6 +29,17 @@ interface StudentDao {
     @Transaction
     @Query("SELECT * FROM student_table WHERE studentId = :studentId")
     suspend fun getStudentWithCourses(studentId: Int): StudentWithCourses?
+
+    @Transaction
+    @Query("""
+        SELECT course_table.courseId, course_table.name, course_table.title, course_table.description,
+               student_course_cross_ref.year, student_course_cross_ref.semester
+        FROM course_table
+        INNER JOIN student_course_cross_ref
+        ON course_table.courseId = student_course_cross_ref.courseId
+        WHERE student_course_cross_ref.studentId = :studentId
+    """)
+    suspend fun getStudentCoursesWithEnrollmentInfo(studentId: Int): List<CourseWithEnrollmentInfo>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStudentCourseCrossRef(crossRef: StudentCourseCrossRef)

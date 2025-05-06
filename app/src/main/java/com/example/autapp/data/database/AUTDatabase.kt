@@ -21,7 +21,7 @@ import com.example.autapp.data.models.*
         Assignment::class,
         Notification::class
     ],
-    version = 18, // Bumped to 15
+    version = 19, // Bumped to 15
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -44,7 +44,7 @@ abstract class AUTDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AUTDatabase::class.java,
-                    "AUT_database_v18" // Changed name to force new file
+                    "AUT_database_v19" // Changed name to force new file
                 )
                     .fallbackToDestructiveMigration()
                     .addCallback(object : RoomDatabase.Callback() {

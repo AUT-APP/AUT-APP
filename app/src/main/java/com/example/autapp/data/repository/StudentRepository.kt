@@ -1,6 +1,7 @@
 package com.example.autapp.data.repository
 
 import com.example.autapp.data.dao.StudentDao
+import com.example.autapp.data.models.CourseWithEnrollmentInfo
 import com.example.autapp.data.models.Student
 import com.example.autapp.data.models.StudentCourseCrossRef
 import com.example.autapp.data.models.StudentWithCourses
@@ -33,6 +34,10 @@ class StudentRepository(private val studentDao: StudentDao) {
 
     suspend fun getStudentWithCourses(studentId: Int): StudentWithCourses? {
         return studentDao.getStudentWithCourses(studentId)
+    }
+
+    suspend fun getStudentCoursesWithEnrollmentInfo(studentId: Int): List<CourseWithEnrollmentInfo> {
+        return studentDao.getStudentCoursesWithEnrollmentInfo(studentId)
     }
 
     suspend fun insertStudentCourseCrossRef(crossRef: StudentCourseCrossRef) {

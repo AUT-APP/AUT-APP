@@ -15,4 +15,11 @@ class Notification(
     var deepLinkUri: String? = null,
     var channelId: String,
     ) {
+    // Method to format the text template with dynamic values
+    fun getFormattedTitle(vararg values: Any): String {
+        return title.format(*values)
+    }
+    fun getFormattedText(vararg values: Any): String {
+        return text.format(*values)
+    }
 }

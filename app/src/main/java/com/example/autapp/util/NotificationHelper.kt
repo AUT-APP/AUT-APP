@@ -74,7 +74,12 @@ object NotificationHelper {
      * Builds and displays a system notification based on notification.
      * Requires POST_NOTIFICATIONS permission on Android 13+.
      */
-    fun pushNotification(context: Context, notification: Notification) {
+    fun pushNotification(
+        context: Context,
+        notification: Notification,
+        titleArgs: Array<out Any> = emptyArray(),
+        textArgs: Array<out Any> = emptyArray()
+    ) {
         val notificationManager = NotificationManagerCompat.from(context)
 
         // Permission Check
@@ -88,6 +93,10 @@ object NotificationHelper {
             println("Error: POST_NOTIFICATIONS permission missing.")
             return
         }
+
+        // Format the text template with dynamic data
+        val formattedTitle = notification.getFormattedTitle(*titleArgs)
+        val formattedText = notification.getFormattedText(*textArgs)
 
         // Create PendingIntent for touch action
         val pendingIntent: PendingIntent? = notification.deepLinkUri?.let { uriString ->
@@ -112,8 +121,8 @@ object NotificationHelper {
         // Build the notification
         val builder = NotificationCompat.Builder(context, notification.channelId)
             .setSmallIcon(notification.iconResId)
-            .setContentTitle(notification.title)
-            .setContentText(notification.text)
+            .setContentTitle(formattedTitle)
+            .setContentText(formattedText)
             .setPriority(notification.priority)
             .setAutoCancel(true) // Dismiss notification when tapped
 

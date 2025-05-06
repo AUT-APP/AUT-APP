@@ -35,6 +35,7 @@ import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.repository.*
 import com.example.autapp.ui.chat.ChatScreen
+import com.example.autapp.ui.notification.NotificationScreen
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,10 +44,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import com.example.autapp.ui.DashboardViewModel
 import com.example.autapp.util.NotificationHelper
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.example.autapp.data.models.Notification
+import com.example.autapp.ui.notification.NotificationViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,6 +85,12 @@ class MainActivity : ComponentActivity() {
         val dashboardViewModelFactory = DashboardViewModelFactory(
             studentRepository, courseRepository, gradeRepository, assignmentRepository, notificationRepository
         )
+
+        val notificationViewModelFactory = NotificationViewModelFactory(
+            studentRepository, notificationRepository
+        )
+        val notificationViewModel = ViewModelProvider(this, notificationViewModelFactory)[NotificationViewModel::class.java]
+
         val dashboardViewModel = ViewModelProvider(this, dashboardViewModelFactory)[DashboardViewModel::class.java]
 
         // Insert test data
@@ -92,6 +103,7 @@ class MainActivity : ComponentActivity() {
                 AppContent(
                     loginViewModel = loginViewModel,
                     dashboardViewModel = dashboardViewModel,
+                    notificationViewModel = notificationViewModel,
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = { isDarkTheme = !isDarkTheme }
                 )
@@ -106,6 +118,7 @@ class MainActivity : ComponentActivity() {
 fun AppContent(
     loginViewModel: LoginViewModel,
     dashboardViewModel: DashboardViewModel,
+    notificationViewModel: NotificationViewModel,
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit
 ) {
@@ -184,25 +197,32 @@ fun AppContent(
                         tint = Color.White,
                         modifier = Modifier
                             .size(24.dp)
-                            .clickable {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                }
-                                // Create a test notification
-                                val testNotification = Notification(
-                                    iconResId = R.drawable.ic_notification, // Replace with your notification icon
-                                    title = "Test Notification",
-                                    text = "This is a test notification!",
-                                    channelId = NotificationHelper.DEFAULT_CHANNEL_ID,
-                                    priority = NotificationCompat.PRIORITY_DEFAULT,
-                                    deepLinkUri = "myapp://dashboard"
-                                )
-                                // Push the notification
-                                NotificationHelper.pushNotification(
-                                    context = navController?.context ?: return@clickable,
-                                    notification = testNotification
-                                )
-                            }
+                            .clickable { navController.navigate("notification/${dashboardViewModel.studentId}") }
+
+//
+//                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+//                                }
+//
+//                                val notification = notificationRepository.getNotificationById(1)
+//
+//                                // Create a test notification
+//                                val testNotification = Notification(
+//                                    iconResId = R.drawable.ic_notification, // Replace with your notification icon
+//                                    title = "Test Notification %s",
+//                                    text = "This is a test notification! %d",
+//                                    channelId = NotificationHelper.DEFAULT_CHANNEL_ID,
+//                                    priority = NotificationCompat.PRIORITY_DEFAULT,
+//                                    deepLinkUri = "myapp://dashboard"
+//                                )
+//                                // Push the notification
+//                                NotificationHelper.pushNotification(
+//                                    context = navController?.context ?: return@clickable,
+//                                    notification = testNotification,
+//                                    titleArgs = arrayOf("Alice"),
+//                                    textArgs = arrayOf(3)
+//                                )
+//                            }
                     )
 //                    Icon(
 //                        imageVector = Icons.Outlined.Notifications,
@@ -318,7 +338,15 @@ fun AppContent(
                 onToggleTheme = onToggleTheme
             )
         }
-        composable("dashboard/{studentId}") { backStackEntry ->
+        composable(
+            route = "dashboard/{studentId}",
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType }),
+            deepLinks = listOf(
+                navDeepLink {
+                    uriPattern = "myapp://dashboard/{studentId}"
+                }
+            )
+        ) { backStackEntry ->
             val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
             Scaffold(
                 topBar = {
@@ -344,11 +372,18 @@ fun AppContent(
                 navController = navController
             )
         }
-        composable("notifications") {
-            ChatScreen(
+        composable(
+            route = "notification/{studentId}",
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
+            notificationViewModel.initialize(studentId)
+            NotificationScreen(
+                viewModel = notificationViewModel,
                 navController = navController
             )
         }
+
     }
 }
 
@@ -384,3 +419,17 @@ class DashboardViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+class NotificationViewModelFactory(
+    private val studentRepository: StudentRepository,
+    private val notificationRepository: NotificationRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(NotificationViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return NotificationViewModel(studentRepository, notificationRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+

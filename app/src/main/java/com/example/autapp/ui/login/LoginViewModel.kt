@@ -134,7 +134,7 @@ class LoginViewModel(
                     yearOfStudy = 2,
                     gpa = 0.0
                 )
-                studentRepository.insertStudent(testStudent)
+                    studentRepository.insertStudent(testStudent)
 
                 // Insert Courses (16 courses, 15 credits each = 240 credits)
                 val courses = listOf(
@@ -157,12 +157,36 @@ class LoginViewModel(
                 )
                 courses.forEach { courseRepository.insertCourse(it) }
 
+                val totalCourses = courses.size // 16
+                var year = 2025
+                var semester = 1
+                var index = 0
                 // Link Student to Courses
-                courses.forEach { course ->
-                    studentRepository.insertStudentCourseCrossRef(
-                        StudentCourseCrossRef(studentId = 1001, courseId = course.courseId)
-                    )
+                while (index < totalCourses) {
+                    // Assign 4 courses per semester
+                    for (i in 0 until 4) {
+                        if (index >= totalCourses) break
+                        val course = courses[index]
+                        studentRepository.insertStudentCourseCrossRef(
+                            StudentCourseCrossRef(
+                                studentId = 1001,
+                                courseId = course.courseId,
+                                year = year,
+                                semester = semester
+                            )
+                        )
+                        index++
+                    }
+
+                    // Move to next semester
+                    if (semester == 1) {
+                        semester = 2
+                    } else {
+                        semester = 1
+                        year-- // Only decrement year after semester 2
+                    }
                 }
+
 
                 // Set up dates
                 val calendar = Calendar.getInstance()
@@ -263,16 +287,26 @@ class LoginViewModel(
                 }
 
                 // Test notification
-                val testNotification = Notification(
+                val classNotification = Notification(
                     iconResId = R.drawable.ic_notification,
-                    title = "Test Notification",
-                    text = "This is a test notification.",
+                    title = "%s starts soon!",
+                    text = "%s is starting in %s.",
                     priority = NotificationCompat.PRIORITY_HIGH,
-                    deepLinkUri = "myapp://dashboard",
+                    deepLinkUri = "myapp://dashboard/1", // teststudent has an ID of 1
                     channelId = "test_channel"
                 )
 
-                notificationRepository.insertNotification(testNotification)
+                val shuttleNotification = Notification(
+                    iconResId = R.drawable.ic_notification,
+                    title = "Shuttle leaves soon!",
+                    text = "The shuttle bus leaves in %s.",
+                    priority = NotificationCompat.PRIORITY_HIGH,
+                    deepLinkUri = "myapp://dashboard/1", // teststudent has an ID of 1
+                    channelId = "test_channel"
+                )
+
+                notificationRepository.insertNotification(classNotification)
+                notificationRepository.insertNotification(shuttleNotification)
 
 
                 loginResult = "Test data inserted successfully"
