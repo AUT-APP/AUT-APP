@@ -30,7 +30,7 @@ fun LoginScreen(
     modifier: Modifier = Modifier,
     onLoginSuccess: (Int) -> Unit = {},
     isDarkTheme: Boolean,
-    onToggleTheme: () -> Unit
+    onToggleTheme: () -> Unit,
 ) {
     val TAG = "LoginScreen"
     Log.d(TAG, "LoginScreen composed")
@@ -78,31 +78,6 @@ fun LoginScreen(
                 )
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
-            ) {
-                Text(
-                    text = if (isDarkTheme) "Dark Mode" else "Light Mode",
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
-                    color = colorScheme.onBackground,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Switch(
-                    checked = isDarkTheme,
-                    onCheckedChange = { onToggleTheme() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = colorScheme.onPrimary,
-                        checkedTrackColor = colorScheme.primary,
-                        uncheckedThumbColor = colorScheme.onPrimary,
-                        uncheckedTrackColor = Color.Gray
-                    )
-                )
-            }
 
             Column(
                 modifier = Modifier

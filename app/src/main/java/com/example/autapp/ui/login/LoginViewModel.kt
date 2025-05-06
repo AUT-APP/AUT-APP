@@ -1,5 +1,6 @@
 package com.example.autapp.ui.theme
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,7 +10,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.autapp.R
 import com.example.autapp.data.models.*
 import com.example.autapp.data.repository.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 
 class LoginViewModel(
@@ -18,6 +21,7 @@ class LoginViewModel(
     private val courseRepository: CourseRepository,
     private val assignmentRepository: AssignmentRepository,
     private val gradeRepository: GradeRepository,
+    private val timetableEntryRepository: TimetableEntryRepository,
     private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
@@ -64,77 +68,40 @@ class LoginViewModel(
         }
     }
 
+    // DO NOT USE, it isn't ran at all!
     fun insertTestData() {
         viewModelScope.launch {
             try {
                 // Clear existing data
-                try {
-                    gradeRepository.deleteAll()
-                    println("Grades deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete grades: ${e.message}")
-                }
-                try {
-                    assignmentRepository.deleteAll()
-                    println("Assignments deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete assignments: ${e.message}")
-                }
-                try {
-                    studentRepository.deleteAllCrossRefs()
-                    println("Cross-references deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete cross-references: ${e.message}")
-                }
-                try {
-                    courseRepository.deleteAll()
-                    println("Courses deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete courses: ${e.message}")
-                    throw e
-                }
-                try {
-                    studentRepository.deleteAll()
-                    println("Students deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete students: ${e.message}")
-                }
-                try {
-                    userRepository.deleteAll()
-                    println("Users deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete users: ${e.message}")
-                }
-                try {
-                    notificationRepository.deleteAll()
-                    println("Notifications deleted")
-                } catch (e: Exception) {
-                    println("Failed to delete notifications: ${e.message}")
-                }
+                gradeRepository.deleteAll()
+                Log.d("LoginViewModel", "Grades deleted")
+                assignmentRepository.deleteAll()
+                Log.d("LoginViewModel", "Assignments deleted")
+                timetableEntryRepository.deleteAll()
+                Log.d("LoginViewModel", "Timetable entries deleted")
+                courseRepository.deleteAll()
+                Log.d("LoginViewModel", "Courses deleted")
+                studentRepository.deleteAll()
+                Log.d("LoginViewModel", "Students and cross-references deleted")
+                userRepository.deleteAll()
+                Log.d("LoginViewModel", "Users deleted")
+                notificationRepository.deleteAll()
+                Log.d("LoginViewModel", "Notifications deleted")
 
-                // Insert User
-                val testUser = User(
-                    firstName = "Test",
-                    lastName = "Student",
-                    role = "Student",
-                    username = "teststudent",
-                    password = "password123"
-                )
-                userRepository.insertUser(testUser)
 
                 // Insert Student
-                val testStudent = Student(
-                    firstName = "Test",
-                    lastName = "Student",
-                    username = "teststudent",
-                    password = "password123",
-                    studentId = 1001,
-                    enrollmentDate = "2023-01-01",
-                    major = "Computer Science",
-                    yearOfStudy = 2,
-                    gpa = 0.0
-                )
-                    studentRepository.insertStudent(testStudent)
+//                val testStudent = Student(
+//                    firstName = "Test",
+//                     lastName = "Student",
+//                    username = "teststudent",
+//                    password = "password123",
+//                    studentId = 1001,
+//                    enrollmentDate = "2023-01-01",
+//                    major = "Computer Science",
+//                    yearOfStudy = 2,
+//                    gpa = 0.0
+//                )
+//                studentRepository.insertStudent(testStudent)
 
                 // Insert Courses (16 courses, 15 credits each = 240 credits)
                 val courses = listOf(
@@ -155,7 +122,10 @@ class LoginViewModel(
                     Course(115, "CS115", "Parallel Computing", "Parallel systems", "WZ115"),
                     Course(116, "CS116", "Ethics in Computing", "Ethical issues", "WZ116")
                 )
-                courses.forEach { courseRepository.insertCourse(it) }
+                courses.forEach {
+                    courseRepository.insertCourse(it)
+                    Log.d("LoginViewModel", "Inserted course: ${it.name}")
+                }
 
                 val totalCourses = courses.size // 16
                 var year = 2025
@@ -175,6 +145,7 @@ class LoginViewModel(
                                 semester = semester
                             )
                         )
+                        Log.d("LoginViewModel", "Linked student 1001 to course ${course.courseId}")
                         index++
                     }
 
@@ -186,7 +157,6 @@ class LoginViewModel(
                         year-- // Only decrement year after semester 2
                     }
                 }
-
 
                 // Set up dates
                 val calendar = Calendar.getInstance()
@@ -225,22 +195,8 @@ class LoginViewModel(
 
                 // Past assignments with grades (16 grades, diverse types)
                 val gradeScores = listOf(
-                    95.0, // A+
-                    92.0, // A+
-                    88.0, // A
-                    86.0, // A
-                    83.0, // A-
-                    81.0, // A-
-                    78.0, // B+
-                    76.0, // B+
-                    73.0, // B
-                    71.0, // B
-                    68.0, // B-
-                    66.0, // B-
-                    63.0, // C+
-                    58.0, // C
-                    53.0, // C-
-                    45.0  // D
+                    95.0, 92.0, 88.0, 86.0, 83.0, 81.0, 78.0, 76.0,
+                    73.0, 71.0, 68.0, 66.0, 63.0, 58.0, 53.0, 45.0
                 )
 
                 val pastAssignments = courses.mapIndexed { index, course ->
@@ -263,7 +219,7 @@ class LoginViewModel(
                             assignmentId = 0,
                             studentId = 1001,
                             _score = gradeScores[index],
-                            grade = "", // Auto-set by Grade logic
+                            grade = "",
                             feedback = "Feedback for ${course.name}"
                         )
                     )
@@ -272,6 +228,7 @@ class LoginViewModel(
                 // Insert assignments
                 (upcomingAssignments + pastAssignments.map { it.first }).forEach {
                     assignmentRepository.insertAssignment(it)
+                    Log.d("LoginViewModel", "Inserted assignment: ${it.name}")
                 }
 
                 // Insert grades
@@ -283,6 +240,7 @@ class LoginViewModel(
                     if (insertedAssignment != null) {
                         grade.assignmentId = insertedAssignment.assignmentId
                         gradeRepository.insertGrade(grade)
+                        Log.d("LoginViewModel", "Inserted grade for assignment: ${assignment.name}")
                     }
                 }
 
@@ -308,11 +266,253 @@ class LoginViewModel(
                 notificationRepository.insertNotification(classNotification)
                 notificationRepository.insertNotification(shuttleNotification)
 
+                // Create timetable entries
+                val csEntries = listOf(
+                    TimetableEntry(
+                        courseId = 101,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB101",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 102,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB102",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 103,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB103",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 104,
+                        dayOfWeek = 2,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB104",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 105,
+                        dayOfWeek = 2,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB105",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 106,
+                        dayOfWeek = 2,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB106",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 107,
+                        dayOfWeek = 3,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB107",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 108,
+                        dayOfWeek = 3,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB108",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 109,
+                        dayOfWeek = 3,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB109",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 110,
+                        dayOfWeek = 4,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB110",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 111,
+                        dayOfWeek = 4,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB111",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 112,
+                        dayOfWeek = 4,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB112",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 113,
+                        dayOfWeek = 5,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB113",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 114,
+                        dayOfWeek = 5,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB114",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 115,
+                        dayOfWeek = 5,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB115",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 116,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 18)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB116",
+                        type = "Lecture"
+                    )
+                )
 
-                loginResult = "Test data inserted successfully"
+                csEntries.forEach {
+                    timetableEntryRepository.insertTimetableEntry(it)
+                    Log.d("LoginViewModel", "Inserted timetable entry for course ${it.courseId}")
+                }
+
+                // Verify insertions
+                val users = userRepository.getAllUsers()
+                val students = withContext(Dispatchers.IO) { studentRepository.getAllStudents() }
+                Log.d("LoginViewModel", "Inserted ${users.size} users: $users")
+                Log.d("LoginViewModel", "Inserted ${students.size} students: $students")
+
+                loginResult = if (students.isNotEmpty()) {
+                    "Test data inserted successfully"
+                } else {
+                    "Test data insertion failed: No students inserted"
+                }
             } catch (e: Exception) {
                 loginResult = "Test data insertion failed: ${e.message}"
-                println("Insert test data error: ${e.stackTraceToString()}")
+                Log.e("LoginViewModel", "Error inserting test data: ${e.message}", e)
             }
         }
     }

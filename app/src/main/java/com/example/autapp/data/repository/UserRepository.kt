@@ -5,8 +5,8 @@ import com.example.autapp.data.models.User
 
 class UserRepository(private val userDao: UserDao) {
 
-    suspend fun insertUser(user: User) {
-        userDao.insertUser(user)
+    suspend fun insertUser(user: User): Long {
+        return userDao.insertUser(user)
     }
 
     suspend fun checkUser(username: String, password: String): Boolean {

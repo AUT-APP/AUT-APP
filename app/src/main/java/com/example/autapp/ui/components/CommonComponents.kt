@@ -5,7 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
@@ -42,7 +42,7 @@ fun AUTTopAppBar(
                 if (showBackButton && navController != null) {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
-                            imageVector = Icons.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.White
                         )
@@ -75,7 +75,7 @@ fun AUTTopAppBar(
                 Spacer(modifier = Modifier.weight(1f))
                 // Right-side icons
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_chatbot),
+                    painter = painterResource(id = R.drawable.chatbot_assistant_icon),
                     contentDescription = "AI Chat",
                     tint = Color.White,
                     modifier = Modifier

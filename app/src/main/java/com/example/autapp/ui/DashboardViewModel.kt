@@ -43,9 +43,9 @@ class DashboardViewModel(
             try {
                 // Fetch student's courses
                 val studentWithCourses = studentRepository.getStudentWithCourses(studentId)
-                courses = studentWithCourses?.courses ?: emptyList()
+                courses = studentWithCourses?.courses?.sortedBy { it.name } ?: emptyList()
 
-                // Fetch grades with assignments
+                // Fetch all grades with assignments
                 grades = gradeRepository.getGradesWithAssignmentsSortedByDate(studentId)
 
                 // Calculate GPA
@@ -55,7 +55,6 @@ class DashboardViewModel(
                 assignments = assignmentRepository.getAllAssignments()
                     .filter { it.due.after(Date()) }
                     .sortedBy { it.due }
-                    .take(2) // Limit to 2 for UI
 
                 errorMessage = null
             } catch (e: Exception) {
