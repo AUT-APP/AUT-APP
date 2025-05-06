@@ -14,6 +14,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.autapp.R
 import com.example.autapp.data.models.Notification
+import android.app.job.JobInfo
+import android.app.job.JobScheduler
+import android.content.ComponentName
+import android.os.PersistableBundle
+import java.util.*
 
 object NotificationHelper {
 
@@ -133,6 +138,33 @@ object NotificationHelper {
 
         // This allows updating/cancelling this specific notification later
         notificationManager.notify(notification.notificationId, builder.build())
+    }
+
+
+    fun scheduleClassNotification(
+        context: Context,
+        notificationId: Int,
+        title: String,
+        text: String,
+        notifyAtMillis: Long
+    ) {
+        val delay = notifyAtMillis - System.currentTimeMillis()
+        if (delay <= 0) return // Skip if time is in the past
+
+        val extras = PersistableBundle().apply {
+            putString("title", title)
+            putString("text", text)
+        }
+
+        val jobInfo = JobInfo.Builder(notificationId, ComponentName(context, TimetableNotificationJobService::class.java))
+            .setMinimumLatency(delay)
+            .setOverrideDeadline(delay + 60_000)
+            .setExtras(extras)
+            .setPersisted(true)
+            .build()
+
+        val scheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+        scheduler.schedule(jobInfo)
     }
 
     /**

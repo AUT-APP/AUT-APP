@@ -92,7 +92,10 @@ class MainActivity : ComponentActivity() {
                 AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
             ),
             timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
-            notificationRepository = NotificationRepository(AUTDatabase.getDatabase(this).notificationDao()),
+            notificationRepository = NotificationRepository(
+                AUTDatabase.getDatabase(this).notificationDao(),
+                AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
+            ),
             )
     }
 
@@ -108,7 +111,10 @@ class MainActivity : ComponentActivity() {
                 AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
             ),
             assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao()),
-            notificationRepository = NotificationRepository(AUTDatabase.getDatabase(this).notificationDao()),
+            notificationRepository = NotificationRepository(
+                AUTDatabase.getDatabase(this).notificationDao(),
+                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
+            ),
         )
     }
 
@@ -139,7 +145,13 @@ class MainActivity : ComponentActivity() {
                 studentDao = AUTDatabase.getDatabase(this).studentDao(),
                 userDao = AUTDatabase.getDatabase(this).userDao()
             ),
-            notificationRepository = NotificationRepository(AUTDatabase.getDatabase(this).notificationDao()),
+            notificationRepository = NotificationRepository(
+                AUTDatabase.getDatabase(this).notificationDao(),
+                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this)
+                    .timetableNotificationPreferenceDao()
+            ),
+            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
+            courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
         )
     }
 
@@ -164,7 +176,7 @@ class MainActivity : ComponentActivity() {
         val eventRepository = EventRepository(db.eventDao())
         val bookingRepository = BookingRepository(db.bookingDao(), db.studySpaceDao())
         val studySpaceRepository = StudySpaceRepository(db.studySpaceDao())
-        val notificationRepository = NotificationRepository(db.notificationDao())
+        val notificationRepository = NotificationRepository(db.notificationDao(), db.timetableNotificationPreferenceDao())
         Log.d("MainActivity", "Repositories initialized")
 
         // Initialize Notification channels TODO: Move to an application class for efficiency
@@ -177,7 +189,6 @@ class MainActivity : ComponentActivity() {
                 // Clear database to prevent duplicates
                 withContext(Dispatchers.IO) {
                     db.clearAllTables()
-                    db.query("DELETE FROM sqlite_sequence WHERE name = 'bin'", null) // This resets auto-increment counters
                     Log.d("MainActivity", "Database cleared")
                 }
 
@@ -1338,12 +1349,20 @@ class BookingViewModelFactory(
 
 class NotificationViewModelFactory(
     private val studentRepository: StudentRepository,
-    private val notificationRepository: NotificationRepository
+    private val timetableEntryRepository: TimetableEntryRepository,
+    private val notificationRepository: NotificationRepository,
+    private val courseRepository: CourseRepository,
+
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(NotificationViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return NotificationViewModel(studentRepository, notificationRepository) as T
+            return NotificationViewModel(
+                studentRepository,
+                timetableEntryRepository,
+                courseRepository,
+                notificationRepository,
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

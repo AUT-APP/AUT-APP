@@ -20,12 +20,13 @@ import com.example.autapp.data.models.*
         Grade::class,
         Assignment::class,
         TimetableEntry::class,
+        TimetableNotificationPreference::class,
         Event::class,
         Booking::class,
         StudySpace:: class,
         Notification::class
     ],
-    version = 22,
+    version = 23,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -41,6 +42,8 @@ abstract class AUTDatabase : RoomDatabase() {
     abstract fun bookingDao(): BookingDao
     abstract fun studySpaceDao(): StudySpaceDao
     abstract fun notificationDao(): NotificationDao
+    abstract fun timetableNotificationPreferenceDao(): TimetableNotificationPreferenceDao
+
 
     companion object {
         @Volatile
@@ -51,7 +54,7 @@ abstract class AUTDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AUTDatabase::class.java,
-                    "AUT_database_v22" // Updated database version
+                    "AUT_database_v23" // Updated database version
                 )
                     .fallbackToDestructiveMigration()
                     .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
@@ -65,6 +68,9 @@ abstract class AUTDatabase : RoomDatabase() {
                             Log.d("AUTDatabase", "Database opened")
                             // Enable foreign key constraints
                             db.execSQL("PRAGMA foreign_keys = ON;")
+                            // Reset auto-increment counters by clearing sqlite_sequence
+                            db.execSQL("DELETE FROM sqlite_sequence")
+                            Log.d("AUTDatabase", "Auto-increment counters reset")
                             // Log current tables for debugging
                             val tables = db.query("SELECT name FROM sqlite_master WHERE type='table'")
                             tables.use {

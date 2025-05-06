@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.autapp.R
+import com.example.autapp.data.models.TimetableEntry
 import com.example.autapp.ui.AUTTopAppBar
 
 @Composable
@@ -42,6 +43,7 @@ fun NotificationScreen(
 
     val courses = viewModel.courses
     var selectedTabIndex = remember { mutableStateOf(0) }
+
 
     Column(
         modifier = Modifier
@@ -97,21 +99,45 @@ fun NotificationScreen(
 
 @Composable
 fun CourseNotificationsTab(viewModel: NotificationViewModel, courseId: Int) {
-    val courseNotifications = viewModel.notifications
-        //.filter { it.courseId == courseId }
+    val notificationPrefs = viewModel.notificationPrefs // Map of classSessionId to minutesBefore
+    val timetableEntries = viewModel.timetableEntries.filter { it.courseId == courseId }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
-    if (courseNotifications.isEmpty()) {
-        Text("No notifications for this course.")
+    if (timetableEntries.isEmpty()) {
+        Text("No classes in this course.")
     } else {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            courseNotifications.forEach { notification ->
-                Text(
-                    text = notification.title,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 16.sp
-                )
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            timetableEntries.forEach { session ->
+                Column {
+                    Text(
+                        text = "Class: ${session.type} in ${session.room} at ${session.startTime}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(15, 10, 5).forEach { minutes ->
+                            val selected = notificationPrefs[session.entryId] == minutes
+                            Button(
+                                onClick = {
+                                    viewModel.setNotificationPreference(
+                                        context = context,
+                                        studentId = viewModel.studentId,
+                                        classSessionId = session.entryId,
+                                        minutesBefore = minutes
+                                    )
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (selected)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.secondary
+                                )
+                            ) {
+                                Text("$minutes min")
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
-

@@ -2,6 +2,7 @@ package com.example.autapp.data.dao
 
 import androidx.room.*
 import com.example.autapp.data.models.Course
+import com.example.autapp.data.models.TimetableEntry
 
 @Dao
 interface CourseDao {
@@ -16,6 +17,9 @@ interface CourseDao {
 
     @Query("SELECT * FROM course_table")
     suspend fun getAllCourses(): List<Course>
+
+    @Query("SELECT * FROM timetable_entry_table WHERE courseId = :courseId")
+    fun getTimetableForCourse(courseId: Int): List<TimetableEntry>
 
     @Delete
     suspend fun deleteCourse(course: Course)
