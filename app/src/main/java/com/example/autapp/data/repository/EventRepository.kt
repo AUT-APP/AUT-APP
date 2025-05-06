@@ -40,4 +40,8 @@ class EventRepository(private val eventDao: EventDao) {
     suspend fun deleteAllEventsByStudent(studentId: Int) {
         eventDao.deleteAllEventsByStudent(studentId)
     }
+
+    suspend fun getEventsByTitleAndDate(title: String, date: Date): List<Event> {
+        return eventDao.getEventsByTitleAndDate(title, date)
+    }
 } 

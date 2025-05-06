@@ -12,11 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import java.text.SimpleDateFormat
-import java.util.*
 import com.example.autapp.data.models.Event
-import org.threeten.bp.ZoneId
-import org.threeten.bp.LocalDate
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun ManageEventsScreen(
@@ -57,7 +55,7 @@ fun ManageEventsScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(uiState.events.sortedBy { it.date }) { event ->
+                items(uiState.events.sortedBy { it.date }) { event: Event ->
                     ManageEventCard(
                         event = event,
                         onEdit = { selectedEvent = it },
@@ -143,7 +141,6 @@ fun ManageEventCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                
                 Row {
                     IconButton(onClick = { onEdit(event) }) {
                         Icon(
@@ -161,15 +158,12 @@ fun ManageEventCard(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-            
             Text(
                 text = dateFormatter.format(event.date),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
             if (!event.isToDoList && (event.startTime != null || event.endTime != null)) {
                 Text(
                     text = buildString {
@@ -181,7 +175,6 @@ fun ManageEventCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
             if (!event.location.isNullOrBlank()) {
                 Text(
                     text = event.location,
@@ -189,10 +182,9 @@ fun ManageEventCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
             if (event.frequency != null) {
                 Text(
-                    text = "Repeats ${event.frequency.lowercase()}",
+                    text = "Repeats ${event.frequency.lowercase(Locale.getDefault())}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -200,9 +192,3 @@ fun ManageEventCard(
         }
     }
 }
-
-private fun Date.toLocalDate(): LocalDate {
-    return org.threeten.bp.Instant.ofEpochMilli(time)
-        .atZone(ZoneId.systemDefault())
-        .toLocalDate()
-} 
