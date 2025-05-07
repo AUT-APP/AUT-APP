@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.autapp.data.dao.TimetableEntryDao
 import com.example.autapp.data.models.Event
+import com.example.autapp.data.models.Booking
 import com.example.autapp.data.repository.TimetableEntryRepository
 import com.example.autapp.data.repository.StudentRepository
 import com.example.autapp.data.repository.EventRepository
+import com.example.autapp.data.repository.BookingRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +26,8 @@ data class CalendarUiState(
     val timetableEntries: List<TimetableEntryDao.TimetableEntryWithCourse> = emptyList(),
     val events: List<Event> = emptyList(),
     val filteredEvents: List<Event> = emptyList(),
+    val bookings: List<Booking> = emptyList(),
+    val filteredBookings: List<Booking> = emptyList(),
     val isCalendarView: Boolean = true,
     val errorMessage: String? = null,
     val isLoading: Boolean = false
@@ -32,7 +36,8 @@ data class CalendarUiState(
 class CalendarViewModel(
     private val timetableEntryRepository: TimetableEntryRepository,
     private val studentRepository: StudentRepository,
-    private val eventRepository: EventRepository
+    private val eventRepository: EventRepository,
+    private val bookingRepository: BookingRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState())
@@ -72,12 +77,18 @@ class CalendarViewModel(
                 val filteredEvents = events.filter { event ->
                     event.date.toLocalDate() == _uiState.value.selectedDate
                 }
+                val bookings = bookingRepository.getActiveBookingsByStudent(studentId)
+                val filteredBookings = bookings.filter { booking ->
+                    booking.bookingDate.toLocalDate() == _uiState.value.selectedDate
+                }
                 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     timetableEntries = timetableEntries,
                     events = events,
                     filteredEvents = filteredEvents,
+                    bookings = bookings,
+                    filteredBookings = filteredBookings,
                     errorMessage = null
                 )
             } catch (e: Exception) {
@@ -102,10 +113,17 @@ class CalendarViewModel(
                 val filteredEntries = allEntries
                     .filter { entry -> courseIds.contains(entry.entry.courseId) }
                     .sortedBy { it.entry.startTime }
+
+                val bookings = bookingRepository.getActiveBookingsByStudent(_studentId)
+                val filteredBookings = bookings.filter { booking ->
+                    booking.bookingDate.toLocalDate() == _uiState.value.selectedDate
+                }
                 
                 _uiState.update { currentState ->
                     currentState.copy(
                         timetableEntries = filteredEntries,
+                        bookings = bookings,
+                        filteredBookings = filteredBookings,
                         errorMessage = null,
                         isLoading = false
                     )
@@ -116,6 +134,8 @@ class CalendarViewModel(
                     currentState.copy(
                         errorMessage = "Error loading timetable: ${e.message}",
                         timetableEntries = emptyList(),
+                        bookings = emptyList(),
+                        filteredBookings = emptyList(),
                         isLoading = false
                     )
                 }
@@ -177,9 +197,12 @@ class CalendarViewModel(
                         .thenBy { it.second.entry.startTime })
                     .map { it.second }
 
+                val bookings = bookingRepository.getActiveBookingsByStudent(_studentId)
+                
                 _uiState.update { currentState ->
                     currentState.copy(
                         timetableEntries = sortedEntries,
+                        bookings = bookings,
                         errorMessage = null,
                         isLoading = false
                     )
@@ -190,6 +213,7 @@ class CalendarViewModel(
                     currentState.copy(
                         errorMessage = "Error loading timetable: ${e.message}",
                         timetableEntries = emptyList(),
+                        bookings = emptyList(),
                         isLoading = false
                     )
                 }

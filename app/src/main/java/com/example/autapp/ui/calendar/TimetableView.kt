@@ -2,7 +2,6 @@ package com.example.autapp.ui.calendar
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -10,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import com.example.autapp.data.dao.TimetableEntryDao
 import com.example.autapp.data.models.Event
+import com.example.autapp.data.models.Booking
 import org.threeten.bp.LocalDate
 import org.threeten.bp.format.DateTimeFormatter
 import java.util.Date
@@ -30,7 +30,9 @@ fun TimetableView(
     ) {
         val nextTwoWeeksEntries = uiState.timetableEntries
         val nextTwoWeeksEvents = uiState.events
-        if (nextTwoWeeksEntries.isEmpty() && nextTwoWeeksEvents.isEmpty()) {
+        val nextTwoWeeksBookings = uiState.bookings
+
+        if (nextTwoWeeksEntries.isEmpty() && nextTwoWeeksEvents.isEmpty() && nextTwoWeeksBookings.isEmpty()) {
             item {
                 Box(
                     modifier = Modifier
@@ -57,10 +59,14 @@ fun TimetableView(
                 val eventsForDay = nextTwoWeeksEvents.filter { event ->
                     event.date.toLocalDate() == date
                 }
-                val allEntries = (timetableEntriesForDay + eventsForDay).sortedWith(compareBy { entry ->
+                val bookingsForDay = nextTwoWeeksBookings.filter { booking ->
+                    booking.bookingDate.toLocalDate() == date
+                }
+                val allEntries = (timetableEntriesForDay + eventsForDay + bookingsForDay).sortedWith(compareBy { entry ->
                     when (entry) {
                         is TimetableEntryDao.TimetableEntryWithCourse -> entry.entry.startTime
                         is Event -> entry.startTime ?: Date(0)
+                        is Booking -> entry.startTime
                         else -> Date(0)
                     }
                 })
@@ -96,6 +102,14 @@ fun TimetableView(
                                 EventCard(
                                     event = entry,
                                     onClick = { onEventClick(entry) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                )
+                            }
+                            is Booking -> {
+                                BookingCard(
+                                    booking = entry,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp)

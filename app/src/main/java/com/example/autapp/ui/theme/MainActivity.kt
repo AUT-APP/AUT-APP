@@ -62,6 +62,7 @@ import kotlinx.coroutines.withContext
 import java.util.*
 
 class MainActivity : ComponentActivity() {
+    private var currentStudentId by mutableStateOf<Int?>(null)
     private val loginViewModel: LoginViewModel by viewModels {
         LoginViewModelFactory(
             userRepository = UserRepository(AUTDatabase.getDatabase(this).userDao()),
@@ -101,7 +102,11 @@ class MainActivity : ComponentActivity() {
                 studentDao = AUTDatabase.getDatabase(this).studentDao(),
                 userDao = AUTDatabase.getDatabase(this).userDao()
             ),
-            eventRepository = EventRepository(AUTDatabase.getDatabase(this).eventDao())
+            eventRepository = EventRepository(AUTDatabase.getDatabase(this).eventDao()),
+            bookingRepository = BookingRepository(
+                bookingDao = AUTDatabase.getDatabase(this).bookingDao(),
+                studySpaceDao = AUTDatabase.getDatabase(this).studySpaceDao()
+            )
         )
     }
 
@@ -415,7 +420,9 @@ class MainActivity : ComponentActivity() {
                         coroutineScope.launch {
                             themeManager.setDarkMode(newTheme)
                         }
-                    }
+                    },
+                    currentStudentId = currentStudentId,
+                    onStudentIdChange = { currentStudentId = it }
                 )
             }
         }
@@ -431,7 +438,9 @@ fun AppContent(
     bookingViewModel: BookingViewModel,
     chatViewModel: ChatViewModel,
     isDarkTheme: Boolean,
-    onToggleTheme: () -> Unit
+    onToggleTheme: () -> Unit,
+    currentStudentId: Int?,
+    onStudentIdChange: (Int) -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -525,12 +534,17 @@ fun AppContent(
 
     // Define the Bottom NavigationBar composable
     @Composable
-    fun AUTBottomBar(isDarkTheme: Boolean, navController: NavController) {
+    fun AUTBottomBar(
+        isDarkTheme: Boolean,
+        navController: NavController,
+        currentRoute: String?,
+        currentStudentId: Int?
+    ) {
         val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
         val iconTint = if (isDarkTheme) Color.White else Color.Black
         val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
-        val currentStudentId = navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
+        val currentRoute = currentRoute ?: navBackStackEntry?.destination?.route
+        val currentStudentId = currentStudentId ?: navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
 
         NavigationBar(
             containerColor = backgroundColor,
@@ -666,7 +680,7 @@ fun AppContent(
             LoginScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = { studentId ->
-                    Log.d("MainActivity", "Login successful with student ID: $studentId")
+                    onStudentIdChange(studentId)
                     dashboardViewModel.initialize(studentId)
                     navController.navigate("dashboard/$studentId") {
                         popUpTo("login") { inclusive = true }
@@ -680,7 +694,8 @@ fun AppContent(
             route = "dashboard/{studentId}",
             arguments = listOf(navArgument("studentId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            onStudentIdChange(studentId)
             Log.d("MainActivity", "Entering dashboard with student ID: $studentId")
             Scaffold(
                 topBar = {
@@ -691,7 +706,7 @@ fun AppContent(
                         showBackButton = false
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController, currentRoute = null, currentStudentId = studentId) }
             ) { paddingValues ->
                 StudentDashboard(
                     viewModel = dashboardViewModel,
@@ -704,12 +719,12 @@ fun AppContent(
             route = "calendar/{studentId}",
             arguments = listOf(navArgument("studentId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
-            Log.d("MainActivity", "Entering calendar with student ID: $studentId")
-
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            onStudentIdChange(studentId)
             LaunchedEffect(studentId) {
                 calendarViewModel.initialize(studentId)
             }
+            Log.d("MainActivity", "Entering calendar with student ID: $studentId")
 
             Scaffold(
                 topBar = {
@@ -720,7 +735,7 @@ fun AppContent(
                         showBackButton = true
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController, currentRoute = null, currentStudentId = studentId) }
             ) { paddingValues ->
                 CalendarScreen(
                     viewModel = calendarViewModel,
@@ -735,8 +750,8 @@ fun AppContent(
             route = "manage_events/{studentId}",
             arguments = listOf(navArgument("studentId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
-
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            onStudentIdChange(studentId)
             LaunchedEffect(studentId) {
                 if (calendarViewModel.studentId != studentId) {
                     calendarViewModel.initialize(studentId)
@@ -752,7 +767,7 @@ fun AppContent(
                         showBackButton = true
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController, currentRoute = null, currentStudentId = studentId) }
             ) { paddingValues ->
                 ManageEventsScreen(
                     viewModel = calendarViewModel,
@@ -764,7 +779,8 @@ fun AppContent(
             route = "bookings/{studentId}",
             arguments = listOf(navArgument("studentId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            onStudentIdChange(studentId)
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -774,7 +790,7 @@ fun AppContent(
                         showBackButton = true
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController, currentRoute = null, currentStudentId = studentId) }
             ) { paddingValues ->
                 BookingsScreen(
                     viewModel = bookingViewModel,
@@ -801,7 +817,7 @@ fun AppContent(
             val level = backStackEntry.arguments?.getString("level") ?: ""
             val date = backStackEntry.arguments?.getString("date") ?: ""
             val timeSlot = backStackEntry.arguments?.getString("timeSlot") ?: ""
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
             val campus = backStackEntry.arguments?.getString("campus") ?: ""
             val building = backStackEntry.arguments?.getString("building") ?: ""
             val snackbarHostState = remember { SnackbarHostState() } // Define here
@@ -814,7 +830,7 @@ fun AppContent(
                         showBackButton = true
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) },
+                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController, currentRoute = null, currentStudentId = studentId) },
                 snackbarHost = {
                     SnackbarHost(
                         hostState = snackbarHostState,
@@ -839,6 +855,9 @@ fun AppContent(
             }
         }
         composable("chat") {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            val currentStudentId = currentStudentId
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -848,7 +867,14 @@ fun AppContent(
                         showBackButton = true
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        currentRoute = currentRoute,
+                        currentStudentId = currentStudentId
+                    )
+                }
             ) { paddingValues ->
                 ChatScreen(
                     viewModel = chatViewModel,
@@ -858,6 +884,9 @@ fun AppContent(
             }
         }
         composable("settings") {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            val currentStudentId = currentStudentId
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -867,7 +896,7 @@ fun AppContent(
                         showBackButton = true
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController, currentRoute = currentRoute, currentStudentId = currentStudentId) }
             ) { paddingValues ->
                 SettingsScreen(
                     isDarkTheme = isDarkTheme,
@@ -926,7 +955,8 @@ class DashboardViewModelFactory(
 class CalendarViewModelFactory(
     private val timetableEntryRepository: TimetableEntryRepository,
     private val studentRepository: StudentRepository,
-    private val eventRepository: EventRepository
+    private val eventRepository: EventRepository,
+    private val bookingRepository: BookingRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CalendarViewModel::class.java)) {
@@ -934,7 +964,8 @@ class CalendarViewModelFactory(
             return CalendarViewModel(
                 timetableEntryRepository,
                 studentRepository,
-                eventRepository
+                eventRepository,
+                bookingRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

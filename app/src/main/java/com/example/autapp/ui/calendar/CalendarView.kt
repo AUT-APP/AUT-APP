@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.autapp.data.dao.TimetableEntryDao
 import com.example.autapp.data.models.Event
+import com.example.autapp.data.models.Booking
 import org.threeten.bp.LocalDate
 import org.threeten.bp.YearMonth
 import org.threeten.bp.format.DateTimeFormatter
@@ -51,7 +52,7 @@ fun CalendarView(
     modifier: Modifier = Modifier
 ) {
     var currentYearMonth by remember { mutableStateOf(YearMonth.from(uiState.selectedDate)) }
-    
+
     Column(
         modifier = modifier.fillMaxWidth()
     ) {
@@ -68,13 +69,13 @@ fun CalendarView(
             }) {
                 Icon(Icons.Filled.ChevronLeft, "Previous month")
             }
-            
+
             Text(
                 text = currentYearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + currentYearMonth.year,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-            
+
             IconButton(onClick = {
                 currentYearMonth = currentYearMonth.plusMonths(1)
             }) {
@@ -155,14 +156,15 @@ fun CalendarView(
             .filter { entry ->
                 entry.entry.dayOfWeek == uiState.selectedDate.dayOfWeek.value
             }
-            .distinctBy { entry -> 
+            .distinctBy { entry ->
                 "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
             }
             .sortedBy { it.entry.startTime }
 
         val selectedDateEvents = uiState.filteredEvents.sortedBy { it.startTime }
+        val selectedDateBookings = uiState.filteredBookings.sortedBy { it.startTime }
 
-        if (selectedDateEntries.isNotEmpty() || selectedDateEvents.isNotEmpty()) {
+        if (selectedDateEntries.isNotEmpty() || selectedDateEvents.isNotEmpty() || selectedDateBookings.isNotEmpty()) {
             Text(
                 text = "Schedule for ${uiState.selectedDate.format(DateTimeFormatter.ofPattern("EEEE, d MMMM"))}",
                 style = MaterialTheme.typography.titleMedium,
@@ -185,6 +187,10 @@ fun CalendarView(
                         onClick = { onEventClick(event) }
                     )
                 }
+
+                items(selectedDateBookings) { booking: Booking ->
+                    BookingCard(booking = booking)
+                }
             }
         } else {
             Box(
@@ -202,5 +208,3 @@ fun CalendarView(
         }
     }
 }
-
-// Utility functions like generateDaysForMonth, etc. should be moved to CalendarUtils.kt and imported here. 
