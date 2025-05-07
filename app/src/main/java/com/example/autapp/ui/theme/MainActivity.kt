@@ -55,6 +55,8 @@ import com.example.autapp.ui.DashboardViewModel
 import com.example.autapp.ui.settings.SettingsScreen
 import com.example.autapp.ui.components.AUTTopAppBar
 import com.example.autapp.ui.components.AUTBottomBar
+import com.example.autapp.ui.transport.TransportScreen
+import com.example.autapp.ui.transport.TransportViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -122,6 +124,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private val chatViewModel: ChatViewModel by viewModels()
+    private val transportViewModel: TransportViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -414,6 +417,7 @@ class MainActivity : ComponentActivity() {
                     calendarViewModel = calendarViewModel,
                     bookingViewModel = bookingViewModel,
                     chatViewModel = chatViewModel,
+                    transportViewModel = transportViewModel,
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = {
                         val newTheme = !isDarkTheme
@@ -438,6 +442,7 @@ fun AppContent(
     calendarViewModel: CalendarViewModel,
     bookingViewModel: BookingViewModel,
     chatViewModel: ChatViewModel,
+    transportViewModel: TransportViewModel,
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit,
     currentStudentId: Int?,
@@ -723,6 +728,38 @@ fun AppContent(
                     isDarkTheme = isDarkTheme,
                     paddingValues = paddingValues,
                     snackbarHostState = snackbarHostState // Pass to BookingDetailsScreen
+                )
+            }
+        }
+        composable(
+            route = "transport/{studentId}",
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val studentId = backStackEntry.arguments!!.getInt("studentId")
+            Scaffold(
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Shuttle Bus",
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        showBackButton = true,
+                        currentRoute = "transport",
+                        currentStudentId = studentId
+                    )
+                },
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = "transport",
+                        currentStudentId = studentId
+                    )
+                }
+            ) { padding ->
+                TransportScreen(
+                    viewModel = transportViewModel,
+                    paddingValues = padding
                 )
             }
         }
