@@ -29,6 +29,7 @@ import androidx.navigation.NavController
 import com.example.autapp.R
 import com.example.autapp.data.models.TimetableEntry
 import com.example.autapp.ui.AUTTopAppBar
+import com.example.autapp.ui.theme.ClassCard
 
 @Composable
 fun NotificationScreen(
@@ -113,17 +114,45 @@ fun CourseNotificationsTab(viewModel: NotificationViewModel, courseId: Int) {
                         text = "Class: ${session.type} in ${session.room} at ${session.startTime}",
                         style = MaterialTheme.typography.titleMedium
                     )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        viewModel.courses.take(2).forEach { course ->
+                            ClassCard(
+                                course = course,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(180.dp)
+                            )
+                        }
+                        if (viewModel.courses.size < 2) {
+                            repeat(2 - viewModel.courses.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(15, 10, 5).forEach { minutes ->
                             val selected = notificationPrefs[session.entryId] == minutes
                             Button(
                                 onClick = {
-                                    viewModel.setNotificationPreference(
-                                        context = context,
-                                        studentId = viewModel.studentId,
-                                        classSessionId = session.entryId,
-                                        minutesBefore = minutes
-                                    )
+                                    val isCurrentlySet = notificationPrefs[session.entryId] == minutes
+                                    if (isCurrentlySet) {
+                                        viewModel.deleteNotificationPreference(
+                                            studentId = viewModel.studentId,
+                                            classSessionId = session.entryId
+                                        )
+                                    } else {
+                                        viewModel.setNotificationPreference(
+                                            context = context,
+                                            studentId = viewModel.studentId,
+                                            classSessionId = session.entryId,
+                                            minutesBefore = minutes
+                                        )
+                                    }
                                 },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (selected)

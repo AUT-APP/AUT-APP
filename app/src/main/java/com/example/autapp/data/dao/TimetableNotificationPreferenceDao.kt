@@ -8,6 +8,9 @@ interface TimetableNotificationPreferenceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdatePreference(pref: TimetableNotificationPreference)
 
+    @Query("DELETE FROM timetable_notification_prefs WHERE studentId = :studentId AND classSessionId = :classSessionId")
+    suspend fun deletePreference(studentId: Int, classSessionId: Int)
+
     @Query("SELECT * FROM timetable_notification_prefs WHERE studentId = :studentId")
     suspend fun getPreferencesForStudent(studentId: Int): List<TimetableNotificationPreference>
 

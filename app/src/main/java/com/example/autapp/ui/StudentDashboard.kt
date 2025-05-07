@@ -110,36 +110,6 @@ fun StudentDashboard(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            if (viewModel.courses.size > 2) {
-                Text(
-                    text = "All Courses",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor,
-                    modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-                )
-
-                viewModel.courses.drop(2).chunked(2).forEach { coursePair ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        coursePair.forEach { course ->
-                            ClassCard(
-                                course = course,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(120.dp)
-                            )
-                        }
-                        if (coursePair.size < 2) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-
             Spacer(modifier = Modifier.height(24.dp))
 
             viewModel.errorMessage?.let {

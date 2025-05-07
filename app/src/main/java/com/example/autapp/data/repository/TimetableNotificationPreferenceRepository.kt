@@ -14,8 +14,12 @@ class TimetableNotificationPreferenceRepository  (
         timetableNotificationPreferenceDao.insertOrUpdatePreference(entry)
     }
 
-    suspend fun getPreference(studentId: Int, courseId: Int): TimetableNotificationPreference? {
-        return timetableNotificationPreferenceDao.getPreference(studentId, courseId)
+    suspend fun deletePreference(studentId: Int, courseId: Int) {
+        timetableNotificationPreferenceDao.deletePreference(studentId, courseId)
+    }
+
+    suspend fun getPreference(studentId: Int, classSessionId: Int): TimetableNotificationPreference? {
+        return timetableNotificationPreferenceDao.getPreference(studentId, classSessionId)
     }
 
 }

@@ -85,6 +85,20 @@ class NotificationViewModel(
         }
     }
 
+    fun deleteNotificationPreference(studentId: Int, classSessionId: Int) {
+        viewModelScope.launch {
+            try {
+                notificationRepository.deleteTimetableNotificationPreference(studentId, classSessionId)
+                notificationPrefs = notificationPrefs.toMutableMap().apply {
+                    remove(classSessionId)
+                }
+            } catch (e: Exception) {
+                errorMessage = "Failed to delete notification preference: ${e.message}"
+            }
+        }
+    }
+
+
 
     private fun fetchNotificationData() {
         viewModelScope.launch {

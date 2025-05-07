@@ -39,6 +39,10 @@ class NotificationRepository(
         timetableNotificationPreferenceDao.insertOrUpdatePreference(pref)
     }
 
+    suspend fun deleteTimetableNotificationPreference(studentId: Int, classSessionId: Int) {
+        timetableNotificationPreferenceDao.deletePreference(studentId, classSessionId)
+    }
+
 
     // Method to schedule a notification for a specific class session
     fun scheduleNotificationForSession(context: Context, pref: TimetableNotificationPreference, session: TimetableEntry) {
