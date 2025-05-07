@@ -29,7 +29,9 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.autapp.R
 import com.example.autapp.ui.calendar.CalendarViewModel
+import kotlin.String
 
+// Define the TopAppBar composable
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AUTTopAppBar(
@@ -37,6 +39,8 @@ fun AUTTopAppBar(
     navController: NavController,
     title: String,
     showBackButton: Boolean,
+    currentRoute: String?,
+    currentStudentId: Int?,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFF2F7A78)
@@ -47,6 +51,11 @@ fun AUTTopAppBar(
     val profileBackground = if (isDarkTheme) Color.DarkGray else Color.White
     val profileIconColor = if (isDarkTheme) Color.White else Color.Black
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentRoute ?: navBackStackEntry?.destination?.route
+    val currentStudentId = currentStudentId ?: navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
+
+
     TopAppBar(
         title = {
             Row(
@@ -56,7 +65,11 @@ fun AUTTopAppBar(
                     .padding(horizontal = 8.dp)
             ) {
                 if (showBackButton) {
-                    IconButton(onClick = { navController.navigateUp() }) {
+                    IconButton(onClick = {
+                        if (currentRoute?.startsWith("dashboard") != true) {
+                            navController.navigateUp()
+                        }
+                    }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -117,17 +130,20 @@ fun AUTTopAppBar(
     )
 }
 
+// Define the Bottom NavigationBar composable
 @Composable
 fun AUTBottomBar(
     isDarkTheme: Boolean,
     navController: NavController,
-    calendarViewModel: CalendarViewModel
+    calendarViewModel: CalendarViewModel,
+    currentRoute: String?,
+    currentStudentId: Int?
 ) {
     val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
     val iconTint = if (isDarkTheme) Color.White else Color.Black
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-    val currentStudentId = navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
+    val currentRoute = currentRoute ?: navBackStackEntry?.destination?.route
+    val currentStudentId = currentStudentId ?: navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
 
     NavigationBar(
         containerColor = backgroundColor,
@@ -152,12 +168,14 @@ fun AUTBottomBar(
             selected = currentRoute?.startsWith("calendar") == true,
             onClick = {
                 Log.d("MainActivity", "Calendar icon clicked")
-                currentStudentId?.let { studentId ->
-                    Log.d("MainActivity", "Navigating to calendar with student ID: $studentId")
-                    calendarViewModel.initialize(studentId)
-                    navController.navigate("calendar/$studentId") {
-                        popUpTo("dashboard/$studentId") { inclusive = false }
-                        launchSingleTop = true
+                if (currentRoute?.startsWith("calendar") != true) {
+                    currentStudentId?.let { studentId ->
+                        Log.d("MainActivity", "Navigating to calendar with student ID: $studentId")
+                        calendarViewModel.initialize(studentId)
+                        navController.navigate("calendar/$studentId") {
+                            popUpTo("dashboard/$studentId") { inclusive = false }
+                            launchSingleTop = true
+                        }
                     }
                 }
             }
@@ -167,10 +185,12 @@ fun AUTBottomBar(
             label = { Text("Bookings") },
             selected = currentRoute?.startsWith("bookings") == true,
             onClick = {
-                currentStudentId?.let { studentId ->
-                    navController.navigate("bookings/$studentId") {
-                        popUpTo("dashboard/$studentId") { inclusive = false }
-                        launchSingleTop = true
+                if (currentRoute?.startsWith("bookings") != true) {
+                    currentStudentId?.let { studentId ->
+                        navController.navigate("bookings/$studentId") {
+                            popUpTo("dashboard/$studentId") { inclusive = false }
+                            launchSingleTop = true
+                        }
                     }
                 }
             }
@@ -191,7 +211,11 @@ fun AUTBottomBar(
             icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = iconTint) },
             label = { Text("More") },
             selected = currentRoute == "settings",
-            onClick = { navController.navigate("settings") }
+            onClick = {
+                if (currentRoute?.startsWith("settings") != true) {
+                    navController.navigate("settings")
+                }
+            }
         )
     }
 }

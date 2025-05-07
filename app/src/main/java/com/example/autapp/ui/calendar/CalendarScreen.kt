@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.autapp.data.models.Event
 
 @Composable
@@ -46,7 +47,8 @@ fun CalendarScreen(
         ) {
             Text(
                 text = if (showCalendarView) "Calendar View" else "Timetable View",
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.titleLarge,
+                fontSize = 20.sp
             )
 
             Row {
