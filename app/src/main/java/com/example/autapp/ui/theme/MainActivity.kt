@@ -661,7 +661,21 @@ class MainActivity : ComponentActivity() {
                         }.time,
                         room = "WB116",
                         type = "Lecture"
-                    )
+                    ),
+                    TimetableEntry(
+                    courseId = 1,
+                    dayOfWeek = 4,
+                    startTime = calendar.apply {
+                        set(Calendar.HOUR_OF_DAY, 1)
+                        set(Calendar.MINUTE, 12)
+                    }.time,
+                    endTime = calendar.apply {
+                        set(Calendar.HOUR_OF_DAY, 23)
+                        set(Calendar.MINUTE, 59)
+                    }.time,
+                    room = "WB116",
+                    type = "Lecture"
+                    ),
                 )
 
                 csEntries.forEach {

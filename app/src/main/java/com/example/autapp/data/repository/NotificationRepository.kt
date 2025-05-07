@@ -1,12 +1,16 @@
 package com.example.autapp.data.repository
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
+import androidx.annotation.RequiresPermission
 import com.example.autapp.data.dao.NotificationDao
 import com.example.autapp.data.dao.TimetableNotificationPreferenceDao
 import com.example.autapp.data.models.Notification
 import com.example.autapp.data.models.TimetableEntry
 import com.example.autapp.data.models.TimetableNotificationPreference
 import com.example.autapp.util.NotificationHelper
+import com.example.autapp.util.NotificationScheduler
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Date
@@ -46,18 +50,14 @@ class NotificationRepository(
 
     // Method to schedule a notification for a specific class session
     fun scheduleNotificationForSession(context: Context, pref: TimetableNotificationPreference, session: TimetableEntry) {
-        // Convert Date to LocalDateTime
-        val sessionStartTime = convertDateToLocalDateTime(session.startTime)
-
-        // Calculate the time when to show the notification
-        val notifyAtMillis = calculateNotificationTime(sessionStartTime, pref.minutesBefore)
-
-        NotificationHelper.scheduleClassNotification(
+        NotificationScheduler.scheduleClassNotification(
             context = context,  // Your app context
             notificationId = pref.classSessionId.hashCode(),  // Use the session's ID as notification ID
             title = "Class Reminder",  // Customize as necessary
             text = "Your class ${session.type} is coming up in ${pref.minutesBefore} minutes!",
-            notifyAtMillis = notifyAtMillis
+            dayOfWeek = session.dayOfWeek,
+            startTime = session.startTime,
+            minutesBefore = pref.minutesBefore
         )
     }
 

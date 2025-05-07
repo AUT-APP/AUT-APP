@@ -1,10 +1,14 @@
 package com.example.autapp.ui.notification
 
 import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import android.net.Uri
 import com.example.autapp.data.repository.NotificationRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,6 +21,7 @@ import com.example.autapp.data.repository.StudentRepository
 import com.example.autapp.data.repository.TimetableEntryRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import android.app.AlarmManager
 
 class NotificationViewModel(
     private val studentRepository: StudentRepository,
@@ -71,7 +76,7 @@ class NotificationViewModel(
                     put(classSessionId, minutesBefore)
                 }
 
-                // Schedule notification (assumes you have this method)
+                // Schedule notification
                 val session = timetableEntryRepository.getTimetableEntryById(classSessionId)
 
                 if (session != null) {

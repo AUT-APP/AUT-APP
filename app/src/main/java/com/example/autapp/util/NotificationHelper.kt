@@ -18,9 +18,13 @@ import android.app.job.JobInfo
 import android.app.job.JobScheduler
 import android.content.ComponentName
 import android.os.PersistableBundle
+import android.util.Log
+import java.text.SimpleDateFormat
 import java.util.*
 
 object NotificationHelper {
+
+    private const val TAG = "NotificationHelper"
 
     // Channel constants
     const val DEFAULT_CHANNEL_ID = "default_channel"
@@ -42,38 +46,6 @@ object NotificationHelper {
         }
     }
     */
-
-    /**
-     * Creates notification channels. Call this early, e.g., in Application.onCreate().
-     * Safe to call multiple times; creating an existing channel performs no operation.
-     */
-    fun createNotificationChannels(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Default Channel
-            val defaultChannel = NotificationChannel(
-                DEFAULT_CHANNEL_ID,
-                DEFAULT_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_DEFAULT // Adjust importance as needed
-            ).apply {
-                description = DEFAULT_CHANNEL_DESC
-            }
-
-            // High Priority Channel
-            val highPriorityChannel = NotificationChannel(
-                HIGH_PRIORITY_CHANNEL_ID,
-                HIGH_PRIORITY_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = HIGH_PRIORITY_CHANNEL_DESC
-            }
-
-            val notificationManager: NotificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-            notificationManager.createNotificationChannel(defaultChannel)
-            notificationManager.createNotificationChannel(highPriorityChannel)
-        }
-    }
 
     /**
      * Builds and displays a system notification based on notification.
@@ -140,31 +112,34 @@ object NotificationHelper {
         notificationManager.notify(notification.notificationId, builder.build())
     }
 
-
-    fun scheduleClassNotification(
-        context: Context,
-        notificationId: Int,
-        title: String,
-        text: String,
-        notifyAtMillis: Long
-    ) {
-        val delay = notifyAtMillis - System.currentTimeMillis()
-        if (delay <= 0) return // Skip if time is in the past
-
-        val extras = PersistableBundle().apply {
-            putString("title", title)
-            putString("text", text)
+    /**
+     * Creates notification channels. Call this early, e.g., in Application.onCreate().
+     * Safe to call multiple times; creating an existing channel performs no operation.
+     */
+    fun createNotificationChannels(context: Context) {
+        // Default Channel
+        val defaultChannel = NotificationChannel(
+            DEFAULT_CHANNEL_ID,
+            DEFAULT_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_DEFAULT // Adjust importance as needed
+        ).apply {
+            description = DEFAULT_CHANNEL_DESC
         }
 
-        val jobInfo = JobInfo.Builder(notificationId, ComponentName(context, TimetableNotificationJobService::class.java))
-            .setMinimumLatency(delay)
-            .setOverrideDeadline(delay + 60_000)
-            .setExtras(extras)
-            .setPersisted(true)
-            .build()
+        // High Priority Channel
+        val highPriorityChannel = NotificationChannel(
+            HIGH_PRIORITY_CHANNEL_ID,
+            HIGH_PRIORITY_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = HIGH_PRIORITY_CHANNEL_DESC
+        }
 
-        val scheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
-        scheduler.schedule(jobInfo)
+        val notificationManager: NotificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        notificationManager.createNotificationChannel(defaultChannel)
+        notificationManager.createNotificationChannel(highPriorityChannel)
     }
 
     /**
