@@ -16,6 +16,8 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +57,7 @@ fun AUTTopAppBar(
     val currentRoute = currentRoute ?: navBackStackEntry?.destination?.route
     val currentStudentId = currentStudentId ?: navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
 
+    val expanded = remember { mutableStateOf(false) }
 
     TopAppBar(
         title = {
@@ -108,6 +111,7 @@ fun AUTTopAppBar(
                         .size(32.dp)
                         .clip(CircleShape)
                         .background(profileBackground)
+                        .clickable { expanded.value = true }
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Person,
@@ -117,6 +121,32 @@ fun AUTTopAppBar(
                             .size(24.dp)
                             .align(Alignment.Center)
                     )
+                    DropdownMenu(
+                        expanded = expanded.value,
+                        onDismissRequest = { expanded.value = false },
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Settings") },
+                            onClick = {
+                                expanded.value = false
+                                if (currentRoute?.startsWith("settings") != true) {
+                                    navController.navigate("settings")
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Logout") },
+                            onClick = {
+                                expanded.value = false
+                                // TODO: Add proper user sessions
+                                if (currentRoute?.startsWith("login") != true) {
+                                    navController.navigate("login")
+                                }
+                            }
+                        )
+                    }
                 }
             }
         },
