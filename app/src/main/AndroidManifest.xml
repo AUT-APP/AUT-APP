@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.autapp">
 
+    <!-- Add permissions for Google Maps -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <application
         android:name=".AUTApplication"
         android:allowBackup="true"
@@ -14,6 +19,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AUTAPP"
         tools:targetApi="31">
+
+        <!-- Add Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="I_DO_NOT_HAVE_A_API_KEY!!!!!!!!!!!!!!!" />
+
         <activity
             android:name=".ui.theme.MainActivity"
             android:exported="true"
