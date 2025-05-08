@@ -2,6 +2,9 @@ package com.example.autapp.data.repository
 
 import com.example.autapp.data.dao.CourseDao
 import com.example.autapp.data.models.Course
+import com.example.autapp.data.models.TimetableEntry
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class CourseRepository(private val courseDao: CourseDao) {
 
@@ -19,6 +22,12 @@ class CourseRepository(private val courseDao: CourseDao) {
 
     suspend fun getAllCourses(): List<Course> {
         return courseDao.getAllCourses()
+    }
+
+    suspend fun getTimetableForCourse(courseId: Int): List<TimetableEntry> {
+        return withContext(Dispatchers.IO) {
+            courseDao.getTimetableForCourse(courseId)
+        }
     }
 
     suspend fun deleteCourse(course: Course) {

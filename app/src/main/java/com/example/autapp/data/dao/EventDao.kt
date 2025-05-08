@@ -32,4 +32,7 @@ interface EventDao {
 
     @Query("DELETE FROM event_table WHERE studentId = :studentId")
     suspend fun deleteAllEventsByStudent(studentId: Int)
-} 
+
+    @Query("SELECT * FROM event_table WHERE title = :title AND date = :date")
+    suspend fun getEventsByTitleAndDate(title: String, date: Date): List<Event>
+}

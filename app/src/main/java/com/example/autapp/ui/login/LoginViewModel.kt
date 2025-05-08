@@ -4,8 +4,10 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.app.NotificationCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.autapp.R
 import com.example.autapp.data.models.*
 import com.example.autapp.data.repository.*
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +21,8 @@ class LoginViewModel(
     private val courseRepository: CourseRepository,
     private val assignmentRepository: AssignmentRepository,
     private val gradeRepository: GradeRepository,
-    private val timetableEntryRepository: TimetableEntryRepository
+    private val timetableEntryRepository: TimetableEntryRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     var username by mutableStateOf("")
@@ -39,32 +42,37 @@ class LoginViewModel(
         password = newPassword
     }
 
-    fun checkLogin() {
+    fun login(onSuccess: (Int) -> Unit, onFailure: (String) -> Unit) {
         viewModelScope.launch {
             try {
                 val isValid = userRepository.checkUser(username, password)
-                loginResult = if (isValid) "Login successful" else "Invalid credentials"
-            } catch (e: Exception) {
-                loginResult = "Login error: ${e.message}"
-            }
-        }
-    }
+                if (!isValid) {
+                    loginResult = "Invalid credentials"
+                    onFailure("Invalid credentials")
+                    return@launch
+                }
 
-    fun onLoginSuccess(callback: (Int) -> Unit) {
-        viewModelScope.launch {
-            try {
                 val student = studentRepository.getStudentByUsername(username)
-                student?.studentId?.let { studentId ->
-                    callback(studentId)
-                } ?: run {
+                if (student?.studentId != null) {
+                    loginResult = "Login successful"
+                    onSuccess(student.studentId)
+                } else {
                     loginResult = "Error: Student not found"
+                    onFailure("Error: Student not found")
                 }
             } catch (e: Exception) {
-                loginResult = "Error retrieving student: ${e.message}"
+                loginResult = "Login error: ${e.message}"
+                onFailure("Login error: ${e.message}")
             }
         }
     }
+    fun reset() {
+        username = ""
+        password = ""
+        loginResult = null
+    }
 
+    // DO NOT USE, it isn't ran at all!
     fun insertTestData() {
         viewModelScope.launch {
             try {
@@ -81,9 +89,25 @@ class LoginViewModel(
                 Log.d("LoginViewModel", "Students and cross-references deleted")
                 userRepository.deleteAll()
                 Log.d("LoginViewModel", "Users deleted")
+                notificationRepository.deleteAll()
+                Log.d("LoginViewModel", "Notifications deleted")
 
 
-                // Insert Courses
+                // Insert Student
+//                val testStudent = Student(
+//                    firstName = "Test",
+//                     lastName = "Student",
+//                    username = "teststudent",
+//                    password = "password123",
+//                    studentId = 1001,
+//                    enrollmentDate = "2023-01-01",
+//                    major = "Computer Science",
+//                    yearOfStudy = 2,
+//                    gpa = 0.0
+//                )
+//                studentRepository.insertStudent(testStudent)
+
+                // Insert Courses (16 courses, 15 credits each = 240 credits)
                 val courses = listOf(
                     Course(101, "CS101", "Introduction to Programming", "Basic programming", "WZ101"),
                     Course(102, "CS102", "Data Structures", "Advanced data structures", "WZ102"),
@@ -107,12 +131,35 @@ class LoginViewModel(
                     Log.d("LoginViewModel", "Inserted course: ${it.name}")
                 }
 
+                val totalCourses = courses.size // 16
+                var year = 2025
+                var semester = 1
+                var index = 0
                 // Link Student to Courses
-                courses.forEach { course ->
-                    studentRepository.insertStudentCourseCrossRef(
-                        StudentCourseCrossRef(studentId = 1001, courseId = course.courseId)
-                    )
-                    Log.d("LoginViewModel", "Linked student 1001 to course ${course.courseId}")
+                while (index < totalCourses) {
+                    // Assign 4 courses per semester
+                    for (i in 0 until 4) {
+                        if (index >= totalCourses) break
+                        val course = courses[index]
+                        studentRepository.insertStudentCourseCrossRef(
+                            StudentCourseCrossRef(
+                                studentId = 1001,
+                                courseId = course.courseId,
+                                year = year,
+                                semester = semester
+                            )
+                        )
+                        Log.d("LoginViewModel", "Linked student 1001 to course ${course.courseId}")
+                        index++
+                    }
+
+                    // Move to next semester
+                    if (semester == 1) {
+                        semester = 2
+                    } else {
+                        semester = 1
+                        year-- // Only decrement year after semester 2
+                    }
                 }
 
                 // Set up dates
@@ -150,7 +197,7 @@ class LoginViewModel(
                     )
                 )
 
-                // Past assignments with grades
+                // Past assignments with grades (16 grades, diverse types)
                 val gradeScores = listOf(
                     95.0, 92.0, 88.0, 86.0, 83.0, 81.0, 78.0, 76.0,
                     73.0, 71.0, 68.0, 66.0, 63.0, 58.0, 53.0, 45.0
@@ -200,6 +247,28 @@ class LoginViewModel(
                         Log.d("LoginViewModel", "Inserted grade for assignment: ${assignment.name}")
                     }
                 }
+
+                // Test notification
+                val classNotification = Notification(
+                    iconResId = R.drawable.ic_notification,
+                    title = "%s starts soon!",
+                    text = "%s is starting in %s.",
+                    priority = NotificationCompat.PRIORITY_HIGH,
+                    deepLinkUri = "myapp://dashboard/1", // teststudent has an ID of 1
+                    channelId = "test_channel"
+                )
+
+                val shuttleNotification = Notification(
+                    iconResId = R.drawable.ic_notification,
+                    title = "Shuttle leaves soon!",
+                    text = "The shuttle bus leaves in %s.",
+                    priority = NotificationCompat.PRIORITY_HIGH,
+                    deepLinkUri = "myapp://dashboard/1", // teststudent has an ID of 1
+                    channelId = "test_channel"
+                )
+
+                notificationRepository.insertNotification(classNotification)
+                notificationRepository.insertNotification(shuttleNotification)
 
                 // Create timetable entries
                 val csEntries = listOf(

@@ -1,11 +1,16 @@
 package com.example.autapp.ui.theme
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -41,7 +46,6 @@ import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.models.*
 import com.example.autapp.data.repository.*
-import com.example.autapp.ui.AUTTopAppBar
 import com.example.autapp.ui.booking.BookingDetailsScreen
 import com.example.autapp.ui.booking.BookingScreen
 import com.example.autapp.ui.booking.BookingViewModel
@@ -54,14 +58,31 @@ import com.example.autapp.ui.chat.ChatScreen
 import com.example.autapp.ui.chat.ChatViewModel
 import com.example.autapp.ui.DashboardViewModel
 import com.example.autapp.ui.settings.SettingsScreen
+import com.example.autapp.ui.components.AUTTopAppBar
+import com.example.autapp.ui.components.AUTBottomBar
+import com.example.autapp.ui.transport.TransportScreen
+import com.example.autapp.ui.transport.TransportViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.util.*
+import com.example.autapp.ui.notification.NotificationScreen
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import com.example.autapp.util.NotificationHelper
+import androidx.navigation.navDeepLink
+import com.example.autapp.data.repository.NotificationRepository
+import com.example.autapp.ui.notification.NotificationViewModel
 
 class MainActivity : ComponentActivity() {
+    private var currentStudentId by mutableStateOf<Int?>(null)
     private val loginViewModel: LoginViewModel by viewModels {
         LoginViewModelFactory(
             userRepository = UserRepository(AUTDatabase.getDatabase(this).userDao()),
@@ -75,8 +96,12 @@ class MainActivity : ComponentActivity() {
                 AUTDatabase.getDatabase(this).gradeDao(),
                 AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
             ),
-            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao())
-        )
+            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
+            notificationRepository = NotificationRepository(
+                AUTDatabase.getDatabase(this).notificationDao(),
+                AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
+            ),
+            )
     }
 
     private val dashboardViewModel: DashboardViewModel by viewModels {
@@ -90,7 +115,11 @@ class MainActivity : ComponentActivity() {
                 AUTDatabase.getDatabase(this).gradeDao(),
                 AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
             ),
-            assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
+            assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao()),
+            notificationRepository = NotificationRepository(
+                AUTDatabase.getDatabase(this).notificationDao(),
+                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
+            ),
         )
     }
 
@@ -101,7 +130,11 @@ class MainActivity : ComponentActivity() {
                 studentDao = AUTDatabase.getDatabase(this).studentDao(),
                 userDao = AUTDatabase.getDatabase(this).userDao()
             ),
-            eventRepository = EventRepository(AUTDatabase.getDatabase(this).eventDao())
+            eventRepository = EventRepository(AUTDatabase.getDatabase(this).eventDao()),
+            bookingRepository = BookingRepository(
+                bookingDao = AUTDatabase.getDatabase(this).bookingDao(),
+                studySpaceDao = AUTDatabase.getDatabase(this).studySpaceDao()
+            )
         )
     }
 
@@ -115,7 +148,24 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val notificationViewModel: NotificationViewModel by viewModels {
+        NotificationViewModelFactory(
+            studentRepository = StudentRepository(
+                studentDao = AUTDatabase.getDatabase(this).studentDao(),
+                userDao = AUTDatabase.getDatabase(this).userDao()
+            ),
+            notificationRepository = NotificationRepository(
+                AUTDatabase.getDatabase(this).notificationDao(),
+                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this)
+                    .timetableNotificationPreferenceDao()
+            ),
+            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
+            courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
+        )
+    }
+
     private val chatViewModel: ChatViewModel by viewModels()
+    private val transportViewModel: TransportViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -136,7 +186,12 @@ class MainActivity : ComponentActivity() {
         val eventRepository = EventRepository(db.eventDao())
         val bookingRepository = BookingRepository(db.bookingDao(), db.studySpaceDao())
         val studySpaceRepository = StudySpaceRepository(db.studySpaceDao())
+        val notificationRepository = NotificationRepository(db.notificationDao(), db.timetableNotificationPreferenceDao())
         Log.d("MainActivity", "Repositories initialized")
+
+        // Initialize Notification channels TODO: Might be better somewhere else
+        NotificationHelper.createNotificationChannels(applicationContext)
+        Log.d("MainActivity", "Notification channels initialized")
 
         // Insert test data
         runBlocking {
@@ -248,12 +303,13 @@ class MainActivity : ComponentActivity() {
 
                 // Insert student-course relationships
                 val studentCourseCrossRefs = listOf(
-                    StudentCourseCrossRef(studentId = 1000, courseId = 1), // Test student enrolled in COMP101
-                    StudentCourseCrossRef(studentId = 1, courseId = 1),
-                    StudentCourseCrossRef(studentId = 1, courseId = 2),
-                    StudentCourseCrossRef(studentId = 2, courseId = 2),
-                    StudentCourseCrossRef(studentId = 3, courseId = 3),
-                    StudentCourseCrossRef(studentId = 4, courseId = 1)
+                    StudentCourseCrossRef(studentId = 1000, courseId = 1, year = 2025, semester = 1), // Test student enrolled in COMP101
+                    StudentCourseCrossRef(studentId = 1, courseId = 1, year = 2025, semester = 1),
+                    StudentCourseCrossRef(studentId = 1, courseId = 2, year = 2025, semester = 1),
+                    StudentCourseCrossRef(studentId = 1, courseId = 3, year = 2025, semester = 1),
+                    StudentCourseCrossRef(studentId = 2, courseId = 2, year = 2025, semester = 1),
+                    StudentCourseCrossRef(studentId = 3, courseId = 3, year = 2025, semester = 1),
+                    StudentCourseCrossRef(studentId = 4, courseId = 1, year = 2025, semester = 1)
                 )
 
                 withContext(Dispatchers.IO) {
@@ -368,6 +424,252 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                // Create timetable entries
+                val csEntries = listOf(
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB101",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 2,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB102",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 3,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB103",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 2,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB104",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 2,
+                        dayOfWeek = 2,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB105",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 3,
+                        dayOfWeek = 2,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB106",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 3,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB107",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 2,
+                        dayOfWeek = 3,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB108",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 3,
+                        dayOfWeek = 3,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB109",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 4,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB110",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 2,
+                        dayOfWeek = 4,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB111",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 3,
+                        dayOfWeek = 4,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB112",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 5,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB113",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 2,
+                        dayOfWeek = 5,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB114",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 3,
+                        dayOfWeek = 5,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB115",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 18)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB116",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                    courseId = 1,
+                    dayOfWeek = 4,
+                    startTime = calendar.apply {
+                        set(Calendar.HOUR_OF_DAY, 13)
+                        set(Calendar.MINUTE, 9)
+                    }.time,
+                    endTime = calendar.apply {
+                        set(Calendar.HOUR_OF_DAY, 23)
+                        set(Calendar.MINUTE, 59)
+                    }.time,
+                    room = "WB116",
+                    type = "Lecture"
+                    ),
+                )
+
+                csEntries.forEach {
+                    timetableEntryRepository.insertTimetableEntry(it)
+                    Log.d("MainActivity", "Inserted timetable entry for course ${it.courseId}")
+                }
                 // Verify insertions
                 val users = userRepository.getAllUsers()
                 val retrievedStudents = withContext(Dispatchers.IO) { studentRepository.getAllStudents() }
@@ -405,9 +707,11 @@ class MainActivity : ComponentActivity() {
                 AppContent(
                     loginViewModel = loginViewModel,
                     dashboardViewModel = dashboardViewModel,
+                    notificationViewModel = notificationViewModel,
                     calendarViewModel = calendarViewModel,
                     bookingViewModel = bookingViewModel,
                     chatViewModel = chatViewModel,
+                    transportViewModel = transportViewModel,
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = {
                         val newTheme = !isDarkTheme
@@ -415,7 +719,9 @@ class MainActivity : ComponentActivity() {
                         coroutineScope.launch {
                             themeManager.setDarkMode(newTheme)
                         }
-                    }
+                    },
+                    currentStudentId = currentStudentId,
+                    onStudentIdChange = { currentStudentId = it }
                 )
             }
         }
@@ -430,174 +736,14 @@ fun AppContent(
     calendarViewModel: CalendarViewModel,
     bookingViewModel: BookingViewModel,
     chatViewModel: ChatViewModel,
+    transportViewModel: TransportViewModel,
+    notificationViewModel: NotificationViewModel,
     isDarkTheme: Boolean,
-    onToggleTheme: () -> Unit
+    onToggleTheme: () -> Unit,
+    currentStudentId: Int?,
+    onStudentIdChange: (Int) -> Unit
 ) {
     val navController = rememberNavController()
-
-    // Define the TopAppBar composable
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun AUTTopAppBar(
-        isDarkTheme: Boolean,
-        navController: NavController,
-        title: String,
-        showBackButton: Boolean,
-        actions: @Composable RowScope.() -> Unit = {}
-    ) {
-        val containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFF2F7A78)
-        val titleTextColor = if (isDarkTheme) Color.White else Color.White
-        val actionIconColor = if (isDarkTheme) Color.White else Color.White
-        val autLabelBackground = if (isDarkTheme) Color.White else Color.Black
-        val autLabelTextColor = if (isDarkTheme) Color.Black else Color.White
-        val profileBackground = if (isDarkTheme) Color.DarkGray else Color.White
-        val profileIconColor = if (isDarkTheme) Color.White else Color.Black
-
-        TopAppBar(
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                ) {
-                    if (showBackButton) {
-                        IconButton(onClick = { navController.navigateUp() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = actionIconColor
-                            )
-                        }
-                    }
-                    Text(
-                        text = "AUT",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        color = autLabelTextColor,
-                        modifier = Modifier
-                            .background(autLabelBackground)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Icon(
-                        painter = painterResource(id = R.drawable.chatbot_assistant_icon),
-                        contentDescription = "AI Chat",
-                        tint = actionIconColor,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable { navController.navigate("chat") }
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = "Notifications",
-                        tint = actionIconColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(profileBackground)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = "Profile",
-                            tint = profileIconColor,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .align(Alignment.Center)
-                        )
-                    }
-                }
-            },
-            actions = actions,
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                titleContentColor = titleTextColor,
-                actionIconContentColor = actionIconColor
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-
-    // Define the Bottom NavigationBar composable
-    @Composable
-    fun AUTBottomBar(isDarkTheme: Boolean, navController: NavController) {
-        val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
-        val iconTint = if (isDarkTheme) Color.White else Color.Black
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
-        val currentStudentId = navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
-
-        NavigationBar(
-            containerColor = backgroundColor,
-            contentColor = iconTint
-        ) {
-            NavigationBarItem(
-                icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = iconTint) },
-                label = { Text("Home") },
-                selected = currentRoute?.startsWith("dashboard") == true,
-                onClick = {
-                    if (currentStudentId != null && currentRoute?.startsWith("dashboard") != true) {
-                        navController.navigate("dashboard/$currentStudentId") {
-                            popUpTo("dashboard/$currentStudentId") { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            )
-            NavigationBarItem(
-                icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar", tint = iconTint) },
-                label = { Text("Calendar") },
-                selected = currentRoute?.startsWith("calendar") == true,
-                onClick = {
-                    Log.d("MainActivity", "Calendar icon clicked")
-                    currentStudentId?.let { studentId ->
-                        Log.d("MainActivity", "Navigating to calendar with student ID: $studentId")
-                        calendarViewModel.initialize(studentId)
-                        navController.navigate("calendar/$studentId") {
-                            popUpTo("dashboard/$studentId") { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            )
-            NavigationBarItem(
-                icon = { Icon(Icons.Outlined.Event, contentDescription = "Bookings", tint = iconTint) },
-                label = { Text("Bookings") },
-                selected = currentRoute?.startsWith("bookings") == true,
-                onClick = {
-                    currentStudentId?.let { studentId ->
-                        navController.navigate("bookings/$studentId") {
-                            popUpTo("dashboard/$studentId") { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            )
-            NavigationBarItem(
-                icon = {
-                    Icon(
-                        painter = painterResource(id = android.R.drawable.ic_menu_directions),
-                        contentDescription = "Transport",
-                        tint = iconTint
-                    )
-                },
-                label = { Text("Transport") },
-                selected = false,
-                onClick = { /* TODO: Implement Transport screen */ }
-            )
-            NavigationBarItem(
-                icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = iconTint) },
-                label = { Text("More") },
-                selected = currentRoute == "settings",
-                onClick = { navController.navigate("settings") }
-            )
-        }
-    }
 
     // Define the BookingsScreen composable
     @OptIn(ExperimentalMaterial3Api::class)
@@ -666,7 +812,7 @@ fun AppContent(
             LoginScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = { studentId ->
-                    Log.d("MainActivity", "Login successful with student ID: $studentId")
+                    onStudentIdChange(studentId)
                     dashboardViewModel.initialize(studentId)
                     navController.navigate("dashboard/$studentId") {
                         popUpTo("login") { inclusive = true }
@@ -678,20 +824,37 @@ fun AppContent(
         }
         composable(
             route = "dashboard/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType }),
+            deepLinks = listOf(
+                navDeepLink {
+                    uriPattern = "myapp://dashboard/{studentId}"
+                }
+            )
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            onStudentIdChange(studentId)
             Log.d("MainActivity", "Entering dashboard with student ID: $studentId")
+            LaunchedEffect(studentId) {
+                dashboardViewModel.initialize(studentId)
+            }
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
                         title = "Dashboard",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = false
+                        showBackButton = false,
+                        currentRoute = null,
+                        currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) }
             ) { paddingValues ->
                 StudentDashboard(
                     viewModel = dashboardViewModel,
@@ -702,14 +865,14 @@ fun AppContent(
         }
         composable(
             route = "calendar/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
-            Log.d("MainActivity", "Entering calendar with student ID: $studentId")
-
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            onStudentIdChange(studentId)
             LaunchedEffect(studentId) {
                 calendarViewModel.initialize(studentId)
             }
+            Log.d("MainActivity", "Entering calendar with student ID: $studentId")
 
             Scaffold(
                 topBar = {
@@ -717,10 +880,18 @@ fun AppContent(
                         title = "Calendar",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) }
             ) { paddingValues ->
                 CalendarScreen(
                     viewModel = calendarViewModel,
@@ -733,10 +904,10 @@ fun AppContent(
         }
         composable(
             route = "manage_events/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
-
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            onStudentIdChange(studentId)
             LaunchedEffect(studentId) {
                 if (calendarViewModel.studentId != studentId) {
                     calendarViewModel.initialize(studentId)
@@ -749,10 +920,18 @@ fun AppContent(
                         title = "Manage Events",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) }
             ) { paddingValues ->
                 ManageEventsScreen(
                     viewModel = calendarViewModel,
@@ -762,19 +941,28 @@ fun AppContent(
         }
         composable(
             route = "bookings/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            onStudentIdChange(studentId)
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
                         title = "Bookings",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) }
             ) { paddingValues ->
                 BookingsScreen(
                     viewModel = bookingViewModel,
@@ -792,7 +980,7 @@ fun AppContent(
                 navArgument("level") { type = NavType.StringType },
                 navArgument("date") { type = NavType.StringType },
                 navArgument("timeSlot") { type = NavType.StringType },
-                navArgument("studentId") { type = NavType.StringType },
+                navArgument("studentId") { type = NavType.IntType },
                 navArgument("campus") { type = NavType.StringType },
                 navArgument("building") { type = NavType.StringType }
             )
@@ -801,7 +989,7 @@ fun AppContent(
             val level = backStackEntry.arguments?.getString("level") ?: ""
             val date = backStackEntry.arguments?.getString("date") ?: ""
             val timeSlot = backStackEntry.arguments?.getString("timeSlot") ?: ""
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
             val campus = backStackEntry.arguments?.getString("campus") ?: ""
             val building = backStackEntry.arguments?.getString("building") ?: ""
             val snackbarHostState = remember { SnackbarHostState() } // Define here
@@ -811,10 +999,18 @@ fun AppContent(
                         title = "Booking Details",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) },
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) },
                 snackbarHost = {
                     SnackbarHost(
                         hostState = snackbarHostState,
@@ -838,17 +1034,60 @@ fun AppContent(
                 )
             }
         }
+        composable(
+            route = "transport/{studentId}",
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val studentId = backStackEntry.arguments!!.getInt("studentId")
+            Scaffold(
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Shuttle Bus",
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        showBackButton = true,
+                        currentRoute = "transport",
+                        currentStudentId = studentId
+                    )
+                },
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = "transport",
+                        currentStudentId = studentId
+                    )
+                }
+            ) { padding ->
+                TransportScreen(
+                    viewModel = transportViewModel,
+                    paddingValues = padding
+                )
+            }
+        }
         composable("chat") {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            val currentStudentId = currentStudentId
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
                         title = "Chatbot",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = currentRoute,
+                        currentStudentId = currentStudentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = currentRoute,
+                    currentStudentId = currentStudentId
+                ) }
             ) { paddingValues ->
                 ChatScreen(
                     viewModel = chatViewModel,
@@ -858,23 +1097,78 @@ fun AppContent(
             }
         }
         composable("settings") {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            val currentStudentId = currentStudentId
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
                         title = "Settings",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = currentRoute,
+                        currentStudentId = currentStudentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = currentRoute,
+                    currentStudentId = currentStudentId
+                ) }
             ) { paddingValues ->
                 SettingsScreen(
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = onToggleTheme,
-                    paddingValues = paddingValues
+                    paddingValues = paddingValues,
                 )
             }
+        }
+        composable(
+            route = "notification/{studentId}",
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            val snackbarHostState = remember { SnackbarHostState() } // Define here
+            onStudentIdChange(studentId)
+            LaunchedEffect(studentId) {
+                notificationViewModel.initialize(studentId)
+            }
+            Scaffold(
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Bookings",
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
+                    )
+                },
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) },
+                snackbarHost = {
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(16.dp) // Ensure visibility
+                    )
+                }
+            ) { paddingValues ->
+                NotificationScreen(
+                    viewModel = notificationViewModel,
+                    navController = navController,
+                    paddingValues = paddingValues,
+                    snackbarHostState = snackbarHostState // Pass to BookingDetailsScreen
+                )
+            }
+
         }
     }
 }
@@ -885,7 +1179,8 @@ class LoginViewModelFactory(
     private val courseRepository: CourseRepository,
     private val assignmentRepository: AssignmentRepository,
     private val gradeRepository: GradeRepository,
-    private val timetableEntryRepository: TimetableEntryRepository
+    private val timetableEntryRepository: TimetableEntryRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
@@ -896,7 +1191,8 @@ class LoginViewModelFactory(
                 courseRepository,
                 assignmentRepository,
                 gradeRepository,
-                timetableEntryRepository
+                timetableEntryRepository,
+                notificationRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
@@ -907,7 +1203,8 @@ class DashboardViewModelFactory(
     private val studentRepository: StudentRepository,
     private val courseRepository: CourseRepository,
     private val gradeRepository: GradeRepository,
-    private val assignmentRepository: AssignmentRepository
+    private val assignmentRepository: AssignmentRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
@@ -926,7 +1223,8 @@ class DashboardViewModelFactory(
 class CalendarViewModelFactory(
     private val timetableEntryRepository: TimetableEntryRepository,
     private val studentRepository: StudentRepository,
-    private val eventRepository: EventRepository
+    private val eventRepository: EventRepository,
+    private val bookingRepository: BookingRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CalendarViewModel::class.java)) {
@@ -934,7 +1232,8 @@ class CalendarViewModelFactory(
             return CalendarViewModel(
                 timetableEntryRepository,
                 studentRepository,
-                eventRepository
+                eventRepository,
+                bookingRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
@@ -950,6 +1249,27 @@ class BookingViewModelFactory(
             val savedStateHandle = extras.createSavedStateHandle()
             @Suppress("UNCHECKED_CAST")
             return BookingViewModel(bookingRepository, studySpaceRepository, savedStateHandle) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class NotificationViewModelFactory(
+    private val studentRepository: StudentRepository,
+    private val timetableEntryRepository: TimetableEntryRepository,
+    private val notificationRepository: NotificationRepository,
+    private val courseRepository: CourseRepository,
+
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(NotificationViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return NotificationViewModel(
+                studentRepository,
+                timetableEntryRepository,
+                courseRepository,
+                notificationRepository,
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
