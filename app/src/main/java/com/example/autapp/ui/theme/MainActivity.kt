@@ -275,7 +275,24 @@ class MainActivity : ComponentActivity() {
                         courseId = 1,
                         name = "COMP101",
                         title = "Introduction to Programming",
-                        description = "Basics of programming in Python",
+                        description = "This course provides an in-depth exploration of modern software development methodologies, \n" +
+                                "tools, and practices, including but not limited to Agile, Scrum, and DevOps. Students will gain \n" +
+                                "hands-on experience through collaborative projects that mimic real-world software development \n" +
+                                "environments. Topics include requirements analysis, system design, coding standards, continuous \n" +
+                                "integration, automated testing, deployment strategies, and post-release maintenance.\n" +
+                                "\n" +
+                                "We will also study software architecture patterns such as MVC, MVVM, microservices, and event-driven \n" +
+                                "architectures. Throughout the course, students will use industry-standard tools like Git, GitHub Actions, \n" +
+                                "Docker, and Jenkins. Guest lectures from software engineers at leading tech companies will provide insight \n" +
+                                "into current trends and expectations in the industry.\n" +
+                                "\n" +
+                                "The goal of this course is to prepare students to become competent software engineers who are comfortable \n" +
+                                "working in team settings, writing maintainable code, and deploying scalable systems. The final project will \n" +
+                                "require students to design, implement, test, and deploy a complete software application using the tools and \n" +
+                                "techniques discussed in the course.\n" +
+                                "\n" +
+                                "By the end of this course, students should have a strong understanding of both the technical and collaborative \n" +
+                                "skills needed to thrive in the fast-paced software development world.",
                         location = "WG-301"
                     ),
                     Course(
@@ -326,7 +343,11 @@ class MainActivity : ComponentActivity() {
                         assignmentId = 1,
                         name = "Python Project",
                         location = "WG-301",
-                        due = calendar.apply { add(Calendar.DAY_OF_MONTH, 7) }.time,
+                        due = Calendar.getInstance().apply {
+                            add(Calendar.DAY_OF_MONTH, 7)
+                            set(Calendar.HOUR_OF_DAY, 23)
+                            set(Calendar.MINUTE, 59)
+                        }.time,
                         weight = 0.4,
                         maxScore = 100.0,
                         type = "Project",

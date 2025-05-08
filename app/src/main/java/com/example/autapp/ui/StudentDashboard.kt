@@ -123,8 +123,14 @@ fun StudentDashboard(
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
-            viewModel.assignments.forEach { assignment -> AssignmentCard(
+            viewModel.assignments.forEach { assignment ->
+                val courseName = viewModel.courses.find { it.courseId == assignment.courseId }?.name ?: "Unknown"
+                val courseTitle = viewModel.courses.find { it.courseId == assignment.courseId }?.title ?: "Untitled"
+                AssignmentCard(
+
                 assignment = assignment,
+                courseName = courseName,
+                courseTitle = courseTitle,
                 formatDate = viewModel::formatDate,
                 formatTime = viewModel::formatTime
             )
@@ -245,18 +251,18 @@ fun ClassCard(
     if (showDialog) {
         Dialog(onDismissRequest = { showDialog = false }) {
             Surface(
-                shape = RoundedCornerShape(20.dp),
-                tonalElevation = 8.dp,
+                shape = RoundedCornerShape(20.dp), // Rounded corners
+                tonalElevation = 8.dp,  // Shadow elevation
                 modifier = Modifier
-                    .fillMaxWidth(0.98f)
-                    .fillMaxHeight(0.85f)
+                    .fillMaxWidth(0.98f)    // adjusted width
+                    .fillMaxHeight(0.85f)   // adjusted width
             ) {
                 Box {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(20.dp)
-                            .verticalScroll(rememberScrollState())
+                            .verticalScroll(rememberScrollState())  // vertical scrolling
                     ) {
                         // Header with Close Button
                         Row(
@@ -278,7 +284,7 @@ fun ClassCard(
                             }
                         }
 
-                        // Subtitle
+                        // Course Subtitle
                         Text(
                             text = course.title,
                             style = MaterialTheme.typography.titleMedium,
@@ -302,6 +308,7 @@ fun ClassCard(
                             )
                         }
 
+                        // Course description text
                         Text(
                             text = course.description,
                             fontSize = 14.sp,
@@ -447,12 +454,16 @@ fun GPASummaryCard(gpa: Double?) {
 @Composable
 fun AssignmentCard(
     assignment: Assignment,
+    courseName: String,
+    courseTitle: String,
     formatDate: (Date) -> String,
     formatTime: (Date) -> String
 ) {
+    var showDialog by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Button(
-            onClick = { },
+            onClick = { showDialog = true },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary
@@ -465,7 +476,9 @@ fun AssignmentCard(
             )
         }
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showDialog = true },
             shape = RoundedCornerShape(0.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
@@ -494,4 +507,65 @@ fun AssignmentCard(
             }
         }
     }
+    if (showDialog) {
+        Dialog(onDismissRequest = { showDialog = false }) {
+            // Dialog content surface with rounded corners and elevation
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                tonalElevation = 8.dp,
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)
+                    .fillMaxHeight(0.6f)
+            ) {
+                //scrollable content column
+                Column(
+                    modifier = Modifier
+                        .padding(20.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    // Top row with assignment title and close icon
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Assignment name header
+                        Text(
+                            text = assignment.name,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        // Close dialog button
+                        IconButton(onClick = { showDialog = false }) {
+                            Icon(
+                                painter = painterResource(id = android.R.drawable.ic_menu_close_clear_cancel),
+                                contentDescription = "Close"
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp)) // Adds vertical spacing
+
+                    // Assignment details
+                    Text("Type: ${assignment.type}")
+                    Text("Course ID: ${assignment.courseId}")
+                    Text("Course: $courseName")
+                    Text("Course: $courseTitle")
+                    Text("Due: ${formatDate(assignment.due)} at ${formatTime(assignment.due)}")
+                    Text("Location: ${assignment.location}")
+                    Text("Weight: ${assignment.weight * 100}%")
+                    Text("Max Score: ${assignment.maxScore}")
+
+
+                    Spacer(modifier = Modifier.height(16.dp)) // Adds more spacing
+
+                    // Close button at the bottom of the dialog
+                    Button(onClick = { showDialog = false }) {
+                        Text("Close")
+                    }
+                }
+            }
+        }
+    }
 }
+
