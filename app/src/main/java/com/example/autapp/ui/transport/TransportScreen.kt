@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,11 +22,19 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.*
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.maps.model.PolylineOptions
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
+import android.view.ViewGroup
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 class TransportViewModel(application: Application) : AndroidViewModel(application) {
     private val database = BusDatabase.getDatabase(application)
@@ -34,16 +43,19 @@ class TransportViewModel(application: Application) : AndroidViewModel(applicatio
     val departures: Flow<List<BusSchedule>> = busScheduleDao.getAllSchedules()
 
     // Define the coordinates for both campuses
-    val cityCampus = LatLng(-36.8519, 174.7681) // AUT City Campus
-    val southCampus = LatLng(-36.9927, 174.8797) // AUT South Campus
+    val cityCampus = GeoPoint(-36.8519, 174.7681) // AUT City Campus
+    val southCampus = GeoPoint(-36.9927, 174.8797) // AUT South Campus
     
     // Calculate the center point for the camera
-    val centerPoint = LatLng(
+    val centerPoint = GeoPoint(
         (cityCampus.latitude + southCampus.latitude) / 2,
         (cityCampus.longitude + southCampus.longitude) / 2
     )
 
     init {
+        // Initialize OpenStreetMap configuration
+        Configuration.getInstance().userAgentValue = application.packageName
+        
         viewModelScope.launch {
             val schedules = listOf(
                 // Morning departures
@@ -75,6 +87,8 @@ fun TransportScreen(
 ) {
     val now = remember { mutableStateOf(LocalTime.now()) }
     val schedules by viewModel.departures.collectAsState(initial = emptyList())
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     
     LaunchedEffect(Unit) {
         while(true) {
@@ -97,33 +111,44 @@ fun TransportScreen(
                 .height(200.dp)
                 .padding(16.dp)
         ) {
-            val cameraPositionState = rememberCameraPositionState {
-                position = CameraPosition.fromLatLngZoom(viewModel.centerPoint, 10f)
-            }
-            
-            GoogleMap(
+            AndroidView(
+                factory = { context ->
+                    MapView(context).apply {
+                        setTileSource(TileSourceFactory.MAPNIK)
+                        setMultiTouchControls(true)
+                        
+                        // Set initial view
+                        controller.setZoom(10.0)
+                        controller.setCenter(viewModel.centerPoint)
+                        
+                        // Add markers
+                        val cityMarker = Marker(this).apply {
+                            position = viewModel.cityCampus
+                            title = "AUT City Campus"
+                            snippet = "55 Wellesley Street East"
+                        }
+                        val southMarker = Marker(this).apply {
+                            position = viewModel.southCampus
+                            title = "AUT South Campus"
+                            snippet = "640 Great South Road"
+                        }
+                        overlays.add(cityMarker)
+                        overlays.add(southMarker)
+                        
+                        // Add route line
+                        val routeLine = Polyline().apply {
+                            outlinePaint.color = Color.Blue.toArgb()
+                            outlinePaint.strokeWidth = 5f
+                            setPoints(listOf(viewModel.cityCampus, viewModel.southCampus))
+                        }
+                        overlays.add(routeLine)
+                    }
+                },
                 modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState
-            ) {
-                // Add markers for both campuses
-                Marker(
-                    state = MarkerState(position = viewModel.cityCampus),
-                    title = "AUT City Campus",
-                    snippet = "55 Wellesley Street East"
-                )
-                Marker(
-                    state = MarkerState(position = viewModel.southCampus),
-                    title = "AUT South Campus",
-                    snippet = "640 Great South Road"
-                )
-                
-                // Draw a line between the campuses
-                Polyline(
-                    points = listOf(viewModel.cityCampus, viewModel.southCampus),
-                    color = MaterialTheme.colorScheme.primary,
-                    width = 5f
-                )
-            }
+                update = { mapView ->
+                    // Update map if needed
+                }
+            )
         }
 
         // Schedule List
