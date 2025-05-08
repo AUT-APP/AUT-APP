@@ -92,21 +92,6 @@ fun StudentDashboard(
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
-            Text(
-                text = "Upcoming Assignments",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = textColor,
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-            )
-
-            viewModel.assignments.forEach { assignment -> AssignmentCard(
-                    assignment = assignment,
-                    formatDate = viewModel::formatDate,
-                    formatTime = viewModel::formatTime
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
 
             GPASummaryCard(gpa = viewModel.studentGpa)
 
@@ -128,6 +113,22 @@ fun StudentDashboard(
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            Text(
+                text = "Upcoming Assignments",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor,
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+            )
+
+            viewModel.assignments.forEach { assignment -> AssignmentCard(
+                assignment = assignment,
+                formatDate = viewModel::formatDate,
+                formatTime = viewModel::formatTime
+            )
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             if (viewModel.courses.size > 2) {
