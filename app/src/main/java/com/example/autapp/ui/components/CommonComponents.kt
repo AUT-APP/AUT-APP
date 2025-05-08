@@ -237,9 +237,17 @@ fun AUTBottomBar(
                 )
             },
             label = { Text("Transport") },
-            selected = false,
-            onClick = { /* TODO: Implement Transport screen */ }
+            selected = currentRoute?.startsWith("transport") == true,
+            onClick = {
+                if (currentStudentId != null && currentRoute?.startsWith("transport") != true) {
+                    navController.navigate("transport/$currentStudentId") {
+                        popUpTo("dashboard/$currentStudentId") { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            }
         )
+
         NavigationBarItem(
             icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = iconTint) },
             label = { Text("More") },

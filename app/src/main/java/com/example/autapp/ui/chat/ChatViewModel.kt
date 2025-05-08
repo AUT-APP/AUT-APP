@@ -14,10 +14,14 @@ import kotlinx.coroutines.launch
 class ChatViewModel : ViewModel() {
     private val apiKey = "AIzaSyDYdquqUGmKiABClgrfpVR-WdpjozBZWcg"
     private val model = GenerativeModel(
+        // The name of the Generative AI model to use.
         modelName = "gemini-1.5-pro",
+        // The API key for accessing the model.
         apiKey = apiKey
     )
 
+    // System prompt to guide the AI's behavior and responses.
+    // It defines the AI's persona, knowledge domain (AUT-related topics), and response guidelines.
     private val systemPrompt = """
         You are a helpful assistant that answers questions about AUT (Auckland University of Technology). Base your answers on the following information:
 
@@ -52,48 +56,68 @@ class ChatViewModel : ViewModel() {
         If a question is not related to AUT, respond with: "I apologize, but I can only help with AUT-related queries. Please ask me something about Auckland University of Technology."
     """.trimIndent()
 
+    // Private mutable state flow to hold the list of chat messages.
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
+    // Public immutable state flow for observing chat messages in the UI.
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
 
+    // Private mutable state flow to indicate if the AI is currently processing a message.
     private val _isLoading = MutableStateFlow(false)
+    // Public immutable state flow for observing the loading state in the UI.
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    /**
+     * Sends a message from the user to the AI model and updates the chat with the response.
+     * - Adds the user's message to the chat.
+     * - Calls the Generative AI model to get a response.
+     * - Adds the AI's response or an error message to the chat.
+     * - Manages the loading state.
+     */
     fun sendMessage(message: String) {
+        // Do not send empty messages.
         if (message.isBlank()) return
 
-        // Add user message
+        // Add user message to the local list of messages.
         val userMessage = ChatMessage(content = message, isUser = true)
         _messages.update { currentMessages -> currentMessages + userMessage }
 
-        // Generate AI response
+        // Launch a coroutine to handle the AI response generation asynchronously.
         viewModelScope.launch {
             try {
-                _isLoading.value = true
+                _isLoading.value = true // Set loading state to true.
+                // Start a new chat session with the model, providing the system prompt as initial history.
                 val chat = model.startChat(
                     history = listOf(
-                        content("user") {
+                        content("user") { // The system prompt is provided as if it's from a "user" role for context.
                             text(systemPrompt)
                         }
                     )
                 )
+                // Send the user's actual message to the ongoing chat session.
                 val response = chat.sendMessage(message)
+                // Create a ChatMessage object for the AI's response.
                 val aiMessage = ChatMessage(
-                    content = response.text ?: "Sorry, I couldn't generate a response.",
+                    content = response.text ?: "Sorry, I couldn't generate a response.", // Use a fallback if response text is null.
                     isUser = false
                 )
+                // Add the AI's message to the list.
                 _messages.update { currentMessages -> currentMessages + aiMessage }
             } catch (e: Exception) {
+                // If an error occurs during AI communication, add an error message to the chat.
                 val errorMessage = ChatMessage(
                     content = "Error: ${e.message ?: "Unknown error occurred"}",
                     isUser = false
                 )
                 _messages.update { currentMessages -> currentMessages + errorMessage }
             } finally {
-                _isLoading.value = false
+                _isLoading.value = false // Reset loading state regardless of success or failure.
             }
         }
     }
 
+    /**
+     * Clears all messages from the chat history.
+     */
     fun clearChat() {
         _messages.value = emptyList()
     }

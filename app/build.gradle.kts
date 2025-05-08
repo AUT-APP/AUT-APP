@@ -6,6 +6,7 @@ plugins {
     // Remove com.google.relay if not used; comment out for now
     // id("com.google.relay") version "0.3.12"
 }
+
 android {
     namespace = "com.example.autapp"
     compileSdk = 35
@@ -49,6 +50,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
+    // OpenStreetMap
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
 // Compose dependencies
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -71,6 +75,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
     implementation ("androidx.compose.material:material-icons-extended:1.6.8")
+    implementation(libs.play.services.maps)
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
 

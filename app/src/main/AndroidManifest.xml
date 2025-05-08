@@ -2,8 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.autapp">
+
+    <!-- Add permissions for OpenStreetMap -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+
     <application
         android:name=".AUTApplication"
         android:allowBackup="true"
@@ -15,6 +24,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AUTAPP"
         tools:targetApi="31">
+
         <activity
             android:name=".ui.theme.MainActivity"
             android:exported="true"
@@ -22,14 +32,12 @@
             android:theme="@style/Theme.AUTAPP">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data
                     android:scheme="myapp"
                     android:host="dashboard"
@@ -37,7 +45,6 @@
             </intent-filter>
         </activity>
         <receiver android:name=".util.NotificationReceiver" android:enabled="true" android:exported="true"/>
-
     </application>
 
 </manifest>
