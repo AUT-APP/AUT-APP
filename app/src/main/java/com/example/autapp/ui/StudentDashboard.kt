@@ -92,6 +92,22 @@ fun StudentDashboard(
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
+            Text(
+                text = "Upcoming Assignments",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor,
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+            )
+
+            viewModel.assignments.forEach { assignment -> AssignmentCard(
+                    assignment = assignment,
+                    formatDate = viewModel::formatDate,
+                    formatTime = viewModel::formatTime
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             GPASummaryCard(gpa = viewModel.studentGpa)
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -309,35 +325,19 @@ fun ClassCard(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Action Buttons
+                        // Action Button
                         Button(
-                            onClick = { /* Navigate to assignments */ },
+                            onClick = { /* Navigate to materials */ },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Icon(
-                                painter = painterResource(id = android.R.drawable.ic_menu_agenda),
+                                painter = painterResource(id = android.R.drawable.ic_menu_upload),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("View Assignments", color = MaterialTheme.colorScheme.onPrimary)
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Button(
-                            onClick = { /* Navigate to materials */ },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = android.R.drawable.ic_menu_upload),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("View Materials", color = MaterialTheme.colorScheme.onSecondary)
+                            Text("View Materials", color = MaterialTheme.colorScheme.onPrimary)
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -439,6 +439,7 @@ fun GPASummaryCard(gpa: Double?) {
         }
     }
 }
+
 
 
 @SuppressLint("WeekBasedYear")
