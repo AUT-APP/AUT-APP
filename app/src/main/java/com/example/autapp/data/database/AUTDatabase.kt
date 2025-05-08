@@ -26,7 +26,7 @@ import com.example.autapp.data.models.*
         StudySpace:: class,
         Notification::class
     ],
-    version = 23,
+    version = 24,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -54,7 +54,7 @@ abstract class AUTDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AUTDatabase::class.java,
-                    "AUT_database_v23" // Updated database version
+                    "AUT_database_v24" // Change to Notification model
                 )
                     .fallbackToDestructiveMigration()
                     .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)

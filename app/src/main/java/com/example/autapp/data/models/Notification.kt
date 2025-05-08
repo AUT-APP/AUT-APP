@@ -14,6 +14,7 @@ class Notification(
     var priority: Int = NotificationCompat.PRIORITY_DEFAULT,
     var deepLinkUri: String? = null,
     var channelId: String,
+    var timestamp: Long = System.currentTimeMillis() // New field with default
     ) {
     // Method to format the text template with dynamic values
     fun getFormattedTitle(vararg values: Any): String {

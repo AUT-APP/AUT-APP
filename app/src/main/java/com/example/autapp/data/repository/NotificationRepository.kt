@@ -47,20 +47,6 @@ class NotificationRepository(
         timetableNotificationPreferenceDao.deletePreference(studentId, classSessionId)
     }
 
-
-    // Method to schedule a notification for a specific class session
-    fun scheduleNotificationForSession(context: Context, pref: TimetableNotificationPreference, session: TimetableEntry) {
-        NotificationScheduler.scheduleClassNotification(
-            context = context,  // Your app context
-            notificationId = pref.classSessionId.hashCode(),  // Use the session's ID as notification ID
-            title = "Class Reminder",  // Customize as necessary
-            text = "Your class ${session.type} is coming up in ${pref.minutesBefore} minutes!",
-            dayOfWeek = session.dayOfWeek,
-            startTime = session.startTime,
-            minutesBefore = pref.minutesBefore
-        )
-    }
-
     suspend fun deleteAll() {
         notificationDao.deleteAll()
     }

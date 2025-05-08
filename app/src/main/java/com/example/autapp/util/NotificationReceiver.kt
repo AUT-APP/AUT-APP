@@ -4,7 +4,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.example.autapp.R
+import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.models.Notification
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Date
 
 class NotificationReceiver : BroadcastReceiver() {
@@ -15,6 +19,7 @@ class NotificationReceiver : BroadcastReceiver() {
         val dayOfWeek = intent.getIntExtra("dayOfWeek", -1) // Ensure you pass this from your scheduler
         val startTimeMillis = intent.getLongExtra("startTimeMillis", 0L)
         val minutesBefore = intent.getIntExtra("minutesBefore", 0)
+        val deepLinkUri = intent.getStringExtra("deepLinkUri") ?: "myapp://dashboard"
 
         // Create and show the notification
         val notification = Notification(
@@ -22,21 +27,30 @@ class NotificationReceiver : BroadcastReceiver() {
             iconResId = R.drawable.ic_notification, // Your icon
             title = title,
             text = text,
-            channelId = NotificationHelper.HIGH_PRIORITY_CHANNEL_ID
+            channelId = NotificationHelper.HIGH_PRIORITY_CHANNEL_ID,
+            deepLinkUri = deepLinkUri
+
         )
         NotificationHelper.pushNotification(context, notification)
+
+        // Log notification in Notifications table
+        CoroutineScope(Dispatchers.IO).launch {
+            val db = AUTDatabase.getDatabase(context)
+            db.notificationDao().insertNotification(notification)
+        }
 
         val startTime = Date(startTimeMillis)
 
         // Schedule again
         NotificationScheduler.scheduleClassNotification(
-            context,
-            notificationId,
-            title,
-            text,
-            dayOfWeek,
-            startTime,
-            minutesBefore
+            context = context,
+            notificationId = notificationId,
+            title = title,
+            text = text,
+            dayOfWeek = dayOfWeek,
+            startTime = startTime,
+            deepLinkUri = deepLinkUri,
+            minutesBefore = minutesBefore,
         )
     }
 }

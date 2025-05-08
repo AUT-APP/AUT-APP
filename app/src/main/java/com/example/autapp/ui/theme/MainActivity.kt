@@ -161,6 +161,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
 
+
+
         // Initialize database
         AUTDatabase.resetInstance()
         val db = AUTDatabase.getDatabase(applicationContext)
@@ -414,28 +416,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Test notification
-                val classNotification = Notification(
-                    iconResId = R.drawable.ic_notification,
-                    title = "%s starts soon!",
-                    text = "%s is starting in %s.",
-                    priority = NotificationCompat.PRIORITY_HIGH,
-                    deepLinkUri = "myapp://dashboard/1", // teststudent has an ID of 1
-                    channelId = "test_channel"
-                )
-
-                val shuttleNotification = Notification(
-                    iconResId = R.drawable.ic_notification,
-                    title = "Shuttle leaves soon!",
-                    text = "The shuttle bus leaves in %s.",
-                    priority = NotificationCompat.PRIORITY_HIGH,
-                    deepLinkUri = "myapp://dashboard/1", // teststudent has an ID of 1
-                    channelId = "test_channel"
-                )
-
-                notificationRepository.insertNotification(classNotification)
-                notificationRepository.insertNotification(shuttleNotification)
-
                 // Create timetable entries
                 val csEntries = listOf(
                     TimetableEntry(
@@ -666,8 +646,8 @@ class MainActivity : ComponentActivity() {
                     courseId = 1,
                     dayOfWeek = 4,
                     startTime = calendar.apply {
-                        set(Calendar.HOUR_OF_DAY, 1)
-                        set(Calendar.MINUTE, 12)
+                        set(Calendar.HOUR_OF_DAY, 12)
+                        set(Calendar.MINUTE, 19)
                     }.time,
                     endTime = calendar.apply {
                         set(Calendar.HOUR_OF_DAY, 23)
@@ -702,6 +682,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+
 
         val themeManager = ThemePreferenceManager(applicationContext)
         val coroutineScope = CoroutineScope(Dispatchers.Main)
@@ -916,7 +898,7 @@ fun AppContent(
         val iconTint = if (isDarkTheme) Color.White else Color.Black
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
-        val currentStudentId = navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
+        val currentStudentId: Int? = navBackStackEntry?.arguments?.getInt("studentId")
 
         NavigationBar(
             containerColor = backgroundColor,
@@ -1064,15 +1046,18 @@ fun AppContent(
         }
         composable(
             route = "dashboard/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType }),
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType }),
             deepLinks = listOf(
-            navDeepLink {
-                uriPattern = "myapp://dashboard/{studentId}"
-            }
+                navDeepLink {
+                    uriPattern = "myapp://dashboard/{studentId}"
+                }
             )
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
             Log.d("MainActivity", "Entering dashboard with student ID: $studentId")
+            LaunchedEffect(studentId) {
+                dashboardViewModel.initialize(studentId)
+            }
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -1093,9 +1078,9 @@ fun AppContent(
         }
         composable(
             route = "calendar/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
             Log.d("MainActivity", "Entering calendar with student ID: $studentId")
 
             LaunchedEffect(studentId) {
@@ -1124,9 +1109,9 @@ fun AppContent(
         }
         composable(
             route = "manage_events/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
 
             LaunchedEffect(studentId) {
                 if (calendarViewModel.studentId != studentId) {
@@ -1153,9 +1138,9 @@ fun AppContent(
         }
         composable(
             route = "bookings/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -1183,7 +1168,7 @@ fun AppContent(
                 navArgument("level") { type = NavType.StringType },
                 navArgument("date") { type = NavType.StringType },
                 navArgument("timeSlot") { type = NavType.StringType },
-                navArgument("studentId") { type = NavType.StringType },
+                navArgument("studentId") { type = NavType.IntType },
                 navArgument("campus") { type = NavType.StringType },
                 navArgument("building") { type = NavType.StringType }
             )
@@ -1192,7 +1177,7 @@ fun AppContent(
             val level = backStackEntry.arguments?.getString("level") ?: ""
             val date = backStackEntry.arguments?.getString("date") ?: ""
             val timeSlot = backStackEntry.arguments?.getString("timeSlot") ?: ""
-            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
             val campus = backStackEntry.arguments?.getString("campus") ?: ""
             val building = backStackEntry.arguments?.getString("building") ?: ""
             val snackbarHostState = remember { SnackbarHostState() } // Define here
@@ -1272,13 +1257,14 @@ fun AppContent(
             arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
             val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
-            notificationViewModel.initialize(studentId)
+            LaunchedEffect(studentId) {
+                notificationViewModel.initialize(studentId)
+            }
             NotificationScreen(
                 viewModel = notificationViewModel,
                 navController = navController
             )
         }
-
     }
 }
 

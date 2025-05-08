@@ -22,6 +22,7 @@ import com.example.autapp.data.repository.TimetableEntryRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import android.app.AlarmManager
+import com.example.autapp.util.NotificationScheduler
 
 class NotificationViewModel(
     private val studentRepository: StudentRepository,
@@ -57,6 +58,7 @@ class NotificationViewModel(
         context: Context,
         studentId: Int,
         classSessionId: Int,
+        courseName: String,
         minutesBefore: Int
     ) {
         viewModelScope.launch {
@@ -80,7 +82,16 @@ class NotificationViewModel(
                 val session = timetableEntryRepository.getTimetableEntryById(classSessionId)
 
                 if (session != null) {
-                    notificationRepository.scheduleNotificationForSession(context, pref, session)
+                    NotificationScheduler.scheduleClassNotification(
+                        context = context,
+                        notificationId = pref.classSessionId.hashCode(),
+                        title = "$courseName starts soon!",
+                        text = "Your $courseName ${session.type} is coming up in ${pref.minutesBefore} minutes!",
+                        dayOfWeek = session.dayOfWeek,
+                        startTime = session.startTime,
+                        deepLinkUri = "myapp://dashboard/$studentId",
+                        minutesBefore = pref.minutesBefore
+                    )
                 } else {
                     errorMessage = "Class session not found."
                 }

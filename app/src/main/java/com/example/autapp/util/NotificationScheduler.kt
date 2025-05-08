@@ -20,6 +20,7 @@ object NotificationScheduler {
 
     fun scheduleClassNotification(
         context: Context,
+        deepLinkUri: String,
         notificationId: Int,
         title: String,
         text: String,
@@ -43,6 +44,7 @@ object NotificationScheduler {
             putExtra("dayOfWeek", dayOfWeek)
             putExtra("startTimeMillis", startTime.time)
             putExtra("minutesBefore", minutesBefore)
+            putExtra("deepLinkUri", deepLinkUri)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

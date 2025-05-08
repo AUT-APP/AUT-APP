@@ -21,6 +21,7 @@ import android.os.PersistableBundle
 import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.net.toUri
 
 object NotificationHelper {
 
@@ -78,7 +79,7 @@ object NotificationHelper {
         // Create PendingIntent for touch action
         val pendingIntent: PendingIntent? = notification.deepLinkUri?.let { uriString ->
             try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriString)).apply {
+                val intent = Intent(Intent.ACTION_VIEW, uriString.toUri()).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }
 
