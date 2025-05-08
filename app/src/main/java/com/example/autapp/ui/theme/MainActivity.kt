@@ -91,17 +91,21 @@ class MainActivity : ComponentActivity() {
                 userDao = AUTDatabase.getDatabase(this).userDao()
             ),
             courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
-            assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao()),
+            assignmentRepository = AssignmentRepository(
+                AUTDatabase.getDatabase(this).assignmentDao()
+            ),
             gradeRepository = GradeRepository(
                 AUTDatabase.getDatabase(this).gradeDao(),
                 AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
             ),
-            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
+            timetableEntryRepository = TimetableEntryRepository(
+                AUTDatabase.getDatabase(this).timetableEntryDao()
+            ),
             notificationRepository = NotificationRepository(
                 AUTDatabase.getDatabase(this).notificationDao(),
                 AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
             ),
-            )
+        )
     }
 
     private val dashboardViewModel: DashboardViewModel by viewModels {
@@ -115,17 +119,22 @@ class MainActivity : ComponentActivity() {
                 AUTDatabase.getDatabase(this).gradeDao(),
                 AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
             ),
-            assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao()),
+            assignmentRepository = AssignmentRepository(
+                AUTDatabase.getDatabase(this).assignmentDao()
+            ),
             notificationRepository = NotificationRepository(
                 AUTDatabase.getDatabase(this).notificationDao(),
-                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
+                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this)
+                    .timetableNotificationPreferenceDao(),
             ),
         )
     }
 
     private val calendarViewModel: CalendarViewModel by viewModels {
         CalendarViewModelFactory(
-            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
+            timetableEntryRepository = TimetableEntryRepository(
+                AUTDatabase.getDatabase(this).timetableEntryDao()
+            ),
             studentRepository = StudentRepository(
                 studentDao = AUTDatabase.getDatabase(this).studentDao(),
                 userDao = AUTDatabase.getDatabase(this).userDao()
@@ -144,7 +153,9 @@ class MainActivity : ComponentActivity() {
                 bookingDao = AUTDatabase.getDatabase(this).bookingDao(),
                 studySpaceDao = AUTDatabase.getDatabase(this).studySpaceDao()
             ),
-            studySpaceRepository = StudySpaceRepository(AUTDatabase.getDatabase(this).studySpaceDao())
+            studySpaceRepository = StudySpaceRepository(
+                AUTDatabase.getDatabase(this).studySpaceDao()
+            )
         )
     }
 
@@ -159,7 +170,9 @@ class MainActivity : ComponentActivity() {
                 timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this)
                     .timetableNotificationPreferenceDao()
             ),
-            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
+            timetableEntryRepository = TimetableEntryRepository(
+                AUTDatabase.getDatabase(this).timetableEntryDao()
+            ),
             courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
         )
     }
@@ -186,7 +199,8 @@ class MainActivity : ComponentActivity() {
         val eventRepository = EventRepository(db.eventDao())
         val bookingRepository = BookingRepository(db.bookingDao(), db.studySpaceDao())
         val studySpaceRepository = StudySpaceRepository(db.studySpaceDao())
-        val notificationRepository = NotificationRepository(db.notificationDao(), db.timetableNotificationPreferenceDao())
+        val notificationRepository =
+            NotificationRepository(db.notificationDao(), db.timetableNotificationPreferenceDao())
         Log.d("MainActivity", "Repositories initialized")
 
         // Initialize Notification channels TODO: Might be better somewhere else
@@ -265,7 +279,10 @@ class MainActivity : ComponentActivity() {
                 withContext(Dispatchers.IO) {
                     students.forEach { student ->
                         studentRepository.insertStudent(student)
-                        Log.d("MainActivity", "Inserted student: ${student.firstName} ${student.lastName} (ID: ${student.studentId})")
+                        Log.d(
+                            "MainActivity",
+                            "Inserted student: ${student.firstName} ${student.lastName} (ID: ${student.studentId})"
+                        )
                     }
                 }
 
@@ -297,13 +314,21 @@ class MainActivity : ComponentActivity() {
                 withContext(Dispatchers.IO) {
                     courses.forEach { course ->
                         courseRepository.insertCourse(course)
-                        Log.d("MainActivity", "Inserted course: ${course.name} (ID: ${course.courseId})")
+                        Log.d(
+                            "MainActivity",
+                            "Inserted course: ${course.name} (ID: ${course.courseId})"
+                        )
                     }
                 }
 
                 // Insert student-course relationships
                 val studentCourseCrossRefs = listOf(
-                    StudentCourseCrossRef(studentId = 1000, courseId = 1, year = 2025, semester = 1), // Test student enrolled in COMP101
+                    StudentCourseCrossRef(
+                        studentId = 1000,
+                        courseId = 1,
+                        year = 2025,
+                        semester = 1
+                    ), // Test student enrolled in COMP101
                     StudentCourseCrossRef(studentId = 1, courseId = 1, year = 2025, semester = 1),
                     StudentCourseCrossRef(studentId = 1, courseId = 2, year = 2025, semester = 1),
                     StudentCourseCrossRef(studentId = 1, courseId = 3, year = 2025, semester = 1),
@@ -315,7 +340,10 @@ class MainActivity : ComponentActivity() {
                 withContext(Dispatchers.IO) {
                     studentCourseCrossRefs.forEach { crossRef ->
                         studentRepository.insertStudentCourseCrossRef(crossRef)
-                        Log.d("MainActivity", "Inserted student-course: studentId=${crossRef.studentId}, courseId=${crossRef.courseId}")
+                        Log.d(
+                            "MainActivity",
+                            "Inserted student-course: studentId=${crossRef.studentId}, courseId=${crossRef.courseId}"
+                        )
                     }
                 }
 
@@ -367,7 +395,10 @@ class MainActivity : ComponentActivity() {
                 withContext(Dispatchers.IO) {
                     assignments.forEach { assignment ->
                         assignmentRepository.insertAssignment(assignment)
-                        Log.d("MainActivity", "Inserted assignment: ${assignment.name} (ID: ${assignment.assignmentId})")
+                        Log.d(
+                            "MainActivity",
+                            "Inserted assignment: ${assignment.name} (ID: ${assignment.assignmentId})"
+                        )
                     }
                 }
 
@@ -420,7 +451,10 @@ class MainActivity : ComponentActivity() {
                 withContext(Dispatchers.IO) {
                     grades.forEach { grade ->
                         gradeRepository.insertGrade(grade)
-                        Log.d("MainActivity", "Inserted grade: studentId=${grade.studentId}, assignmentId=${grade.assignmentId}, score=${grade.score}")
+                        Log.d(
+                            "MainActivity",
+                            "Inserted grade: studentId=${grade.studentId}, assignmentId=${grade.assignmentId}, score=${grade.score}"
+                        )
                     }
                 }
 
@@ -651,18 +685,18 @@ class MainActivity : ComponentActivity() {
                         type = "Lecture"
                     ),
                     TimetableEntry(
-                    courseId = 1,
-                    dayOfWeek = 4,
-                    startTime = calendar.apply {
-                        set(Calendar.HOUR_OF_DAY, 13)
-                        set(Calendar.MINUTE, 9)
-                    }.time,
-                    endTime = calendar.apply {
-                        set(Calendar.HOUR_OF_DAY, 23)
-                        set(Calendar.MINUTE, 59)
-                    }.time,
-                    room = "WB116",
-                    type = "Lecture"
+                        courseId = 1,
+                        dayOfWeek = 4,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 9)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 23)
+                            set(Calendar.MINUTE, 59)
+                        }.time,
+                        room = "WB116",
+                        type = "Lecture"
                     ),
                 )
 
@@ -672,21 +706,33 @@ class MainActivity : ComponentActivity() {
                 }
                 // Verify insertions
                 val users = userRepository.getAllUsers()
-                val retrievedStudents = withContext(Dispatchers.IO) { studentRepository.getAllStudents() }
+                val retrievedStudents =
+                    withContext(Dispatchers.IO) { studentRepository.getAllStudents() }
                 Log.d("MainActivity", "Inserted ${users.size} users: $users")
-                Log.d("MainActivity", "Inserted ${retrievedStudents.size} students: $retrievedStudents")
+                Log.d(
+                    "MainActivity",
+                    "Inserted ${retrievedStudents.size} students: $retrievedStudents"
+                )
 
                 if (retrievedStudents.isEmpty()) {
                     Log.e("MainActivity", "No students were inserted!")
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, "Failed to insert test students!", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Failed to insert test students!",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
 
             } catch (e: Exception) {
                 Log.e("MainActivity", "Error inserting test data: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@MainActivity, "Error inserting test data: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Error inserting test data: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
@@ -795,6 +841,7 @@ fun AppContent(
                         isDarkTheme = isDarkTheme,
                         paddingValues = PaddingValues(0.dp)
                     )
+
                     1 -> MyBookingsScreen(
                         viewModel = viewModel,
                         navController = navController,
@@ -848,13 +895,15 @@ fun AppContent(
                         currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(
-                    isDarkTheme = isDarkTheme,
-                    navController = navController,
-                    calendarViewModel = calendarViewModel,
-                    currentRoute = null,
-                    currentStudentId = studentId
-                ) }
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = null,
+                        currentStudentId = studentId
+                    )
+                }
             ) { paddingValues ->
                 StudentDashboard(
                     viewModel = dashboardViewModel,
@@ -885,13 +934,15 @@ fun AppContent(
                         currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(
-                    isDarkTheme = isDarkTheme,
-                    navController = navController,
-                    calendarViewModel = calendarViewModel,
-                    currentRoute = null,
-                    currentStudentId = studentId
-                ) }
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = null,
+                        currentStudentId = studentId
+                    )
+                }
             ) { paddingValues ->
                 CalendarScreen(
                     viewModel = calendarViewModel,
@@ -925,13 +976,15 @@ fun AppContent(
                         currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(
-                    isDarkTheme = isDarkTheme,
-                    navController = navController,
-                    calendarViewModel = calendarViewModel,
-                    currentRoute = null,
-                    currentStudentId = studentId
-                ) }
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = null,
+                        currentStudentId = studentId
+                    )
+                }
             ) { paddingValues ->
                 ManageEventsScreen(
                     viewModel = calendarViewModel,
@@ -956,13 +1009,15 @@ fun AppContent(
                         currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(
-                    isDarkTheme = isDarkTheme,
-                    navController = navController,
-                    calendarViewModel = calendarViewModel,
-                    currentRoute = null,
-                    currentStudentId = studentId
-                ) }
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = null,
+                        currentStudentId = studentId
+                    )
+                }
             ) { paddingValues ->
                 BookingsScreen(
                     viewModel = bookingViewModel,
@@ -1004,13 +1059,15 @@ fun AppContent(
                         currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(
-                    isDarkTheme = isDarkTheme,
-                    navController = navController,
-                    calendarViewModel = calendarViewModel,
-                    currentRoute = null,
-                    currentStudentId = studentId
-                ) },
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = null,
+                        currentStudentId = studentId
+                    )
+                },
                 snackbarHost = {
                     SnackbarHost(
                         hostState = snackbarHostState,
@@ -1081,13 +1138,15 @@ fun AppContent(
                         currentStudentId = currentStudentId
                     )
                 },
-                bottomBar = { AUTBottomBar(
-                    isDarkTheme = isDarkTheme,
-                    navController = navController,
-                    calendarViewModel = calendarViewModel,
-                    currentRoute = currentRoute,
-                    currentStudentId = currentStudentId
-                ) }
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = currentRoute,
+                        currentStudentId = currentStudentId
+                    )
+                }
             ) { paddingValues ->
                 ChatScreen(
                     viewModel = chatViewModel,
@@ -1111,13 +1170,15 @@ fun AppContent(
                         currentStudentId = currentStudentId
                     )
                 },
-                bottomBar = { AUTBottomBar(
-                    isDarkTheme = isDarkTheme,
-                    navController = navController,
-                    calendarViewModel = calendarViewModel,
-                    currentRoute = currentRoute,
-                    currentStudentId = currentStudentId
-                ) }
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = currentRoute,
+                        currentStudentId = currentStudentId
+                    )
+                }
             ) { paddingValues ->
                 SettingsScreen(
                     isDarkTheme = isDarkTheme,
@@ -1147,13 +1208,15 @@ fun AppContent(
                         currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(
-                    isDarkTheme = isDarkTheme,
-                    navController = navController,
-                    calendarViewModel = calendarViewModel,
-                    currentRoute = null,
-                    currentStudentId = studentId
-                ) },
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = null,
+                        currentStudentId = studentId
+                    )
+                },
                 snackbarHost = {
                     SnackbarHost(
                         hostState = snackbarHostState,
@@ -1260,7 +1323,7 @@ class NotificationViewModelFactory(
     private val notificationRepository: NotificationRepository,
     private val courseRepository: CourseRepository,
 
-) : ViewModelProvider.Factory {
+    ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(NotificationViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
