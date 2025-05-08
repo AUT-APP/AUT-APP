@@ -549,8 +549,8 @@ fun AssignmentCard(
                     // Assignment details
                     Text("Type: ${assignment.type}")
                     Text("Course ID: ${assignment.courseId}")
-                    Text("Course: $courseName")
-                    Text("Course: $courseTitle")
+                    Text("Course Name: $courseName")
+                    Text("Course Title: $courseTitle")
                     Text("Due: ${formatDate(assignment.due)} at ${formatTime(assignment.due)}")
                     Text("Location: ${assignment.location}")
                     Text("Weight: ${assignment.weight * 100}%")
