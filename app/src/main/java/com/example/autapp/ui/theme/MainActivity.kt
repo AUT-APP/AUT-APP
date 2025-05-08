@@ -1,36 +1,20 @@
 package com.example.autapp.ui.theme
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
@@ -42,7 +26,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.models.*
 import com.example.autapp.data.repository.*
@@ -71,13 +54,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import com.example.autapp.util.NotificationHelper
 import androidx.navigation.navDeepLink
+import com.example.autapp.data.datastores.SettingsDataStore
 import com.example.autapp.data.repository.NotificationRepository
 import com.example.autapp.ui.notification.NotificationViewModel
+import com.example.autapp.ui.settings.SettingsViewModel
+import android.content.Context
 
 class MainActivity : ComponentActivity() {
     private var currentStudentId by mutableStateOf<Int?>(null)
@@ -162,7 +145,14 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        SettingsViewModelFactory(
+            context = this
+        )
+    }
+
     private val chatViewModel: ChatViewModel by viewModels()
+    private lateinit var settingsDataStore: SettingsDataStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -699,6 +689,10 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+
+        settingsDataStore = SettingsDataStore(this)
+
+
         setContent {
             AUTAPPTheme(darkTheme = isDarkTheme, dynamicColor = false) {
                 AppContent(
@@ -708,6 +702,7 @@ class MainActivity : ComponentActivity() {
                     calendarViewModel = calendarViewModel,
                     bookingViewModel = bookingViewModel,
                     chatViewModel = chatViewModel,
+                    settingsViewModel = settingsViewModel,
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = {
                         val newTheme = !isDarkTheme
@@ -736,7 +731,8 @@ fun AppContent(
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit,
     currentStudentId: Int?,
-    onStudentIdChange: (Int) -> Unit
+    onStudentIdChange: (Int) -> Unit,
+    settingsViewModel: SettingsViewModel
 ) {
     val navController = rememberNavController()
 
@@ -1083,7 +1079,12 @@ fun AppContent(
                 ) }
             ) { paddingValues ->
                 SettingsScreen(
+                    viewModel = settingsViewModel,
                     isDarkTheme = isDarkTheme,
+                    isNotificationsEnabled = settingsViewModel.isNotificationsEnabled.collectAsState(initial = true).value,
+                    onToggleNotifications = { settingsViewModel.setNotificationsEnabled(it) },
+                    isClassRemindersEnabled = settingsViewModel.isClassRemindersEnabled.collectAsState(initial = true).value,
+                    onToggleClassReminders = { settingsViewModel.setClassRemindersEnabled(it) },
                     onToggleTheme = onToggleTheme,
                     paddingValues = paddingValues,
                 )
@@ -1094,7 +1095,7 @@ fun AppContent(
             arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
             val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
-            val snackbarHostState = remember { SnackbarHostState() } // Define here
+            val snackbarHostState = remember { SnackbarHostState() }
             onStudentIdChange(studentId)
             LaunchedEffect(studentId) {
                 notificationViewModel.initialize(studentId)
@@ -1233,6 +1234,18 @@ class NotificationViewModelFactory(
                 courseRepository,
                 notificationRepository,
             ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class SettingsViewModelFactory(
+    private val context: Context,
+    ) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return SettingsViewModel(context) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
