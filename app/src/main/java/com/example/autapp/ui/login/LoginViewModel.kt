@@ -42,30 +42,34 @@ class LoginViewModel(
         password = newPassword
     }
 
-    fun checkLogin() {
+    fun login(onSuccess: (Int) -> Unit, onFailure: (String) -> Unit) {
         viewModelScope.launch {
             try {
                 val isValid = userRepository.checkUser(username, password)
-                loginResult = if (isValid) "Login successful" else "Invalid credentials"
+                if (!isValid) {
+                    loginResult = "Invalid credentials"
+                    onFailure("Invalid credentials")
+                    return@launch
+                }
+
+                val student = studentRepository.getStudentByUsername(username)
+                if (student?.studentId != null) {
+                    loginResult = "Login successful"
+                    onSuccess(student.studentId)
+                } else {
+                    loginResult = "Error: Student not found"
+                    onFailure("Error: Student not found")
+                }
             } catch (e: Exception) {
                 loginResult = "Login error: ${e.message}"
+                onFailure("Login error: ${e.message}")
             }
         }
     }
-
-    fun onLoginSuccess(callback: (Int) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val student = studentRepository.getStudentByUsername(username)
-                student?.studentId?.let { studentId ->
-                    callback(studentId)
-                } ?: run {
-                    loginResult = "Error: Student not found"
-                }
-            } catch (e: Exception) {
-                loginResult = "Error retrieving student: ${e.message}"
-            }
-        }
+    fun reset() {
+        username = ""
+        password = ""
+        loginResult = null
     }
 
     // DO NOT USE, it isn't ran at all!

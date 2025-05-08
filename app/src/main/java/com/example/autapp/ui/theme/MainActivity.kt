@@ -58,6 +58,8 @@ import com.example.autapp.ui.chat.ChatScreen
 import com.example.autapp.ui.chat.ChatViewModel
 import com.example.autapp.ui.DashboardViewModel
 import com.example.autapp.ui.settings.SettingsScreen
+import com.example.autapp.ui.components.AUTTopAppBar
+import com.example.autapp.ui.components.AUTBottomBar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -78,6 +80,7 @@ import com.example.autapp.data.repository.NotificationRepository
 import com.example.autapp.ui.notification.NotificationViewModel
 
 class MainActivity : ComponentActivity() {
+    private var currentStudentId by mutableStateOf<Int?>(null)
     private val loginViewModel: LoginViewModel by viewModels {
         LoginViewModelFactory(
             userRepository = UserRepository(AUTDatabase.getDatabase(this).userDao()),
@@ -125,7 +128,11 @@ class MainActivity : ComponentActivity() {
                 studentDao = AUTDatabase.getDatabase(this).studentDao(),
                 userDao = AUTDatabase.getDatabase(this).userDao()
             ),
-            eventRepository = EventRepository(AUTDatabase.getDatabase(this).eventDao())
+            eventRepository = EventRepository(AUTDatabase.getDatabase(this).eventDao()),
+            bookingRepository = BookingRepository(
+                bookingDao = AUTDatabase.getDatabase(this).bookingDao(),
+                studySpaceDao = AUTDatabase.getDatabase(this).studySpaceDao()
+            )
         )
     }
 
@@ -161,8 +168,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
 
-
-
         // Initialize database
         AUTDatabase.resetInstance()
         val db = AUTDatabase.getDatabase(applicationContext)
@@ -181,7 +186,7 @@ class MainActivity : ComponentActivity() {
         val notificationRepository = NotificationRepository(db.notificationDao(), db.timetableNotificationPreferenceDao())
         Log.d("MainActivity", "Repositories initialized")
 
-        // Initialize Notification channels TODO: Move to an application class for efficiency
+        // Initialize Notification channels TODO: Might be better somewhere else
         NotificationHelper.createNotificationChannels(applicationContext)
         Log.d("MainActivity", "Notification channels initialized")
 
@@ -646,8 +651,8 @@ class MainActivity : ComponentActivity() {
                     courseId = 1,
                     dayOfWeek = 4,
                     startTime = calendar.apply {
-                        set(Calendar.HOUR_OF_DAY, 12)
-                        set(Calendar.MINUTE, 19)
+                        set(Calendar.HOUR_OF_DAY, 13)
+                        set(Calendar.MINUTE, 9)
                     }.time,
                     endTime = calendar.apply {
                         set(Calendar.HOUR_OF_DAY, 23)
@@ -683,8 +688,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-
-
         val themeManager = ThemePreferenceManager(applicationContext)
         val coroutineScope = CoroutineScope(Dispatchers.Main)
 
@@ -712,7 +715,9 @@ class MainActivity : ComponentActivity() {
                         coroutineScope.launch {
                             themeManager.setDarkMode(newTheme)
                         }
-                    }
+                    },
+                    currentStudentId = currentStudentId,
+                    onStudentIdChange = { currentStudentId = it }
                 )
             }
         }
@@ -729,243 +734,11 @@ fun AppContent(
     chatViewModel: ChatViewModel,
     notificationViewModel: NotificationViewModel,
     isDarkTheme: Boolean,
-    onToggleTheme: () -> Unit
+    onToggleTheme: () -> Unit,
+    currentStudentId: Int?,
+    onStudentIdChange: (Int) -> Unit
 ) {
     val navController = rememberNavController()
-
-    // Define the TopAppBar composable
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun AUTTopAppBar(
-        isDarkTheme: Boolean,
-        navController: NavController,
-        title: String,
-        showBackButton: Boolean,
-        actions: @Composable RowScope.() -> Unit = {}
-    ) {
-        val containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFF2F7A78)
-        val titleTextColor = if (isDarkTheme) Color.White else Color.White
-        val actionIconColor = if (isDarkTheme) Color.White else Color.White
-        val autLabelBackground = if (isDarkTheme) Color.White else Color.Black
-        val autLabelTextColor = if (isDarkTheme) Color.Black else Color.White
-        val profileBackground = if (isDarkTheme) Color.DarkGray else Color.White
-        val profileIconColor = if (isDarkTheme) Color.White else Color.Black
-        val context = LocalContext.current
-
-        // State to track notification permission
-        var hasNotificationsPermission by remember {
-            mutableStateOf(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.POST_NOTIFICATIONS
-                    ) == PackageManager.PERMISSION_GRANTED
-                } else {
-                    true // Permission is automatically granted on versions below Android 13
-                }
-            )
-        }
-
-        // Activity result launcher for permission request
-        val permissionLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission(),
-            onResult = { isGranted -> hasNotificationsPermission = isGranted }
-        )
-
-        TopAppBar(
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                ) {
-                    if (showBackButton) {
-                        IconButton(onClick = { navController.navigateUp() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = actionIconColor
-                            )
-                        }
-                    }
-                    Text(
-                        text = "AUT",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        color = autLabelTextColor,
-                        modifier = Modifier
-                            .background(autLabelBackground)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Icon(
-                        painter = painterResource(id = R.drawable.chatbot_assistant_icon),
-                        contentDescription = "AI Chat",
-                        tint = actionIconColor,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable { navController.navigate("chat") }
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = "Notifications",
-                        tint = actionIconColor,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable { navController.navigate("notification/${dashboardViewModel.studentId}") }
-
-//
-//                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-//                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-//                                }
-//
-//                                val notification = notificationRepository.getNotificationById(1)
-//
-//                                // Create a test notification
-//                                val testNotification = Notification(
-//                                    iconResId = R.drawable.ic_notification, // Replace with your notification icon
-//                                    title = "Test Notification %s",
-//                                    text = "This is a test notification! %d",
-//                                    channelId = NotificationHelper.DEFAULT_CHANNEL_ID,
-//                                    priority = NotificationCompat.PRIORITY_DEFAULT,
-//                                    deepLinkUri = "myapp://dashboard"
-//                                )
-//                                // Push the notification
-//                                NotificationHelper.pushNotification(
-//                                    context = navController?.context ?: return@clickable,
-//                                    notification = testNotification,
-//                                    titleArgs = arrayOf("Alice"),
-//                                    textArgs = arrayOf(3)
-//                                )
-//                            }
-                    )
-//                    Icon(
-//                        imageVector = Icons.Outlined.Notifications,
-//                        contentDescription = "Notifications",
-//                        tint = Color.White,
-//                        modifier = Modifier
-//                            .size(24.dp)
-//                            .clickable {
-//                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-//                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-//                                }
-//                                // Trigger notification when clicked
-//                                val testNotification = Notification(
-//                                    iconResId = R.drawable.ic_notification,
-//                                    title = "Test Notification",
-//                                    text = "This is a test notification.",
-//                                    priority = NotificationCompat.PRIORITY_HIGH,
-//                                    deepLinkUri = "myapp://dashboard",
-//                                    channelId = NotificationHelper.DEFAULT_CHANNEL_ID
-//                                )
-//                                NotificationHelper.pushNotification(context, testNotification)
-//                            }
-//                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(profileBackground)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = "Profile",
-                            tint = profileIconColor,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .align(Alignment.Center)
-                        )
-                    }
-                }
-            },
-            actions = actions,
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = containerColor,
-                titleContentColor = titleTextColor,
-                actionIconContentColor = actionIconColor
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-
-    // Define the Bottom NavigationBar composable
-    @Composable
-    fun AUTBottomBar(isDarkTheme: Boolean, navController: NavController) {
-        val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
-        val iconTint = if (isDarkTheme) Color.White else Color.Black
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
-        val currentStudentId: Int? = navBackStackEntry?.arguments?.getInt("studentId")
-
-        NavigationBar(
-            containerColor = backgroundColor,
-            contentColor = iconTint
-        ) {
-            NavigationBarItem(
-                icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = iconTint) },
-                label = { Text("Home") },
-                selected = currentRoute?.startsWith("dashboard") == true,
-                onClick = {
-                    if (currentStudentId != null && currentRoute?.startsWith("dashboard") != true) {
-                        navController.navigate("dashboard/$currentStudentId") {
-                            popUpTo("dashboard/$currentStudentId") { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            )
-            NavigationBarItem(
-                icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar", tint = iconTint) },
-                label = { Text("Calendar") },
-                selected = currentRoute?.startsWith("calendar") == true,
-                onClick = {
-                    Log.d("MainActivity", "Calendar icon clicked")
-                    currentStudentId?.let { studentId ->
-                        Log.d("MainActivity", "Navigating to calendar with student ID: $studentId")
-                        calendarViewModel.initialize(studentId)
-                        navController.navigate("calendar/$studentId") {
-                            popUpTo("dashboard/$studentId") { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            )
-            NavigationBarItem(
-                icon = { Icon(Icons.Outlined.Event, contentDescription = "Bookings", tint = iconTint) },
-                label = { Text("Bookings") },
-                selected = currentRoute?.startsWith("bookings") == true,
-                onClick = {
-                    currentStudentId?.let { studentId ->
-                        navController.navigate("bookings/$studentId") {
-                            popUpTo("dashboard/$studentId") { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            )
-            NavigationBarItem(
-                icon = {
-                    Icon(
-                        painter = painterResource(id = android.R.drawable.ic_menu_directions),
-                        contentDescription = "Transport",
-                        tint = iconTint
-                    )
-                },
-                label = { Text("Transport") },
-                selected = false,
-                onClick = { /* TODO: Implement Transport screen */ }
-            )
-            NavigationBarItem(
-                icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = iconTint) },
-                label = { Text("More") },
-                selected = currentRoute == "settings",
-                onClick = { navController.navigate("settings") }
-            )
-        }
-    }
 
     // Define the BookingsScreen composable
     @OptIn(ExperimentalMaterial3Api::class)
@@ -1034,7 +807,7 @@ fun AppContent(
             LoginScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = { studentId ->
-                    Log.d("MainActivity", "Login successful with student ID: $studentId")
+                    onStudentIdChange(studentId)
                     dashboardViewModel.initialize(studentId)
                     navController.navigate("dashboard/$studentId") {
                         popUpTo("login") { inclusive = true }
@@ -1053,7 +826,8 @@ fun AppContent(
                 }
             )
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            onStudentIdChange(studentId)
             Log.d("MainActivity", "Entering dashboard with student ID: $studentId")
             LaunchedEffect(studentId) {
                 dashboardViewModel.initialize(studentId)
@@ -1064,10 +838,18 @@ fun AppContent(
                         title = "Dashboard",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = false
+                        showBackButton = false,
+                        currentRoute = null,
+                        currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) }
             ) { paddingValues ->
                 StudentDashboard(
                     viewModel = dashboardViewModel,
@@ -1080,12 +862,12 @@ fun AppContent(
             route = "calendar/{studentId}",
             arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
-            Log.d("MainActivity", "Entering calendar with student ID: $studentId")
-
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            onStudentIdChange(studentId)
             LaunchedEffect(studentId) {
                 calendarViewModel.initialize(studentId)
             }
+            Log.d("MainActivity", "Entering calendar with student ID: $studentId")
 
             Scaffold(
                 topBar = {
@@ -1093,10 +875,18 @@ fun AppContent(
                         title = "Calendar",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) }
             ) { paddingValues ->
                 CalendarScreen(
                     viewModel = calendarViewModel,
@@ -1111,8 +901,8 @@ fun AppContent(
             route = "manage_events/{studentId}",
             arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
-
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            onStudentIdChange(studentId)
             LaunchedEffect(studentId) {
                 if (calendarViewModel.studentId != studentId) {
                     calendarViewModel.initialize(studentId)
@@ -1125,10 +915,18 @@ fun AppContent(
                         title = "Manage Events",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) }
             ) { paddingValues ->
                 ManageEventsScreen(
                     viewModel = calendarViewModel,
@@ -1140,17 +938,26 @@ fun AppContent(
             route = "bookings/{studentId}",
             arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            onStudentIdChange(studentId)
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
                         title = "Bookings",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) }
             ) { paddingValues ->
                 BookingsScreen(
                     viewModel = bookingViewModel,
@@ -1177,7 +984,7 @@ fun AppContent(
             val level = backStackEntry.arguments?.getString("level") ?: ""
             val date = backStackEntry.arguments?.getString("date") ?: ""
             val timeSlot = backStackEntry.arguments?.getString("timeSlot") ?: ""
-            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
             val campus = backStackEntry.arguments?.getString("campus") ?: ""
             val building = backStackEntry.arguments?.getString("building") ?: ""
             val snackbarHostState = remember { SnackbarHostState() } // Define here
@@ -1187,10 +994,18 @@ fun AppContent(
                         title = "Booking Details",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) },
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) },
                 snackbarHost = {
                     SnackbarHost(
                         hostState = snackbarHostState,
@@ -1215,16 +1030,27 @@ fun AppContent(
             }
         }
         composable("chat") {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            val currentStudentId = currentStudentId
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
                         title = "Chatbot",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = currentRoute,
+                        currentStudentId = currentStudentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = currentRoute,
+                    currentStudentId = currentStudentId
+                ) }
             ) { paddingValues ->
                 ChatScreen(
                     viewModel = chatViewModel,
@@ -1234,21 +1060,32 @@ fun AppContent(
             }
         }
         composable("settings") {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            val currentStudentId = currentStudentId
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
                         title = "Settings",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
-                        showBackButton = true
+                        showBackButton = true,
+                        currentRoute = currentRoute,
+                        currentStudentId = currentStudentId
                     )
                 },
-                bottomBar = { AUTBottomBar(isDarkTheme = isDarkTheme, navController = navController) }
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = currentRoute,
+                    currentStudentId = currentStudentId
+                ) }
             ) { paddingValues ->
                 SettingsScreen(
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = onToggleTheme,
-                    paddingValues = paddingValues
+                    paddingValues = paddingValues,
                 )
             }
         }
@@ -1256,14 +1093,45 @@ fun AppContent(
             route = "notification/{studentId}",
             arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            val snackbarHostState = remember { SnackbarHostState() } // Define here
+            onStudentIdChange(studentId)
             LaunchedEffect(studentId) {
                 notificationViewModel.initialize(studentId)
             }
-            NotificationScreen(
-                viewModel = notificationViewModel,
-                navController = navController
-            )
+            Scaffold(
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Bookings",
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
+                    )
+                },
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) },
+                snackbarHost = {
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(16.dp) // Ensure visibility
+                    )
+                }
+            ) { paddingValues ->
+                NotificationScreen(
+                    viewModel = notificationViewModel,
+                    navController = navController,
+                    paddingValues = paddingValues,
+                    snackbarHostState = snackbarHostState // Pass to BookingDetailsScreen
+                )
+            }
+
         }
     }
 }
@@ -1318,7 +1186,8 @@ class DashboardViewModelFactory(
 class CalendarViewModelFactory(
     private val timetableEntryRepository: TimetableEntryRepository,
     private val studentRepository: StudentRepository,
-    private val eventRepository: EventRepository
+    private val eventRepository: EventRepository,
+    private val bookingRepository: BookingRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CalendarViewModel::class.java)) {
@@ -1326,7 +1195,8 @@ class CalendarViewModelFactory(
             return CalendarViewModel(
                 timetableEntryRepository,
                 studentRepository,
-                eventRepository
+                eventRepository,
+                bookingRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

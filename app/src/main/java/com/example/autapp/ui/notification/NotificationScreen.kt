@@ -46,7 +46,7 @@
     import com.example.autapp.R
     import com.example.autapp.data.models.Course
     import com.example.autapp.data.models.TimetableEntry
-    import com.example.autapp.ui.AUTTopAppBar
+    import com.example.autapp.ui.components.AUTTopAppBar
     import com.example.autapp.ui.theme.ClassCard
     import org.threeten.bp.LocalDate
     import org.threeten.bp.ZoneId
@@ -66,7 +66,9 @@
     @Composable
     fun NotificationScreen(
         viewModel: NotificationViewModel,
-        navController: NavController
+        navController: NavController,
+        paddingValues: PaddingValues,
+        snackbarHostState: SnackbarHostState
     ) {
         val tag = "NotificationScreen"
         Log.d(tag, "NotificationScreen composed")
@@ -77,66 +79,52 @@
         val courses = viewModel.courses
         var selectedTabIndex = remember { mutableStateOf(0) }
 
-        val snackbarHostState = remember { SnackbarHostState() }
         val coroutineScope = rememberCoroutineScope()
-
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) }
-        ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .systemBarsPadding()
-            ) {
-                AUTTopAppBar(
-                    title = "Notifications",
-                    navController = navController,
-                    showBackButton = true,
-                    modifier = Modifier.statusBarsPadding()
-                )
-
-                if (courses.isNotEmpty()) {
-                    TabRow(
-                        selectedTabIndex = selectedTabIndex.value,
-                        containerColor = colorScheme.surface,
-                        contentColor = colorScheme.onSurface
-                    ) {
-                        courses.forEachIndexed { index, course ->
-                            Tab(
-                                selected = selectedTabIndex.value == index,
-                                onClick = { selectedTabIndex.value = index },
-                                text = { Text(course.name, fontWeight = FontWeight.Bold) }
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .padding(horizontal = 24.dp, vertical = 32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // Show notifications related to the selected course
-                        val selectedCourse = courses[selectedTabIndex.value]
-                        CourseNotificationsTab(viewModel,
-                            selectedCourse.courseId,
-                            selectedCourse.name,
-                            snackbarHostState,
-                            coroutineScope
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            if (courses.isNotEmpty()) {
+                TabRow(
+                    selectedTabIndex = selectedTabIndex.value,
+                    containerColor = colorScheme.surface,
+                    contentColor = colorScheme.onSurface
+                ) {
+                    courses.forEachIndexed { index, course ->
+                        Tab(
+                            selected = selectedTabIndex.value == index,
+                            onClick = { selectedTabIndex.value = index },
+                            text = { Text(course.name, fontWeight = FontWeight.Bold) }
                         )
-                    }
-                } else {
-                    // Loading or no courses
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Loading courses or no courses found")
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 24.dp, vertical = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Show notifications related to the selected course
+                    val selectedCourse = courses[selectedTabIndex.value]
+                    CourseNotificationsTab(viewModel,
+                        selectedCourse.courseId,
+                        selectedCourse.name,
+                        snackbarHostState,
+                        coroutineScope
+                    )
+                }
+            } else {
+                // Loading or no courses
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Loading courses or no courses found")
+                }
             }
         }
 
@@ -315,7 +303,10 @@
                                             classSessionId = timetableEntry.entryId
                                         )
                                         coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("$courseName ${timetableEntry.type} notification disabled")
+                                            snackbarHostState.showSnackbar(
+                                                message = "$courseName ${timetableEntry.type} notification disabled",
+                                                actionLabel = "OK"
+                                            )
                                         }
                                     } else {
                                         // Request permission before setting the notification
@@ -331,7 +322,10 @@
                                             courseName = courseName
                                         )
                                         coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("$courseName ${timetableEntry.type} notification set for $label")
+                                            snackbarHostState.showSnackbar(
+                                                message = "$courseName ${timetableEntry.type} notification set for $label",
+                                                actionLabel = "OK"
+                                            )
                                         }
                                     }
                                 },

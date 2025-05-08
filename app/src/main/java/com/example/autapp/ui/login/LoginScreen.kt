@@ -39,15 +39,8 @@ fun LoginScreen(
     val colorScheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
 
-    // Observe login result and trigger navigation on success
-    LaunchedEffect(viewModel.loginResult) {
-        viewModel.loginResult?.let { result ->
-            if (result.startsWith("Login successful")) {
-                viewModel.onLoginSuccess { studentId ->
-                    onLoginSuccess(studentId)
-                }
-            }
-        }
+    LaunchedEffect(Unit) {
+        viewModel.reset()
     }
 
     Box(
@@ -131,7 +124,12 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
-                    onClick = { viewModel.checkLogin() },
+                    onClick = {
+                        viewModel.login(
+                            onSuccess = { studentId -> onLoginSuccess(studentId) },
+                            onFailure = {}
+                        )
+                    },
                     modifier = Modifier
                         .width(160.dp)
                         .height(48.dp),
