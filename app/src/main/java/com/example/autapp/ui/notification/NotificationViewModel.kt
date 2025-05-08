@@ -82,15 +82,21 @@ class NotificationViewModel(
                 val session = timetableEntryRepository.getTimetableEntryById(classSessionId)
 
                 if (session != null) {
+                    val minutesBefore = pref.minutesBefore
+                    val notificationText = when (minutesBefore) {
+                        0 -> "Your $courseName ${session.type} at ${session.room} is starting now!"
+                        60 -> "Your $courseName ${session.type} at ${session.room} is coming up in an hour!"
+                        else -> "Your $courseName ${session.type} at ${session.room} is coming up in $minutesBefore minutes!"
+                    }
                     NotificationScheduler.scheduleClassNotification(
                         context = context,
                         notificationId = pref.classSessionId.hashCode(),
                         title = "$courseName starts soon!",
-                        text = "Your $courseName ${session.type} is coming up in ${pref.minutesBefore} minutes!",
+                        text = notificationText,
                         dayOfWeek = session.dayOfWeek,
                         startTime = session.startTime,
                         deepLinkUri = "myapp://dashboard/$studentId",
-                        minutesBefore = pref.minutesBefore
+                        minutesBefore = minutesBefore
                     )
                 } else {
                     errorMessage = "Class session not found."
