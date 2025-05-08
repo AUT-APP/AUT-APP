@@ -22,20 +22,33 @@ import com.example.autapp.data.repository.TimetableEntryRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import android.app.AlarmManager
+import androidx.compose.runtime.mutableIntStateOf
+import com.example.autapp.data.datastores.SettingsDataStore
 import com.example.autapp.util.NotificationScheduler
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 
 class NotificationViewModel(
     private val studentRepository: StudentRepository,
     private val timetableEntryRepository: TimetableEntryRepository,
     private val courseRepository: CourseRepository,
     private val notificationRepository: NotificationRepository,
+    private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
-    var studentId by mutableStateOf(0)
+    var studentId by mutableIntStateOf(0)
     var courses by mutableStateOf<List<Course>>(emptyList())
     var notifications by mutableStateOf<List<Notification>>(emptyList())
     var notificationPrefs by mutableStateOf<Map<Int, Int>>(emptyMap()) // classSessionId -> minutesBefore
     var errorMessage by mutableStateOf<String?>(null)
     var timetableEntries by mutableStateOf<List<TimetableEntry>>(emptyList())
+
+    val notificationsEnabled = settingsDataStore.isNotificationsEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val classRemindersEnabled = settingsDataStore.isClassRemindersEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+
 
     fun initialize(studentId: Int) {
         this.studentId = studentId

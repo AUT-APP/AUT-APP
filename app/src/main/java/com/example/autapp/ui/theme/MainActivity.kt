@@ -64,6 +64,7 @@ import android.content.Context
 
 class MainActivity : ComponentActivity() {
     private var currentStudentId by mutableStateOf<Int?>(null)
+    private val settingsDataStore by lazy { SettingsDataStore(this) }
     private val loginViewModel: LoginViewModel by viewModels {
         LoginViewModelFactory(
             userRepository = UserRepository(AUTDatabase.getDatabase(this).userDao()),
@@ -142,6 +143,7 @@ class MainActivity : ComponentActivity() {
             ),
             timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
             courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
+            settingsDataStore = settingsDataStore
         )
     }
 
@@ -152,7 +154,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private val chatViewModel: ChatViewModel by viewModels()
-    private lateinit var settingsDataStore: SettingsDataStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -641,8 +642,8 @@ class MainActivity : ComponentActivity() {
                     courseId = 1,
                     dayOfWeek = 4,
                     startTime = calendar.apply {
-                        set(Calendar.HOUR_OF_DAY, 13)
-                        set(Calendar.MINUTE, 9)
+                        set(Calendar.HOUR_OF_DAY, 21)
+                        set(Calendar.MINUTE, 2)
                     }.time,
                     endTime = calendar.apply {
                         set(Calendar.HOUR_OF_DAY, 23)
@@ -678,20 +679,16 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val themeManager = ThemePreferenceManager(applicationContext)
+        val settingsDataStore = SettingsDataStore(applicationContext)
         val coroutineScope = CoroutineScope(Dispatchers.Main)
 
         var isDarkTheme by mutableStateOf(false)
 
         coroutineScope.launch {
-            themeManager.isDarkMode.collect {
+            settingsDataStore.isDarkMode.collect {
                 isDarkTheme = it
             }
         }
-
-
-        settingsDataStore = SettingsDataStore(this)
-
 
         setContent {
             AUTAPPTheme(darkTheme = isDarkTheme, dynamicColor = false) {
@@ -708,7 +705,7 @@ class MainActivity : ComponentActivity() {
                         val newTheme = !isDarkTheme
                         isDarkTheme = newTheme
                         coroutineScope.launch {
-                            themeManager.setDarkMode(newTheme)
+                            settingsDataStore.setDarkMode(newTheme)
                         }
                     },
                     currentStudentId = currentStudentId,
@@ -1223,7 +1220,7 @@ class NotificationViewModelFactory(
     private val timetableEntryRepository: TimetableEntryRepository,
     private val notificationRepository: NotificationRepository,
     private val courseRepository: CourseRepository,
-
+    private val settingsDataStore: SettingsDataStore,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(NotificationViewModel::class.java)) {
@@ -1233,6 +1230,7 @@ class NotificationViewModelFactory(
                 timetableEntryRepository,
                 courseRepository,
                 notificationRepository,
+                settingsDataStore
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

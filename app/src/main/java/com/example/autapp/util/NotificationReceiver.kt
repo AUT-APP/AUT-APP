@@ -6,7 +6,7 @@ import android.content.Intent
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
-import com.example.autapp.data.datastores.settingsDataStore
+import com.example.autapp.data.datastores.SettingsDataStore
 import com.example.autapp.data.models.Notification
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,11 +26,9 @@ class NotificationReceiver : BroadcastReceiver() {
             val minutesBefore = intent.getIntExtra("minutesBefore", 0)
             val deepLinkUri = intent.getStringExtra("deepLinkUri") ?: "myapp://dashboard"
 
-            val prefs = context.settingsDataStore.data.first()
-
-            val notificationsEnabled = prefs[booleanPreferencesKey("notifications_enabled")] ?: true
-            val classRemindersEnabled =
-                prefs[booleanPreferencesKey("class_reminders_enabled")] ?: true
+            val settingsDataStore = SettingsDataStore(context)
+            val notificationsEnabled = settingsDataStore.isNotificationsEnabled.first()
+            val classRemindersEnabled = settingsDataStore.isClassRemindersEnabled.first()
 
             if (!notificationsEnabled || !classRemindersEnabled) {
                 // Don't show/log the notification
