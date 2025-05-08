@@ -3,6 +3,7 @@ package com.example.autapp.data.repository
 import android.util.Log
 import androidx.room.Transaction
 import com.example.autapp.data.dao.StudentDao
+import com.example.autapp.data.models.CourseWithEnrollmentInfo
 import com.example.autapp.data.dao.UserDao
 import com.example.autapp.data.models.Student
 import com.example.autapp.data.models.StudentCourseCrossRef
@@ -79,6 +80,10 @@ class StudentRepository(
 
     suspend fun getStudentWithCourses(studentId: Int): StudentWithCourses? {
         return studentDao.getStudentWithCourses(studentId)
+    }
+
+    suspend fun getStudentCoursesWithEnrollmentInfo(studentId: Int): List<CourseWithEnrollmentInfo> {
+        return studentDao.getStudentCoursesWithEnrollmentInfo(studentId)
     }
 
     suspend fun insertStudentCourseCrossRef(crossRef: StudentCourseCrossRef) {

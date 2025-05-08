@@ -28,5 +28,7 @@ import androidx.room.Index
 )
 data class StudentCourseCrossRef(
     val studentId: Int,
-    val courseId: Int
+    val courseId: Int,
+    val year: Int,
+    val semester: Int
 )

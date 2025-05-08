@@ -1,11 +1,16 @@
 package com.example.autapp.ui.theme
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -63,6 +68,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.util.*
+import com.example.autapp.ui.notification.NotificationScreen
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import com.example.autapp.util.NotificationHelper
+import androidx.navigation.navDeepLink
+import com.example.autapp.data.repository.NotificationRepository
+import com.example.autapp.ui.notification.NotificationViewModel
 
 class MainActivity : ComponentActivity() {
     private var currentStudentId by mutableStateOf<Int?>(null)
@@ -79,8 +96,12 @@ class MainActivity : ComponentActivity() {
                 AUTDatabase.getDatabase(this).gradeDao(),
                 AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
             ),
-            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao())
-        )
+            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
+            notificationRepository = NotificationRepository(
+                AUTDatabase.getDatabase(this).notificationDao(),
+                AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
+            ),
+            )
     }
 
     private val dashboardViewModel: DashboardViewModel by viewModels {
@@ -94,7 +115,11 @@ class MainActivity : ComponentActivity() {
                 AUTDatabase.getDatabase(this).gradeDao(),
                 AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
             ),
-            assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
+            assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao()),
+            notificationRepository = NotificationRepository(
+                AUTDatabase.getDatabase(this).notificationDao(),
+                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
+            ),
         )
     }
 
@@ -123,6 +148,22 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val notificationViewModel: NotificationViewModel by viewModels {
+        NotificationViewModelFactory(
+            studentRepository = StudentRepository(
+                studentDao = AUTDatabase.getDatabase(this).studentDao(),
+                userDao = AUTDatabase.getDatabase(this).userDao()
+            ),
+            notificationRepository = NotificationRepository(
+                AUTDatabase.getDatabase(this).notificationDao(),
+                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this)
+                    .timetableNotificationPreferenceDao()
+            ),
+            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
+            courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
+        )
+    }
+
     private val chatViewModel: ChatViewModel by viewModels()
     private val transportViewModel: TransportViewModel by viewModels()
 
@@ -145,7 +186,12 @@ class MainActivity : ComponentActivity() {
         val eventRepository = EventRepository(db.eventDao())
         val bookingRepository = BookingRepository(db.bookingDao(), db.studySpaceDao())
         val studySpaceRepository = StudySpaceRepository(db.studySpaceDao())
+        val notificationRepository = NotificationRepository(db.notificationDao(), db.timetableNotificationPreferenceDao())
         Log.d("MainActivity", "Repositories initialized")
+
+        // Initialize Notification channels TODO: Might be better somewhere else
+        NotificationHelper.createNotificationChannels(applicationContext)
+        Log.d("MainActivity", "Notification channels initialized")
 
         // Insert test data
         runBlocking {
@@ -257,12 +303,13 @@ class MainActivity : ComponentActivity() {
 
                 // Insert student-course relationships
                 val studentCourseCrossRefs = listOf(
-                    StudentCourseCrossRef(studentId = 1000, courseId = 1), // Test student enrolled in COMP101
-                    StudentCourseCrossRef(studentId = 1, courseId = 1),
-                    StudentCourseCrossRef(studentId = 1, courseId = 2),
-                    StudentCourseCrossRef(studentId = 2, courseId = 2),
-                    StudentCourseCrossRef(studentId = 3, courseId = 3),
-                    StudentCourseCrossRef(studentId = 4, courseId = 1)
+                    StudentCourseCrossRef(studentId = 1000, courseId = 1, year = 2025, semester = 1), // Test student enrolled in COMP101
+                    StudentCourseCrossRef(studentId = 1, courseId = 1, year = 2025, semester = 1),
+                    StudentCourseCrossRef(studentId = 1, courseId = 2, year = 2025, semester = 1),
+                    StudentCourseCrossRef(studentId = 1, courseId = 3, year = 2025, semester = 1),
+                    StudentCourseCrossRef(studentId = 2, courseId = 2, year = 2025, semester = 1),
+                    StudentCourseCrossRef(studentId = 3, courseId = 3, year = 2025, semester = 1),
+                    StudentCourseCrossRef(studentId = 4, courseId = 1, year = 2025, semester = 1)
                 )
 
                 withContext(Dispatchers.IO) {
@@ -377,6 +424,252 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                // Create timetable entries
+                val csEntries = listOf(
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB101",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 2,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB102",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 3,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB103",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 2,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB104",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 2,
+                        dayOfWeek = 2,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB105",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 3,
+                        dayOfWeek = 2,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB106",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 3,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB107",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 2,
+                        dayOfWeek = 3,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB108",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 3,
+                        dayOfWeek = 3,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB109",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 4,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB110",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 2,
+                        dayOfWeek = 4,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB111",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 3,
+                        dayOfWeek = 4,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB112",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 5,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 9)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB113",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 2,
+                        dayOfWeek = 5,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 11)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 13)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB114",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 3,
+                        dayOfWeek = 5,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 14)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 0)
+                        }.time,
+                        room = "WB115",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                        courseId = 1,
+                        dayOfWeek = 1,
+                        startTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 16)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        endTime = calendar.apply {
+                            set(Calendar.HOUR_OF_DAY, 18)
+                            set(Calendar.MINUTE, 30)
+                        }.time,
+                        room = "WB116",
+                        type = "Lecture"
+                    ),
+                    TimetableEntry(
+                    courseId = 1,
+                    dayOfWeek = 4,
+                    startTime = calendar.apply {
+                        set(Calendar.HOUR_OF_DAY, 13)
+                        set(Calendar.MINUTE, 9)
+                    }.time,
+                    endTime = calendar.apply {
+                        set(Calendar.HOUR_OF_DAY, 23)
+                        set(Calendar.MINUTE, 59)
+                    }.time,
+                    room = "WB116",
+                    type = "Lecture"
+                    ),
+                )
+
+                csEntries.forEach {
+                    timetableEntryRepository.insertTimetableEntry(it)
+                    Log.d("MainActivity", "Inserted timetable entry for course ${it.courseId}")
+                }
                 // Verify insertions
                 val users = userRepository.getAllUsers()
                 val retrievedStudents = withContext(Dispatchers.IO) { studentRepository.getAllStudents() }
@@ -414,6 +707,7 @@ class MainActivity : ComponentActivity() {
                 AppContent(
                     loginViewModel = loginViewModel,
                     dashboardViewModel = dashboardViewModel,
+                    notificationViewModel = notificationViewModel,
                     calendarViewModel = calendarViewModel,
                     bookingViewModel = bookingViewModel,
                     chatViewModel = chatViewModel,
@@ -443,6 +737,7 @@ fun AppContent(
     bookingViewModel: BookingViewModel,
     chatViewModel: ChatViewModel,
     transportViewModel: TransportViewModel,
+    notificationViewModel: NotificationViewModel,
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit,
     currentStudentId: Int?,
@@ -529,11 +824,19 @@ fun AppContent(
         }
         composable(
             route = "dashboard/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType }),
+            deepLinks = listOf(
+                navDeepLink {
+                    uriPattern = "myapp://dashboard/{studentId}"
+                }
+            )
         ) { backStackEntry ->
-            val studentId = currentStudentId ?: backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
             onStudentIdChange(studentId)
             Log.d("MainActivity", "Entering dashboard with student ID: $studentId")
+            LaunchedEffect(studentId) {
+                dashboardViewModel.initialize(studentId)
+            }
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -562,9 +865,9 @@ fun AppContent(
         }
         composable(
             route = "calendar/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = currentStudentId ?: backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
             onStudentIdChange(studentId)
             LaunchedEffect(studentId) {
                 calendarViewModel.initialize(studentId)
@@ -601,9 +904,9 @@ fun AppContent(
         }
         composable(
             route = "manage_events/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = currentStudentId ?: backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
             onStudentIdChange(studentId)
             LaunchedEffect(studentId) {
                 if (calendarViewModel.studentId != studentId) {
@@ -638,9 +941,9 @@ fun AppContent(
         }
         composable(
             route = "bookings/{studentId}",
-            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = currentStudentId ?: backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
             onStudentIdChange(studentId)
             Scaffold(
                 topBar = {
@@ -677,7 +980,7 @@ fun AppContent(
                 navArgument("level") { type = NavType.StringType },
                 navArgument("date") { type = NavType.StringType },
                 navArgument("timeSlot") { type = NavType.StringType },
-                navArgument("studentId") { type = NavType.StringType },
+                navArgument("studentId") { type = NavType.IntType },
                 navArgument("campus") { type = NavType.StringType },
                 navArgument("building") { type = NavType.StringType }
             )
@@ -686,7 +989,7 @@ fun AppContent(
             val level = backStackEntry.arguments?.getString("level") ?: ""
             val date = backStackEntry.arguments?.getString("date") ?: ""
             val timeSlot = backStackEntry.arguments?.getString("timeSlot") ?: ""
-            val studentId = currentStudentId ?: backStackEntry.arguments?.getString("studentId")?.toIntOrNull() ?: 0
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
             val campus = backStackEntry.arguments?.getString("campus") ?: ""
             val building = backStackEntry.arguments?.getString("building") ?: ""
             val snackbarHostState = remember { SnackbarHostState() } // Define here
@@ -819,9 +1122,53 @@ fun AppContent(
                 SettingsScreen(
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = onToggleTheme,
-                    paddingValues = paddingValues
+                    paddingValues = paddingValues,
                 )
             }
+        }
+        composable(
+            route = "notification/{studentId}",
+            arguments = listOf(navArgument("studentId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
+            val snackbarHostState = remember { SnackbarHostState() } // Define here
+            onStudentIdChange(studentId)
+            LaunchedEffect(studentId) {
+                notificationViewModel.initialize(studentId)
+            }
+            Scaffold(
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Bookings",
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        showBackButton = true,
+                        currentRoute = null,
+                        currentStudentId = studentId
+                    )
+                },
+                bottomBar = { AUTBottomBar(
+                    isDarkTheme = isDarkTheme,
+                    navController = navController,
+                    calendarViewModel = calendarViewModel,
+                    currentRoute = null,
+                    currentStudentId = studentId
+                ) },
+                snackbarHost = {
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(16.dp) // Ensure visibility
+                    )
+                }
+            ) { paddingValues ->
+                NotificationScreen(
+                    viewModel = notificationViewModel,
+                    navController = navController,
+                    paddingValues = paddingValues,
+                    snackbarHostState = snackbarHostState // Pass to BookingDetailsScreen
+                )
+            }
+
         }
     }
 }
@@ -832,7 +1179,8 @@ class LoginViewModelFactory(
     private val courseRepository: CourseRepository,
     private val assignmentRepository: AssignmentRepository,
     private val gradeRepository: GradeRepository,
-    private val timetableEntryRepository: TimetableEntryRepository
+    private val timetableEntryRepository: TimetableEntryRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
@@ -843,7 +1191,8 @@ class LoginViewModelFactory(
                 courseRepository,
                 assignmentRepository,
                 gradeRepository,
-                timetableEntryRepository
+                timetableEntryRepository,
+                notificationRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
@@ -854,7 +1203,8 @@ class DashboardViewModelFactory(
     private val studentRepository: StudentRepository,
     private val courseRepository: CourseRepository,
     private val gradeRepository: GradeRepository,
-    private val assignmentRepository: AssignmentRepository
+    private val assignmentRepository: AssignmentRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
@@ -899,6 +1249,27 @@ class BookingViewModelFactory(
             val savedStateHandle = extras.createSavedStateHandle()
             @Suppress("UNCHECKED_CAST")
             return BookingViewModel(bookingRepository, studySpaceRepository, savedStateHandle) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class NotificationViewModelFactory(
+    private val studentRepository: StudentRepository,
+    private val timetableEntryRepository: TimetableEntryRepository,
+    private val notificationRepository: NotificationRepository,
+    private val courseRepository: CourseRepository,
+
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(NotificationViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return NotificationViewModel(
+                studentRepository,
+                timetableEntryRepository,
+                courseRepository,
+                notificationRepository,
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

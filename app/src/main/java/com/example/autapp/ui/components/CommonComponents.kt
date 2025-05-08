@@ -103,8 +103,11 @@ fun AUTTopAppBar(
                     imageVector = Icons.Outlined.Notifications,
                     contentDescription = "Notifications",
                     tint = actionIconColor,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable { navController.navigate("notification/${currentStudentId}") }
                 )
+
                 Spacer(modifier = Modifier.width(16.dp))
                 Box(
                     modifier = Modifier
