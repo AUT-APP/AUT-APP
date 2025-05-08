@@ -19,13 +19,21 @@ fun CalendarScreen(
     modifier: Modifier = Modifier,
     onNavigateToManageEvents: () -> Unit
 ) {
+    // StateFlow for UI state from the ViewModel, collected as State
     val uiState by viewModel.uiState.collectAsState()
+    // StateFlow to trigger navigation to the manage events screen
     val navigateToManageEvents by viewModel.navigateToManageEvents.collectAsState()
+    // State to toggle between Calendar and Timetable views
     var showCalendarView by remember { mutableStateOf(uiState.isCalendarView) }
+    // State to control the visibility of the add event dialog
     var showAddEventDialog by remember { mutableStateOf(false) }
+    // State to control the visibility of the add to-do dialog
     var showAddTodoDialog by remember { mutableStateOf(false) }
+    // State to hold the currently selected event for editing or viewing details
     var selectedEvent by remember { mutableStateOf<Event?>(null) }
 
+    // LaunchedEffect observes navigateToManageEvents. When true, it triggers navigation
+    // and then calls a ViewModel function to reset the navigation trigger.
     LaunchedEffect(navigateToManageEvents) {
         if (navigateToManageEvents) {
             onNavigateToManageEvents()
@@ -52,18 +60,21 @@ fun CalendarScreen(
             )
 
             Row {
+                // IconButton to open the dialog for adding a new event
                 IconButton(onClick = { showAddEventDialog = true }) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add Event"
                     )
                 }
+                // IconButton to open the dialog for adding a new to-do item
                 IconButton(onClick = { showAddTodoDialog = true }) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = "Add Todo"
                     )
                 }
+                // IconButton to navigate to the manage events screen
                 IconButton(onClick = { 
                     // Navigate to manage events screen
                     viewModel.navigateToManageEvents()
@@ -73,9 +84,10 @@ fun CalendarScreen(
                         contentDescription = "Manage Events"
                     )
                 }
+                // IconButton to toggle between Calendar and Timetable views
                 IconButton(onClick = {
                     showCalendarView = !showCalendarView
-                    viewModel.toggleView()
+                    viewModel.toggleView() // Notify ViewModel about the view change
                 }) {
                     Icon(
                         imageVector = if (showCalendarView)
@@ -87,6 +99,7 @@ fun CalendarScreen(
             }
         }
 
+        // Display a loading indicator while data is being fetched
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -94,6 +107,7 @@ fun CalendarScreen(
             ) {
                 CircularProgressIndicator()
             }
+        // Display an error message if data fetching fails
         } else if (uiState.errorMessage != null) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -105,6 +119,7 @@ fun CalendarScreen(
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
+        // Display the main content (Calendar or Timetable view) if data is loaded successfully
         } else {
             if (showCalendarView) {
                 CalendarView(
@@ -121,45 +136,49 @@ fun CalendarScreen(
         }
     }
 
+    // Dialog for adding a new to-do item
     if (showAddTodoDialog) {
         EventDialog(
-            event = null,
-            isToDoList = true,
+            event = null, // Pass null for a new event
+            isToDoList = true, // Specify that this is a to-do item
             selectedDate = uiState.selectedDate,
-            onDismiss = { showAddTodoDialog = false },
+            onDismiss = { showAddTodoDialog = false }, // Close dialog on dismiss
             onSave = { event ->
-                viewModel.addEvent(event)
-                showAddTodoDialog = false
+                viewModel.addEvent(event) // Save the new to-do item
+                showAddTodoDialog = false // Close dialog on save
             }
         )
     }
 
+    // Dialog for editing an existing event or to-do item
+    // Shows when 'selectedEvent' is not null
     selectedEvent?.let { event ->
         EventDialog(
-            event = event,
+            event = event, // Pass the selected event to prefill fields
             isToDoList = event.isToDoList,
             selectedDate = uiState.selectedDate,
-            onDismiss = { selectedEvent = null },
+            onDismiss = { selectedEvent = null }, // Close dialog and clear selection on dismiss
             onSave = { updatedEvent ->
-                viewModel.updateEvent(updatedEvent)
-                selectedEvent = null
+                viewModel.updateEvent(updatedEvent) // Update the event
+                selectedEvent = null // Close dialog and clear selection
             },
             onDelete = {
-                viewModel.deleteEvent(event)
-                selectedEvent = null
+                viewModel.deleteEvent(event) // Delete the event
+                selectedEvent = null // Close dialog and clear selection
             }
         )
     }
 
+    // Dialog for adding a new calendar event
     if (showAddEventDialog) {
         EventDialog(
-            event = null,
-            isToDoList = false,
+            event = null, // Pass null for a new event
+            isToDoList = false, // Specify that this is a calendar event, not a to-do
             selectedDate = uiState.selectedDate,
-            onDismiss = { showAddEventDialog = false },
+            onDismiss = { showAddEventDialog = false }, // Close dialog on dismiss
             onSave = { event ->
-                viewModel.addEvent(event)
-                showAddEventDialog = false
+                viewModel.addEvent(event) // Save the new event
+                showAddEventDialog = false // Close dialog on save
             }
         )
     }

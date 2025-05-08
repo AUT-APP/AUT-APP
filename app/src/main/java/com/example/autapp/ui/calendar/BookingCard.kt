@@ -75,5 +75,5 @@ fun BookingCard(
         }
     }
 }
-
+// Extension function to format Date as time string
 fun Date.toTimeString(): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(this) 
