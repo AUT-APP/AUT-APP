@@ -72,7 +72,17 @@ class CalendarViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             
             try {
-                val timetableEntries = timetableEntryRepository.getTimetableEntriesWithCourseByDay(_uiState.value.selectedDate.dayOfWeek.value)
+                val studentWithCourses = studentRepository.getStudentWithCourses(studentId)
+                val courseIds = studentWithCourses?.courses?.map { it.courseId } ?: emptyList()
+                
+                val allEntries = timetableEntryRepository.getTimetableEntriesWithCourseByDay(_uiState.value.selectedDate.dayOfWeek.value)
+                val filteredEntries = allEntries
+                    .filter { entry -> courseIds.contains(entry.entry.courseId) }
+                    .distinctBy { entry -> 
+                        "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
+                    }
+                    .sortedBy { it.entry.startTime }
+                
                 val events = eventRepository.getEventsByStudent(studentId)
                 val filteredEvents = events.filter { event ->
                     event.date.toLocalDate() == _uiState.value.selectedDate
@@ -84,7 +94,7 @@ class CalendarViewModel(
                 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    timetableEntries = timetableEntries,
+                    timetableEntries = filteredEntries,
                     events = events,
                     filteredEvents = filteredEvents,
                     bookings = bookings,
@@ -112,6 +122,9 @@ class CalendarViewModel(
                 
                 val filteredEntries = allEntries
                     .filter { entry -> courseIds.contains(entry.entry.courseId) }
+                    .distinctBy { entry ->
+                        "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
+                    }
                     .sortedBy { it.entry.startTime }
 
                 val bookings = bookingRepository.getActiveBookingsByStudent(_studentId)
