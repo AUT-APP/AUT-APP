@@ -318,8 +318,10 @@ fun ClassCard(
                         }
 
                         // Course description text
+                        val descriptionText = course.description.takeIf { !it.isNullOrBlank() } ?: "No course description available. You can ask the instructor to add more information."
+
                         Text(
-                            text = course.description,
+                            text = descriptionText,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(vertical = 8.dp)
