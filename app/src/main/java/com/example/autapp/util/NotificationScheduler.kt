@@ -73,24 +73,43 @@ object NotificationScheduler {
             set(Calendar.MILLISECOND, 0)
         }
 
-        val today = now.get(Calendar.DAY_OF_WEEK)
-        val adjustedDayOfWeek = dayOfWeek + 1
-        var daysUntilTarget = (adjustedDayOfWeek - today + 7) % 7
-
-        // Move to next week if target time is in the past or now
-        if (daysUntilTarget == 0 && target.timeInMillis <= now.timeInMillis) {
-            daysUntilTarget = 7
-        }
+        val todayInCalendar = now.get(Calendar.DAY_OF_WEEK)
+        // Convert Monday = 1 to Sunday = 1 system that calendar uses
+        val calendarDayOfWeek = if (dayOfWeek == 7) Calendar.SUNDAY else dayOfWeek + 1
+        var daysUntilTarget = (calendarDayOfWeek - todayInCalendar + 7) % 7
 
         target.add(Calendar.DAY_OF_YEAR, daysUntilTarget)
-        val targetMillis = target.timeInMillis - minutesBefore * 60_000L
 
-        // Ensure the final notification time is at least 30 seconds in the future
-        if (targetMillis <= now.timeInMillis + 30_000L) {
+        var triggerTimeMillis = target.timeInMillis - minutesBefore * 60_000L
+        // If time has passed, or it's too soon
+        if (triggerTimeMillis <= now.timeInMillis + 30_000L) {
             target.add(Calendar.DAY_OF_YEAR, 7) // Move to next week
-            Log.d(TAG, "Target time was too close to now, rescheduling for next week: ${target.time}")
+            triggerTimeMillis = target.timeInMillis - minutesBefore * 60_000L
+            Log.d(TAG, "Target time was too close to now, rescheduling for next week: ${Date(triggerTimeMillis)}")
         }
 
-        return target.timeInMillis - minutesBefore * 60_000L
+        return triggerTimeMillis
+    }
+
+    fun cancelScheduledNotification(context: Context, notificationId: Int) {
+        Log.d(TAG, "Attempting to cancel notification ID: $notificationId")
+        val intent = Intent(context, NotificationReceiver::class.java)
+
+        // Create a PendingIntent that matches the one used for scheduling
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            notificationId,
+            intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        if (pendingIntent != null) {
+            alarmManager.cancel(pendingIntent)
+            pendingIntent.cancel() // Also cancel the PendingIntent itself
+            Log.d(TAG, "Cancelled alarm for notification ID: $notificationId")
+        } else {
+            Log.d(TAG, "No alarm found to cancel for notification ID: $notificationId (PendingIntent was null)")
+        }
     }
 }

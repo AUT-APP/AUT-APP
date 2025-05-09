@@ -22,4 +22,7 @@ class TimetableNotificationPreferenceRepository  (
         return timetableNotificationPreferenceDao.getPreference(studentId, classSessionId)
     }
 
+    suspend fun getPreferencesByStudent(studentId: Int): List<TimetableNotificationPreference> {
+        return timetableNotificationPreferenceDao.getPreferencesForStudent(studentId)
+    }
 }

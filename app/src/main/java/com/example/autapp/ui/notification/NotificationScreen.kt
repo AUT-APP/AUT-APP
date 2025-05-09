@@ -306,6 +306,7 @@
                                     val isCurrentlySet = notificationPrefs[timetableEntry.entryId] == minutes
                                     if (isCurrentlySet) {
                                         viewModel.deleteNotificationPreference(
+                                            context,
                                             studentId = viewModel.studentId,
                                             classSessionId = timetableEntry.entryId
                                         )

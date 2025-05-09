@@ -39,14 +39,6 @@ class NotificationRepository(
         notificationDao.updateNotification(notification)
     }
 
-    suspend fun saveTimetableNotificationPreference(pref: TimetableNotificationPreference) {
-        timetableNotificationPreferenceDao.insertOrUpdatePreference(pref)
-    }
-
-    suspend fun deleteTimetableNotificationPreference(studentId: Int, classSessionId: Int) {
-        timetableNotificationPreferenceDao.deletePreference(studentId, classSessionId)
-    }
-
     suspend fun deleteAll() {
         notificationDao.deleteAll()
     }

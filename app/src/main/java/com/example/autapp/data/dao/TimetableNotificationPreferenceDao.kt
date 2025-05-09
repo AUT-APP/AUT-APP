@@ -16,4 +16,5 @@ interface TimetableNotificationPreferenceDao {
 
     @Query("SELECT * FROM timetable_notification_prefs WHERE studentId = :studentId AND classSessionId = :classSessionId LIMIT 1")
     suspend fun getPreference(studentId: Int, classSessionId: Int): TimetableNotificationPreference?
+
 }

@@ -12,6 +12,7 @@ import com.example.autapp.data.repository.NotificationRepository
 import com.example.autapp.data.repository.StudentRepository
 import com.example.autapp.data.repository.StudySpaceRepository
 import com.example.autapp.data.repository.TimetableEntryRepository
+import com.example.autapp.data.repository.TimetableNotificationPreferenceRepository
 import com.example.autapp.data.repository.UserRepository
 import com.example.autapp.util.NotificationHelper
 import com.jakewharton.threetenabp.AndroidThreeTen
@@ -41,6 +42,9 @@ class AUTApplication : Application() {
     }
     val studySpaceRepository by lazy {
         StudySpaceRepository(database.studySpaceDao())
+    }
+    val timetableNotificationPreferenceRepository by lazy {
+        TimetableNotificationPreferenceRepository(database.timetableNotificationPreferenceDao())
     }
 
     override fun onCreate() {
