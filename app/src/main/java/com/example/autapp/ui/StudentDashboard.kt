@@ -203,7 +203,8 @@ fun ClassCard(
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
-    val today = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+    val rawToday = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+    val today = if (rawToday == Calendar.SUNDAY) 7 else rawToday - 1
     val hasScheduleToday = timetableEntries.any {
         it.courseId == course.courseId && it.dayOfWeek == today
     }
