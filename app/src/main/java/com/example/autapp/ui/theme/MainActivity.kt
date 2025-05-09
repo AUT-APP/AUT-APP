@@ -1,40 +1,22 @@
 package com.example.autapp.ui.theme
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.createSavedStateHandle
-import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -42,7 +24,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.models.*
 import com.example.autapp.data.repository.*
@@ -73,12 +54,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import com.example.autapp.util.NotificationHelper
 import androidx.navigation.navDeepLink
 import com.example.autapp.data.repository.NotificationRepository
+import com.example.autapp.ui.login.LoginScreen
+import com.example.autapp.ui.login.LoginViewModel
 import com.example.autapp.ui.notification.NotificationViewModel
 
 class MainActivity : ComponentActivity() {
@@ -89,18 +69,7 @@ class MainActivity : ComponentActivity() {
             studentRepository = StudentRepository(
                 studentDao = AUTDatabase.getDatabase(this).studentDao(),
                 userDao = AUTDatabase.getDatabase(this).userDao()
-            ),
-            courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
-            assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao()),
-            gradeRepository = GradeRepository(
-                AUTDatabase.getDatabase(this).gradeDao(),
-                AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
-            ),
-            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao()),
-            notificationRepository = NotificationRepository(
-                AUTDatabase.getDatabase(this).notificationDao(),
-                AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
-            ),
+            )
             )
     }
 
@@ -116,10 +85,6 @@ class MainActivity : ComponentActivity() {
                 AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
             ),
             assignmentRepository = AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao()),
-            notificationRepository = NotificationRepository(
-                AUTDatabase.getDatabase(this).notificationDao(),
-                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
-            ),
         )
     }
 
@@ -183,10 +148,6 @@ class MainActivity : ComponentActivity() {
         val assignmentRepository = AssignmentRepository(db.assignmentDao())
         val gradeRepository = GradeRepository(db.gradeDao(), assignmentRepository)
         val timetableEntryRepository = TimetableEntryRepository(db.timetableEntryDao())
-        val eventRepository = EventRepository(db.eventDao())
-        val bookingRepository = BookingRepository(db.bookingDao(), db.studySpaceDao())
-        val studySpaceRepository = StudySpaceRepository(db.studySpaceDao())
-        val notificationRepository = NotificationRepository(db.notificationDao(), db.timetableNotificationPreferenceDao())
         Log.d("MainActivity", "Repositories initialized")
 
         // Initialize Notification channels TODO: Might be better somewhere else
@@ -728,7 +689,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Rest of the file (composables and ViewModel factories) remains unchanged
 @Composable
 fun AppContent(
     loginViewModel: LoginViewModel,
@@ -817,9 +777,7 @@ fun AppContent(
                     navController.navigate("dashboard/$studentId") {
                         popUpTo("login") { inclusive = true }
                     }
-                },
-                isDarkTheme = isDarkTheme,
-                onToggleTheme = onToggleTheme
+                }
             )
         }
         composable(
@@ -1175,24 +1133,14 @@ fun AppContent(
 
 class LoginViewModelFactory(
     private val userRepository: UserRepository,
-    private val studentRepository: StudentRepository,
-    private val courseRepository: CourseRepository,
-    private val assignmentRepository: AssignmentRepository,
-    private val gradeRepository: GradeRepository,
-    private val timetableEntryRepository: TimetableEntryRepository,
-    private val notificationRepository: NotificationRepository
+    private val studentRepository: StudentRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return LoginViewModel(
                 userRepository,
-                studentRepository,
-                courseRepository,
-                assignmentRepository,
-                gradeRepository,
-                timetableEntryRepository,
-                notificationRepository
+                studentRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
@@ -1203,8 +1151,7 @@ class DashboardViewModelFactory(
     private val studentRepository: StudentRepository,
     private val courseRepository: CourseRepository,
     private val gradeRepository: GradeRepository,
-    private val assignmentRepository: AssignmentRepository,
-    private val notificationRepository: NotificationRepository
+    private val assignmentRepository: AssignmentRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
@@ -1235,20 +1182,6 @@ class CalendarViewModelFactory(
                 eventRepository,
                 bookingRepository
             ) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
-class BookingViewModelFactory(
-    private val bookingRepository: BookingRepository,
-    private val studySpaceRepository: StudySpaceRepository
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-        if (modelClass.isAssignableFrom(BookingViewModel::class.java)) {
-            val savedStateHandle = extras.createSavedStateHandle()
-            @Suppress("UNCHECKED_CAST")
-            return BookingViewModel(bookingRepository, studySpaceRepository, savedStateHandle) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
