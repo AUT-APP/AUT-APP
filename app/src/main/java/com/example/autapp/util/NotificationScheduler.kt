@@ -1,19 +1,12 @@
 package com.example.autapp.util
 
-import android.Manifest
-import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
 import android.util.Log
-import androidx.annotation.RequiresPermission
 import java.util.Calendar
 import java.util.Date
-import androidx.core.net.toUri
 
 object NotificationScheduler {
     const val TAG = "NotificationScheduler"
@@ -28,13 +21,13 @@ object NotificationScheduler {
         startTime: Date,
         minutesBefore: Int
     ) {
-        Log.d(TAG, "scheduleClassNotification() called")
+        Log.d(TAG, "Scheduling notification ID: $notificationId for dayOfWeek: $dayOfWeek, minutesBefore: $minutesBefore")
         val calendar = Calendar.getInstance().apply { time = startTime }
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
         val minute = calendar.get(Calendar.MINUTE)
 
         // Calculate the time when the notification should be triggered
-        val notifyAtMillis = getNextDateTimeMillis(dayOfWeek, hour, minute) - minutesBefore * 60_000L
+        val notifyAtMillis = getNextDateTimeMillis(dayOfWeek, hour, minute, minutesBefore)
 
         // Create the PendingIntent to trigger the NotificationReceiver
         val intent = Intent(context, NotificationReceiver::class.java).apply {
@@ -62,7 +55,7 @@ object NotificationScheduler {
                 notifyAtMillis,
                 pendingIntent
             )
-            Log.d(TAG, "Scheduled alarm with ID: $notificationId at: $notifyAtMillis")
+            Log.d(TAG, "Scheduled alarm ID: $notificationId for ${Date(notifyAtMillis)}")
         } catch (e: SecurityException) {
             Log.e(TAG, "Failed to schedule alarm: ${e.message}", e)
         } catch (e: Exception) {
@@ -71,7 +64,7 @@ object NotificationScheduler {
     }
 
     // Helper method to calculate the next notification time in milliseconds
-    fun getNextDateTimeMillis(dayOfWeek: Int, hour: Int, minute: Int): Long {
+    fun getNextDateTimeMillis(dayOfWeek: Int, hour: Int, minute: Int, minutesBefore: Int): Long {
         val now = Calendar.getInstance()
         val target = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
@@ -83,11 +76,21 @@ object NotificationScheduler {
         val today = now.get(Calendar.DAY_OF_WEEK)
         val adjustedDayOfWeek = dayOfWeek + 1
         var daysUntilTarget = (adjustedDayOfWeek - today + 7) % 7
-        if (daysUntilTarget == 0 && target.before(now)) {
+
+        // Move to next week if target time is in the past or now
+        if (daysUntilTarget == 0 && target.timeInMillis <= now.timeInMillis) {
             daysUntilTarget = 7
         }
 
         target.add(Calendar.DAY_OF_YEAR, daysUntilTarget)
-        return target.timeInMillis
+        val targetMillis = target.timeInMillis - minutesBefore * 60_000L
+
+        // Ensure the final notification time is at least 30 seconds in the future
+        if (targetMillis <= now.timeInMillis + 30_000L) {
+            target.add(Calendar.DAY_OF_YEAR, 7) // Move to next week
+            Log.d(TAG, "Target time was too close to now, rescheduling for next week: ${target.time}")
+        }
+
+        return target.timeInMillis - minutesBefore * 60_000L
     }
 }
