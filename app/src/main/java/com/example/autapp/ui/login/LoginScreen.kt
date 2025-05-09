@@ -1,4 +1,4 @@
-package com.example.autapp.ui.theme
+package com.example.autapp.ui.login
 
 import android.util.Log
 import androidx.compose.foundation.background
@@ -30,15 +30,12 @@ fun LoginScreen(
     viewModel: LoginViewModel,
     modifier: Modifier = Modifier,
     onLoginSuccess: (Int) -> Unit = {},
-    isDarkTheme: Boolean,
-    onToggleTheme: () -> Unit,
 ) {
     val TAG = "LoginScreen"
     Log.d(TAG, "LoginScreen composed")
 
     // Use theme colors
     val colorScheme = MaterialTheme.colorScheme
-    val typography = MaterialTheme.typography
 
     LaunchedEffect(Unit) {
         viewModel.reset()

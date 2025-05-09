@@ -15,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -22,6 +24,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.autapp.data.database.AUTDatabase
+import com.example.autapp.data.models.*
+import com.example.autapp.data.repository.*
 import com.example.autapp.ui.booking.BookingDetailsScreen
 import com.example.autapp.ui.booking.BookingScreen
 import com.example.autapp.ui.booking.BookingViewModel
@@ -50,6 +55,9 @@ import androidx.compose.runtime.setValue
 import com.example.autapp.util.NotificationHelper
 import androidx.navigation.navDeepLink
 import com.example.autapp.data.datastores.SettingsDataStore
+import com.example.autapp.data.repository.NotificationRepository
+import com.example.autapp.ui.login.LoginScreen
+import com.example.autapp.ui.login.LoginViewModel
 import com.example.autapp.ui.notification.NotificationViewModel
 import com.example.autapp.ui.settings.SettingsViewModel
 import com.example.autapp.ui.login.LoginViewModel
@@ -215,9 +223,7 @@ fun AppContent(
                     navController.navigate("dashboard/$studentId") {
                         popUpTo("login") { inclusive = true }
                     }
-                },
-                isDarkTheme = isDarkTheme,
-                onToggleTheme = onToggleTheme
+                }
             )
         }
         composable(
