@@ -89,7 +89,8 @@ class DashboardViewModel(
                     application.studentRepository,
                     application.courseRepository,
                     application.gradeRepository,
-                    application.assignmentRepository
+                    application.assignmentRepository,
+                    application.timetableEntryRepository
                 )
             }
         }
