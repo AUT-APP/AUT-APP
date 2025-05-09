@@ -181,7 +181,9 @@
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                timetableEntries.forEach { timetableEntry ->
+                timetableEntries
+                    .sortedWith(compareBy({ it.dayOfWeek }, { it.startTime }))
+                    .forEach { timetableEntry ->
                     Column {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TimetableEntryCard(
