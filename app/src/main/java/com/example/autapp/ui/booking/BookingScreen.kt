@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -56,7 +57,7 @@ fun BookingScreen(
 
     LaunchedEffect(campuses) {
         if (campuses.isNotEmpty() && selectedCampus !in campuses) {
-            viewModel.updateFilters(campuses.first(), "", "All", "All", selectedDate)
+            viewModel.updateFilters(campuses.first(), "", "All", allLevels.firstOrNull() ?: "", selectedDate)
             viewModel.fetchBuildings(campuses.first())
         }
     }
@@ -66,7 +67,7 @@ fun BookingScreen(
             viewModel.fetchBuildings(selectedCampus)
             viewModel.fetchAllLevels(selectedCampus, selectedBuilding)
             if (selectedBuilding !in buildings) {
-                viewModel.updateFilters(selectedCampus, "", "All", "All", selectedDate)
+                viewModel.updateFilters(selectedCampus, "", "All", allLevels.firstOrNull() ?: "", selectedDate)
             }
         }
     }
@@ -76,7 +77,7 @@ fun BookingScreen(
             viewModel.fetchStudySpaces(selectedCampus, selectedBuilding, selectedLevel)
             viewModel.fetchAllLevels(selectedCampus, selectedBuilding)
             if (selectedSpaceId != "All" && studySpaces.none { it.spaceId == selectedSpaceId }) {
-                viewModel.updateFilters(selectedCampus, selectedBuilding, "All", selectedLevel, selectedDate)
+                viewModel.updateFilters(selectedCampus, selectedBuilding, "All", allLevels.firstOrNull() ?: selectedLevel, selectedDate)
             }
         }
     }
@@ -96,7 +97,7 @@ fun BookingScreen(
                 spaceId = if (selectedSpaceId == "All") null else selectedSpaceId,
                 building = selectedBuilding,
                 campus = selectedCampus,
-                level = if (selectedLevel == "All") null else selectedLevel,
+                level = if (selectedLevel.isEmpty()) null else selectedLevel,
                 date = selectedDate,
                 studentId = studentId
             )
@@ -130,11 +131,11 @@ fun BookingScreen(
         FilterBar(
             selectedCampus = selectedCampus,
             onCampusSelected = { campus ->
-                viewModel.updateFilters(campus, "", "All", "All", selectedDate)
+                viewModel.updateFilters(campus, "", "All", allLevels.firstOrNull() ?: "", selectedDate)
             },
             selectedBuilding = selectedBuilding,
             onBuildingSelected = { building ->
-                viewModel.updateFilters(selectedCampus, building, "All", "All", selectedDate)
+                viewModel.updateFilters(selectedCampus, building, "All", allLevels.firstOrNull() ?: "", selectedDate)
             },
             selectedSpaceId = selectedSpaceId,
             onSpaceSelected = { spaceId ->
@@ -482,9 +483,10 @@ fun FilterBar(
     var spaceExpanded by remember { mutableStateOf(false) }
     var levelExpanded by remember { mutableStateOf(false) }
 
-    val levelOptions = listOf("All") + allLevels.sorted()
+    // Remove "All" from levelOptions
+    val levelOptions = allLevels.sorted()
     val spaceOptions = listOf("All") + studySpaces
-        .filter { selectedLevel == "All" || it.level == selectedLevel }
+        .filter { selectedLevel.isEmpty() || it.level == selectedLevel }
         .map { it.spaceId }
         .sorted()
 
@@ -585,7 +587,7 @@ fun FilterBar(
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
                         Text(
-                            if (!isBuildingEnabled) "Select Campus First" else if (buildings.isEmpty()) "Loading..." else "Select Building",
+                            if (!isBuildingEnabled) "Select Campus" else if (buildings.isEmpty()) "Loading..." else "Select Building",
                             color = textColor.copy(alpha = 0.5f)
                         )
                     },
@@ -658,7 +660,11 @@ fun FilterBar(
                     .padding(end = 4.dp)
             ) {
                 OutlinedTextField(
-                    value = selectedLevel.ifEmpty { if (isLevelEnabled) "Select Level" else "Select Building First" },
+                    value = if (selectedLevel.isEmpty()) {
+                        if (isLevelEnabled) "Select Level" else "Select Building"
+                    } else {
+                        selectedLevel
+                    },
                     onValueChange = { },
                     label = { Text("Level", color = textColor) },
                     readOnly = true,
@@ -666,7 +672,7 @@ fun FilterBar(
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
                         Text(
-                            if (!isLevelEnabled) "Select Building First" else if (levelOptions.isEmpty()) "Loading..." else "Select Level",
+                            if (!isLevelEnabled) "Select Building" else if (levelOptions.isEmpty()) "Loading..." else "Select Level",
                             color = textColor.copy(alpha = 0.5f)
                         )
                     },
@@ -803,38 +809,41 @@ fun FilterBar(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(if (isDarkTheme) Color(0xFF242424) else Color.White)
-                .padding(12.dp)
-                .clickable {
-                    val calendar = Calendar.getInstance().apply { time = selectedDate }
-                    DatePickerDialog(
-                        context,
-                        { _, year, month, dayOfMonth ->
-                            val newDate = Calendar.getInstance().apply {
-                                set(year, month, dayOfMonth)
-                            }.time
-                            onDateSelected(newDate)
-                        },
-                        calendar.get(Calendar.YEAR),
-                        calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)
-                    ).show()
-                },
-            verticalAlignment = Alignment.CenterVertically
+        // Old Button for Date Selection
+        Button(
+            onClick = {
+                val calendar = Calendar.getInstance().apply { time = selectedDate }
+                DatePickerDialog(
+                    context,
+                    { _, year, month, dayOfMonth ->
+                        calendar.set(year, month, dayOfMonth)
+                        onDateSelected(calendar.time)
+                    },
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                ).show()
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isDarkTheme) Color(0xFF006060) else Color(0xFF006B6B),
+                contentColor = textColor
+            )
         ) {
-            Icon(
-                imageVector = Icons.Default.CalendarToday,
-                contentDescription = "Select Date",
-                tint = textColor
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                "Date: ${SimpleDateFormat("dd MMM yyyy", Locale.US).format(selectedDate)}",
-                color = textColor
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarToday,
+                    contentDescription = "Select Date",
+                    tint = textColor
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Date: ${SimpleDateFormat("dd MMM yyyy", Locale.US).format(selectedDate)}",
+                    color = Color.White
+                )
+            }
         }
     }
 }
