@@ -13,12 +13,14 @@ import com.example.autapp.data.repository.StudentRepository
 import com.example.autapp.data.repository.StudySpaceRepository
 import com.example.autapp.data.repository.TimetableEntryRepository
 import com.example.autapp.data.repository.UserRepository
+import com.example.autapp.util.NotificationHelper
 import com.jakewharton.threetenabp.AndroidThreeTen
 
 class AUTApplication : Application() {
 
     // Initialize Room database
     val database: AUTDatabase by lazy {
+        AUTDatabase.resetInstance()
         AUTDatabase.getDatabase(this)
     }
 
@@ -44,5 +46,7 @@ class AUTApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         AndroidThreeTen.init(this)
+        // Initialize Notification channels
+        NotificationHelper.createNotificationChannels(this)
     }
 }
