@@ -19,12 +19,15 @@ fun EventCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Card composable to display event information.
+    // It's clickable to trigger the onClick lambda, likely for opening an edit/detail view.
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
+            // Use secondaryContainer color for to-do items, surface color for regular events.
             containerColor = if (event.isToDoList)
                 MaterialTheme.colorScheme.secondaryContainer
             else MaterialTheme.colorScheme.surface
@@ -41,6 +44,7 @@ fun EventCard(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
+            // Display event time (start - end) if it's not a to-do list and time is available.
             if (!event.isToDoList && (event.startTime != null || event.endTime != null)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -54,8 +58,11 @@ fun EventCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = buildString {
+                            // Append start time if available.
                             event.startTime?.let { append(it.format()) }
+                            // Append separator if both start and end times are available.
                             if (event.startTime != null && event.endTime != null) append(" - ")
+                            // Append end time if available.
                             event.endTime?.let { append(it.format()) }
                         },
                         style = MaterialTheme.typography.bodyMedium,
@@ -64,6 +71,7 @@ fun EventCard(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
             }
+            // Display event location if it's not a to-do list and location is provided.
             if (!event.isToDoList && !event.location.isNullOrBlank()) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -82,6 +90,7 @@ fun EventCard(
                     )
                 }
             }
+            // Display event details if provided.
             if (!event.details.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -90,6 +99,7 @@ fun EventCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            // Display event recurrence frequency if provided (e.g., "Repeats daily").
             if (event.frequency != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(

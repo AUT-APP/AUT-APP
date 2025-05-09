@@ -58,9 +58,12 @@
     import android.app.AlarmManager
     import android.net.Uri
     import android.provider.Settings
+    import androidx.compose.runtime.collectAsState
+    import androidx.compose.runtime.mutableIntStateOf
     import androidx.compose.runtime.rememberCoroutineScope
     import androidx.core.net.toUri
     import kotlinx.coroutines.CoroutineScope
+    import kotlinx.coroutines.delay
     import kotlinx.coroutines.launch
 
     @Composable
@@ -77,7 +80,7 @@
         val typography = MaterialTheme.typography
 
         val courses = viewModel.courses
-        var selectedTabIndex = remember { mutableStateOf(0) }
+        var selectedTabIndex = remember { mutableIntStateOf(0) }
 
         val coroutineScope = rememberCoroutineScope()
         Column(
@@ -233,6 +236,8 @@
         courseName: String,
         modifier: Modifier = Modifier
     ) {
+        val notificationsEnabled: Boolean by viewModel.notificationsEnabled.collectAsState(initial = true)
+        val classRemindersEnabled: Boolean by viewModel.classRemindersEnabled.collectAsState(initial = true)
 
         Card(
             modifier = modifier.fillMaxWidth(),
@@ -303,9 +308,11 @@
                                             classSessionId = timetableEntry.entryId
                                         )
                                         coroutineScope.launch {
+                                            // Dismiss any currently showing snackbar
+                                            snackbarHostState.currentSnackbarData?.dismiss()
                                             snackbarHostState.showSnackbar(
                                                 message = "$courseName ${timetableEntry.type} notification disabled",
-                                                actionLabel = "OK"
+                                                duration = SnackbarDuration.Short
                                             )
                                         }
                                     } else {
@@ -322,9 +329,16 @@
                                             courseName = courseName
                                         )
                                         coroutineScope.launch {
+                                            // Dismiss any currently showing snackbar
+                                            snackbarHostState.currentSnackbarData?.dismiss()
+                                            val warning = when {
+                                                !notificationsEnabled -> " (Notifications disabled in settings)"
+                                                !classRemindersEnabled -> " (Reminders disabled in settings)"
+                                                else -> ""
+                                            }
                                             snackbarHostState.showSnackbar(
-                                                message = "$courseName ${timetableEntry.type} notification set for $label",
-                                                actionLabel = "OK"
+                                                message = "$courseName ${timetableEntry.type} notification set for $label$warning",
+                                                duration = SnackbarDuration.Short
                                             )
                                         }
                                     }

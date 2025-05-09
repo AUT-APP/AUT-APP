@@ -4,7 +4,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.autapp.AUTApplication
 import com.example.autapp.data.dao.GradeDao
 import com.example.autapp.data.models.Assignment
 import com.example.autapp.data.models.Course
@@ -12,6 +18,7 @@ import com.example.autapp.data.repository.AssignmentRepository
 import com.example.autapp.data.repository.CourseRepository
 import com.example.autapp.data.repository.GradeRepository
 import com.example.autapp.data.repository.StudentRepository
+import com.example.autapp.ui.login.LoginViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -72,4 +79,19 @@ class DashboardViewModel(
 
     fun formatDate(date: Date): String = dateFormat.format(date)
     fun formatTime(date: Date): String = timeFormat.format(date)
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = this[APPLICATION_KEY] as AUTApplication
+
+                DashboardViewModel(
+                    application.studentRepository,
+                    application.courseRepository,
+                    application.gradeRepository,
+                    application.assignmentRepository
+                )
+            }
+        }
+    }
 }

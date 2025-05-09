@@ -4,15 +4,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.autapp.AUTApplication
 import com.example.autapp.data.models.Booking
 import com.example.autapp.data.models.BookingSlot
 import com.example.autapp.data.models.SlotStatus
 import com.example.autapp.data.models.StudySpace
 import com.example.autapp.data.repository.BookingRepository
 import com.example.autapp.data.repository.StudySpaceRepository
+import com.example.autapp.ui.DashboardViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -569,17 +574,18 @@ import java.util.*class BookingViewModel(
         return SimpleDateFormat("dd MMM yyyy, HH:mm").format(date)
     }
 
-}class BookingViewModelFactory(
-    private val bookingRepository: BookingRepository,
-    private val studySpaceRepository: StudySpaceRepository
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-        if (modelClass.isAssignableFrom(BookingViewModel::class.java)) {
-            val savedStateHandle = extras.createSavedStateHandle()
-            @Suppress("UNCHECKED_CAST")
-            return BookingViewModel(bookingRepository, studySpaceRepository, savedStateHandle) as T
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = this[APPLICATION_KEY] as AUTApplication
+                val savedStateHandle = createSavedStateHandle()
+                BookingViewModel(
+                    application.bookingRepository,
+                    application.studySpaceRepository,
+                    savedStateHandle
+                )
+            }
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
 

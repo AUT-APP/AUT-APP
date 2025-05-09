@@ -9,33 +9,53 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import android.net.Uri
-import com.example.autapp.data.repository.NotificationRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.autapp.data.models.Course
 import com.example.autapp.data.models.Notification
 import com.example.autapp.data.models.TimetableEntry
 import com.example.autapp.data.models.TimetableNotificationPreference
-import com.example.autapp.data.repository.CourseRepository
-import com.example.autapp.data.repository.StudentRepository
-import com.example.autapp.data.repository.TimetableEntryRepository
+
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import android.app.AlarmManager
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.autapp.AUTApplication
+import com.example.autapp.data.repository.StudentRepository
+import com.example.autapp.data.datastores.SettingsDataStore
+import com.example.autapp.data.repository.CourseRepository
+import com.example.autapp.data.repository.NotificationRepository
+import com.example.autapp.data.repository.TimetableEntryRepository
+import com.example.autapp.ui.calendar.CalendarViewModel
 import com.example.autapp.util.NotificationScheduler
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 
 class NotificationViewModel(
     private val studentRepository: StudentRepository,
     private val timetableEntryRepository: TimetableEntryRepository,
     private val courseRepository: CourseRepository,
     private val notificationRepository: NotificationRepository,
+    private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
-    var studentId by mutableStateOf(0)
+    var studentId by mutableIntStateOf(0)
     var courses by mutableStateOf<List<Course>>(emptyList())
     var notifications by mutableStateOf<List<Notification>>(emptyList())
     var notificationPrefs by mutableStateOf<Map<Int, Int>>(emptyMap()) // classSessionId -> minutesBefore
     var errorMessage by mutableStateOf<String?>(null)
     var timetableEntries by mutableStateOf<List<TimetableEntry>>(emptyList())
+
+    val notificationsEnabled = settingsDataStore.isNotificationsEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val classRemindersEnabled = settingsDataStore.isClassRemindersEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+
 
     fun initialize(studentId: Int) {
         this.studentId = studentId
@@ -160,6 +180,22 @@ class NotificationViewModel(
             } catch (e: Exception) {
                 Log.e("NotificationViewModel", "Error in fetchNotificationData: ${e.message}", e)
                 errorMessage = "Error loading notification screen: ${e.message}"
+            }
+        }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = this[APPLICATION_KEY] as AUTApplication
+                val context = application.applicationContext
+                NotificationViewModel(
+                    application.studentRepository,
+                    application.timetableEntryRepository,
+                    application.courseRepository,
+                    application.notificationRepository,
+                    SettingsDataStore(context)
+                )
             }
         }
     }

@@ -39,13 +39,13 @@ import androidx.lifecycle.LifecycleEventObserver
 class TransportViewModel(application: Application) : AndroidViewModel(application) {
     private val database = BusDatabase.getDatabase(application)
     private val busScheduleDao = database.busScheduleDao()
-    
+
     val departures: Flow<List<BusSchedule>> = busScheduleDao.getAllSchedules()
 
     // Define the coordinates for both campuses
     val cityCampus = GeoPoint(-36.8519, 174.7681) // AUT City Campus
     val southCampus = GeoPoint(-36.9927, 174.8797) // AUT South Campus
-    
+
     // Calculate the center point for the camera
     val centerPoint = GeoPoint(
         (cityCampus.latitude + southCampus.latitude) / 2,
@@ -55,7 +55,7 @@ class TransportViewModel(application: Application) : AndroidViewModel(applicatio
     init {
         // Initialize OpenStreetMap configuration
         Configuration.getInstance().userAgentValue = application.packageName
-        
+
         viewModelScope.launch {
             val schedules = listOf(
                 // Morning departures
@@ -63,15 +63,39 @@ class TransportViewModel(application: Application) : AndroidViewModel(applicatio
                 BusSchedule(departureTime = LocalTime.of(8, 15), arrivalTime = LocalTime.of(9, 0)),
                 BusSchedule(departureTime = LocalTime.of(9, 0), arrivalTime = LocalTime.of(9, 30)),
                 BusSchedule(departureTime = LocalTime.of(9, 30), arrivalTime = LocalTime.of(10, 0)),
-                BusSchedule(departureTime = LocalTime.of(10, 30), arrivalTime = LocalTime.of(11, 0)),
-                BusSchedule(departureTime = LocalTime.of(11, 30), arrivalTime = LocalTime.of(12, 0)),
+                BusSchedule(
+                    departureTime = LocalTime.of(10, 30),
+                    arrivalTime = LocalTime.of(11, 0)
+                ),
+                BusSchedule(
+                    departureTime = LocalTime.of(11, 30),
+                    arrivalTime = LocalTime.of(12, 0)
+                ),
                 // Afternoon departures
-                BusSchedule(departureTime = LocalTime.of(12, 30), arrivalTime = LocalTime.of(13, 0)),
-                BusSchedule(departureTime = LocalTime.of(13, 30), arrivalTime = LocalTime.of(14, 0)),
-                BusSchedule(departureTime = LocalTime.of(14, 30), arrivalTime = LocalTime.of(15, 0)),
-                BusSchedule(departureTime = LocalTime.of(15, 15), arrivalTime = LocalTime.of(15, 45)),
-                BusSchedule(departureTime = LocalTime.of(16, 30), arrivalTime = LocalTime.of(17, 15)),
-                BusSchedule(departureTime = LocalTime.of(17, 15), arrivalTime = LocalTime.of(18, 0)),
+                BusSchedule(
+                    departureTime = LocalTime.of(12, 30),
+                    arrivalTime = LocalTime.of(13, 0)
+                ),
+                BusSchedule(
+                    departureTime = LocalTime.of(13, 30),
+                    arrivalTime = LocalTime.of(14, 0)
+                ),
+                BusSchedule(
+                    departureTime = LocalTime.of(14, 30),
+                    arrivalTime = LocalTime.of(15, 0)
+                ),
+                BusSchedule(
+                    departureTime = LocalTime.of(15, 15),
+                    arrivalTime = LocalTime.of(15, 45)
+                ),
+                BusSchedule(
+                    departureTime = LocalTime.of(16, 30),
+                    arrivalTime = LocalTime.of(17, 15)
+                ),
+                BusSchedule(
+                    departureTime = LocalTime.of(17, 15),
+                    arrivalTime = LocalTime.of(18, 0)
+                ),
                 BusSchedule(departureTime = LocalTime.of(18, 30), arrivalTime = LocalTime.of(19, 0))
             )
             busScheduleDao.deleteAll()
@@ -89,16 +113,16 @@ fun TransportScreen(
     val schedules by viewModel.departures.collectAsState(initial = emptyList())
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    
+
     LaunchedEffect(Unit) {
-        while(true) {
+        while (true) {
             now.value = LocalTime.now()
             kotlinx.coroutines.delay(60_000)
         }
     }
 
     val formatter = DateTimeFormatter.ofPattern("hh:mm a")
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -116,11 +140,11 @@ fun TransportScreen(
                     MapView(context).apply {
                         setTileSource(TileSourceFactory.MAPNIK)
                         setMultiTouchControls(true)
-                        
+
                         // Set initial view
                         controller.setZoom(10.0)
                         controller.setCenter(viewModel.centerPoint)
-                        
+
                         // Add markers
                         val cityMarker = Marker(this).apply {
                             position = viewModel.cityCampus
@@ -134,7 +158,7 @@ fun TransportScreen(
                         }
                         overlays.add(cityMarker)
                         overlays.add(southMarker)
-                        
+
                         // Add route line
                         val routeLine = Polyline().apply {
                             outlinePaint.color = Color.Blue.toArgb()
@@ -163,9 +187,9 @@ fun TransportScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isPast) 
+                        containerColor = if (isPast)
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        else 
+                        else
                             MaterialTheme.colorScheme.surface
                     )
                 ) {
@@ -199,7 +223,7 @@ fun TransportScreen(
                                     )
                                 )
                             }
-                            
+
                             Icon(
                                 imageVector = Icons.Default.ArrowForward,
                                 contentDescription = "To",
@@ -208,7 +232,7 @@ fun TransportScreen(
                                     .size(16.dp),
                                 tint = if (isPast) Color.Gray else MaterialTheme.colorScheme.primary
                             )
-                            
+
                             Column {
                                 Text(
                                     text = "Arrival",

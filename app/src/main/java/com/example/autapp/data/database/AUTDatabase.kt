@@ -23,7 +23,7 @@ import com.example.autapp.data.models.*
         TimetableNotificationPreference::class,
         Event::class,
         Booking::class,
-        StudySpace:: class,
+        StudySpace::class,
         Notification::class
     ],
     version = 24,
@@ -64,6 +64,7 @@ abstract class AUTDatabase : RoomDatabase() {
                             // Enable foreign key constraints
                             db.execSQL("PRAGMA foreign_keys = ON;")
                         }
+
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             Log.d("AUTDatabase", "Database opened")
                             // Enable foreign key constraints
@@ -72,7 +73,8 @@ abstract class AUTDatabase : RoomDatabase() {
                             db.execSQL("DELETE FROM sqlite_sequence")
                             Log.d("AUTDatabase", "Auto-increment counters reset")
                             // Log current tables for debugging
-                            val tables = db.query("SELECT name FROM sqlite_master WHERE type='table'")
+                            val tables =
+                                db.query("SELECT name FROM sqlite_master WHERE type='table'")
                             tables.use {
                                 while (it.moveToNext()) {
                                     Log.d("AUTDatabase", "Table on open: ${it.getString(0)}")

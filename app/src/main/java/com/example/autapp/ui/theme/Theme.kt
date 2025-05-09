@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.autapp.ui.theme
 
 import android.app.Activity
@@ -53,6 +55,7 @@ fun AUTAPPTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
+
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
