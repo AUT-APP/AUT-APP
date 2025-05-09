@@ -1,5 +1,5 @@
 package com.example.autapp.ui.booking
-import android.util.Log
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,9 +23,7 @@ import com.example.autapp.data.models.Booking
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
-
-
-
+import java.util.logging.Logger
 
 @Composable
 fun BookingDetailsScreen(
@@ -40,7 +38,7 @@ fun BookingDetailsScreen(
     building: String,
     isDarkTheme: Boolean,
     paddingValues: PaddingValues,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() } // Pass from parent
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     var durationMinutes by remember { mutableStateOf(30) }
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -56,11 +54,11 @@ fun BookingDetailsScreen(
             campus.isNotEmpty() && building.isNotEmpty()
 
     val parsedDate = try {
-        SimpleDateFormat("yyyy-MM-dd").parse(date) ?: Date()
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(date) ?: Date()
     } catch (e: Exception) {
         Date()
     }
-    val formattedDate = SimpleDateFormat("dd MMM yyyy").format(parsedDate)
+    val formattedDate = SimpleDateFormat("dd MMM yyyy", Locale.US).format(parsedDate)
     val (hour, minute) = try {
         timeSlot.split(":").map { it.toInt() }
     } catch (e: Exception) {
@@ -76,19 +74,17 @@ fun BookingDetailsScreen(
     val slotStartTime = calendar.time
 
     val maxDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 30) }.time
-    val isToday = Calendar.getInstance().apply { time = parsedDate }.get(Calendar.DAY_OF_YEAR) ==
-            Calendar.getInstance().get(Calendar.DAY_OF_YEAR) &&
-            Calendar.getInstance().apply { time = parsedDate }.get(Calendar.YEAR) ==
-            Calendar.getInstance().get(Calendar.YEAR)
-    val isDateValid = parsedDate.before(maxDate) && (parsedDate.after(
-        Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, -1) }.time
-    ) || (isToday && slotStartTime.after(Date())))
+    val isToday = Calendar.getInstance().apply { time = parsedDate }.let { parsed ->
+        val today = Calendar.getInstance()
+        parsed.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR) &&
+                parsed.get(Calendar.YEAR) == today.get(Calendar.YEAR)
+    }
+    val isDateValid = !parsedDate.after(maxDate) && (isToday || parsedDate.after(Date()))
 
-    // Handle error and success messages
     LaunchedEffect(errorMessage, bookingSuccess) {
         when {
             errorMessage != null -> {
-                Log.d("BookingDetailsScreen", "Showing error: $errorMessage")
+                Logger.getLogger("BookingDetailsScreen").info("Showing error: $errorMessage")
                 snackbarHostState.showSnackbar(
                     message = errorMessage!!,
                     actionLabel = "Dismiss",
@@ -97,13 +93,12 @@ fun BookingDetailsScreen(
                 viewModel.clearErrorMessage()
             }
             bookingSuccess -> {
-                Log.d("BookingDetailsScreen", "Showing success message")
+                Logger.getLogger("BookingDetailsScreen").info("Showing success message")
                 snackbarHostState.showSnackbar(
                     message = "Booking created successfully!",
                     actionLabel = "OK",
                     duration = SnackbarDuration.Short
                 )
-                // Delay navigation to ensure Snackbar is visible
                 delay(1000L)
                 navController.popBackStack()
                 viewModel.clearBookingSuccess()
@@ -112,16 +107,14 @@ fun BookingDetailsScreen(
     }
 
     LaunchedEffect(spaceId, date, timeSlot) {
-        if (isValidInput && isDateValid) {
-            viewModel.fetchAvailableDurations(spaceId, parsedDate, hour, minute)
-        }
+        viewModel.fetchAvailableDurations(spaceId, parsedDate, hour, minute)
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(containerColor)
-            .padding(paddingValues) // Use padding from outer Scaffold
+            .padding(paddingValues)
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -129,7 +122,7 @@ fun BookingDetailsScreen(
             Text(
                 text = when {
                     !isValidInput -> "Invalid booking details provided"
-                    !isDateValid -> "Booking date must be today (future time) or within the next 30 days"
+                    !isDateValid -> "Booking date must be today or within the next 30 days"
                     else -> "Invalid input"
                 },
                 color = MaterialTheme.colorScheme.error,
@@ -142,7 +135,7 @@ fun BookingDetailsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isDarkTheme) Color(0xFF006060) else Color(0xFF006B6B),
-                    contentColor = textColor
+                    contentColor = Color.White
                 )
             ) {
                 Text("Go Back")
@@ -220,7 +213,7 @@ fun BookingDetailsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    val calendar = Calendar.getInstance().apply { time = parsedDate }
+                    calendar.time = parsedDate
                     calendar.set(Calendar.HOUR_OF_DAY, hour)
                     calendar.set(Calendar.MINUTE, minute)
                     calendar.set(Calendar.SECOND, 0)
@@ -247,7 +240,7 @@ fun BookingDetailsScreen(
                 enabled = isValidInput && availableDurations.isNotEmpty() && isDateValid,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isDarkTheme) Color(0xFF006060) else Color(0xFF006B6B),
-                    contentColor = textColor
+                    contentColor = Color.White
                 )
             ) {
                 Text("Create Booking")
@@ -271,10 +264,13 @@ fun BookingDetailsScreen(
                     Text("Campus: ${pendingBooking!!.campus}", color = textColor)
                     Text("Building: ${pendingBooking!!.building}", color = textColor)
                     Text("Level: ${pendingBooking!!.level}", color = textColor)
-                    Text("Date: ${SimpleDateFormat("dd MMM yyyy").format(pendingBooking!!.bookingDate)}", color = textColor)
                     Text(
-                        "Time: ${SimpleDateFormat("HH:mm").format(pendingBooking!!.startTime)} - " +
-                                "${SimpleDateFormat("HH:mm").format(pendingBooking!!.endTime)}",
+                        SimpleDateFormat("dd MMM yyyy", Locale.US).format(pendingBooking!!.bookingDate),
+                        color = textColor
+                    )
+                    Text(
+                        "${SimpleDateFormat("HH:mm", Locale.US).format(pendingBooking!!.startTime)} - " +
+                                "${SimpleDateFormat("HH:mm", Locale.US).format(pendingBooking!!.endTime)}",
                         color = textColor
                     )
                 }
@@ -283,7 +279,7 @@ fun BookingDetailsScreen(
                 TextButton(
                     onClick = {
                         pendingBooking?.let { booking ->
-                            Log.d("BookingDetailsScreen", "Confirming booking: $booking")
+                            Logger.getLogger("BookingDetailsScreen").info("Confirming booking: $booking")
                             viewModel.createBooking(
                                 studentId = booking.studentId,
                                 spaceId = booking.roomId,
@@ -319,6 +315,7 @@ fun BookingDetailsScreen(
         )
     }
 }
+
 @Composable
 fun DurationDropdown(
     selectedDuration: Int,
@@ -377,8 +374,9 @@ fun DurationDropdown(
                 .clickable(enabled = availableDurations.isNotEmpty()) { expanded = true }
         )
     }
+}
 
-}@Composable
+@Composable
 fun DetailRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
@@ -414,7 +412,9 @@ fun DetailRow(
             )
         }
     }
-}fun formatDuration(minutes: Int): String {
+}
+
+fun formatDuration(minutes: Int): String {
     return when (minutes) {
         30 -> "30 minutes"
         60 -> "1 hour"
@@ -423,4 +423,3 @@ fun DetailRow(
         else -> "$minutes minutes"
     }
 }
-
