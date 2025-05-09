@@ -833,11 +833,6 @@ fun FilterBar(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.CalendarToday,
-                    contentDescription = "Select Date",
-                    tint = textColor
-                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Date: ${SimpleDateFormat("dd MMM yyyy", Locale.US).format(selectedDate)}",
