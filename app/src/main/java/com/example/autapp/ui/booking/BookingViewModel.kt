@@ -1,13 +1,10 @@
 package com.example.autapp.ui.booking
-import android.util.Log
-import androidx.compose.runtime.mutableStateOf
+
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.autapp.AUTApplication
@@ -17,12 +14,13 @@ import com.example.autapp.data.models.SlotStatus
 import com.example.autapp.data.models.StudySpace
 import com.example.autapp.data.repository.BookingRepository
 import com.example.autapp.data.repository.StudySpaceRepository
-import com.example.autapp.ui.DashboardViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*class BookingViewModel(
+import java.util.*
+import java.util.logging.Logger
+
+class BookingViewModel(
     private val bookingRepository: BookingRepository,
     private val studySpaceRepository: StudySpaceRepository,
     private val savedStateHandle: SavedStateHandle
@@ -52,15 +50,16 @@ import java.util.*class BookingViewModel(
     private val _studySpaces = MutableStateFlow<List<StudySpace>>(emptyList())
     val studySpaces: StateFlow<List<StudySpace>> = _studySpaces
 
+    private val _allLevels = MutableStateFlow<List<String>>(emptyList())
+    val allLevels: StateFlow<List<String>> = _allLevels
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    val selectedPurpose = mutableStateOf("")
-
-    // Persisted filter states
     private val _selectedCampus = MutableStateFlow(savedStateHandle.get<String>("selectedCampus") ?: "")
     private val _selectedBuilding = MutableStateFlow(savedStateHandle.get<String>("selectedBuilding") ?: "")
     private val _selectedSpaceId = MutableStateFlow(savedStateHandle.get<String>("selectedSpaceId") ?: "All")
+    private val _selectedLevel = MutableStateFlow(savedStateHandle.get<String>("selectedLevel") ?: "All")
     private val _selectedDate = MutableStateFlow(
         savedStateHandle.get<Long>("selectedDate")?.let { Date(it) } ?: Date()
     )
@@ -68,52 +67,62 @@ import java.util.*class BookingViewModel(
     val selectedCampus: StateFlow<String> = _selectedCampus
     val selectedBuilding: StateFlow<String> = _selectedBuilding
     val selectedSpaceId: StateFlow<String> = _selectedSpaceId
+    val selectedLevel: StateFlow<String> = _selectedLevel
     val selectedDate: StateFlow<Date> = _selectedDate
 
     init {
-        // Initialize study spaces and fetch campuses
-        initializeStudySpaces(forceClear = false) // Avoid clearing unless necessary
+        initializeStudySpaces(forceClear = false)
         fetchCampuses()
-        // Validate restored state
         viewModelScope.launch {
             if (_selectedCampus.value.isNotEmpty() && _campuses.value.isNotEmpty() && _selectedCampus.value !in _campuses.value) {
                 _selectedCampus.value = _campuses.value.firstOrNull() ?: ""
+                _selectedLevel.value = "All"
                 savedStateHandle["selectedCampus"] = _selectedCampus.value
-                Log.d("BookingViewModel", "Reset selectedCampus to ${_selectedCampus.value}")
+                savedStateHandle["selectedLevel"] = _selectedLevel.value
+                Logger.getLogger("BookingViewModel").info("Reset selectedCampus to ${_selectedCampus.value}, selectedLevel to ${_selectedLevel.value}")
             }
             if (_selectedBuilding.value.isNotEmpty() && _buildings.value.isNotEmpty() && _selectedBuilding.value !in _buildings.value) {
                 _selectedBuilding.value = ""
+                _selectedLevel.value = "All"
                 savedStateHandle["selectedBuilding"] = _selectedBuilding.value
-                Log.d("BookingViewModel", "Reset selectedBuilding to empty")
+                savedStateHandle["selectedLevel"] = _selectedLevel.value
+                Logger.getLogger("BookingViewModel").info("Reset selectedBuilding to empty, selectedLevel to ${_selectedLevel.value}")
             }
             if (_selectedSpaceId.value != "All" && _studySpaces.value.isNotEmpty() && _studySpaces.value.none { it.spaceId == _selectedSpaceId.value }) {
                 _selectedSpaceId.value = "All"
                 savedStateHandle["selectedSpaceId"] = _selectedSpaceId.value
-                Log.d("BookingViewModel", "Reset selectedSpaceId to All")
+                Logger.getLogger("BookingViewModel").info("Reset selectedSpaceId to All")
+            }
+            if (_selectedLevel.value != "All" && _studySpaces.value.isNotEmpty() && _studySpaces.value.none { it.level == _selectedLevel.value }) {
+                _selectedLevel.value = "All"
+                savedStateHandle["selectedLevel"] = _selectedLevel.value
+                Logger.getLogger("BookingViewModel").info("Reset selectedLevel to All")
             }
         }
     }
 
-    fun updateFilters(campus: String, building: String, spaceId: String, date: Date) {
+    fun updateFilters(campus: String, building: String, spaceId: String, level: String, date: Date) {
         _selectedCampus.value = campus
         _selectedBuilding.value = building
         _selectedSpaceId.value = spaceId
+        _selectedLevel.value = level
         _selectedDate.value = date
         savedStateHandle["selectedCampus"] = campus
         savedStateHandle["selectedBuilding"] = building
         savedStateHandle["selectedSpaceId"] = spaceId
+        savedStateHandle["selectedLevel"] = level
         savedStateHandle["selectedDate"] = date.time
-        Log.d("BookingViewModel", "Filters updated: campus=$campus, building=$building, spaceId=$spaceId, date=$date")
+        Logger.getLogger("BookingViewModel").info("Filters updated: campus=$campus, building=$building, spaceId=$spaceId, level=$level, date=$date")
     }
 
     fun clearErrorMessage() {
         _errorMessage.value = null
-        Log.d("BookingViewModel", "Error message cleared")
+        Logger.getLogger("BookingViewModel").info("Error message cleared")
     }
 
     fun clearBookingSuccess() {
         _bookingSuccess.value = false
-        Log.d("BookingViewModel", "Booking success cleared")
+        Logger.getLogger("BookingViewModel").info("Booking success cleared")
     }
 
     private fun initializeStudySpaces(forceClear: Boolean = false) {
@@ -121,95 +130,72 @@ import java.util.*class BookingViewModel(
             _isLoading.value = true
             try {
                 val existingSpaces = studySpaceRepository.getAllStudySpaces()
-                Log.d("BookingViewModel", "Existing study spaces: ${existingSpaces.size}")
-                existingSpaces.forEach { Log.d("BookingViewModel", "Space: $it") }
+                Logger.getLogger("BookingViewModel").info("Existing study spaces: ${existingSpaces.size}")
+                existingSpaces.forEach { Logger.getLogger("BookingViewModel").info("Space: $it") }
 
                 if (forceClear) {
                     studySpaceRepository.deleteAll()
-                    Log.d("BookingViewModel", "Cleared study_space_table")
+                    Logger.getLogger("BookingViewModel").info("Cleared study_space_table")
                 }
 
                 if (forceClear || existingSpaces.isEmpty()) {
                     val studySpaces = listOf(
-                        // City Campus
-                        StudySpace("Room 1", "WA3 Study Rooms", "City", "Level 3", 10, true),
-                        StudySpace("Room 2", "WA3 Study Rooms", "City", "Level 3", 10, true),
-                        StudySpace("Room 3", "WA3 Study Rooms", "City", "Level 3", 10, true),
-                        StudySpace("Room 4", "WA3 Study Rooms", "City", "Level 3", 10, true),
-                        StudySpace("Room 5", "WA3 Study Rooms", "City", "Level 3", 10, true),
-                        StudySpace("Room 6", "WA5 Study Rooms", "City", "Level 5", 10, true),
-                        StudySpace("Room 7", "WA5 Study Rooms", "City", "Level 5", 10, true),
-                        StudySpace("Room 8", "WA5 Study Rooms", "City", "Level 5", 10, true),
-                        StudySpace("Room 9", "WA5 Study Rooms", "City", "Level 5", 10, true),
-                        StudySpace("Room 11", "WA6 Study Rooms", "City", "Level 6", 10, true),
-                        StudySpace("Room 12", "WA6 Study Rooms", "City", "Level 6", 10, true),
-                        StudySpace("Room 13", "WA6 Study Rooms", "City", "Level 6", 10, true),
-                        StudySpace("Room 14", "WA6 Study Rooms", "City", "Level 6", 10, true),
-                        StudySpace("Room 409", "WG4 Study Rooms", "City", "Level 4", 10, true),
-                        StudySpace("Room 410", "WG4 Study Rooms", "City", "Level 4", 10, true),
-                        StudySpace("Room 411", "WG4 Study Rooms", "City", "Level 4", 10, true),
-                        StudySpace("Room 412", "WG4 Study Rooms", "City", "Level 4", 10, true),
-                        // North Campus
+                        StudySpace("Room 1", "WA", "City", "Level 3", 10, true),
+                        StudySpace("Room 2", "WA", "City", "Level 3", 10, true),
+                        StudySpace("Room 3", "WA", "City", "Level 3", 10, true),
+                        StudySpace("Room 4", "WA", "City", "Level 3", 10, true),
+                        StudySpace("Room 5", "WA", "City", "Level 3", 10, true),
+                        StudySpace("Room 6", "WA", "City", "Level 5", 10, true),
+                        StudySpace("Room 7", "WA", "City", "Level 5", 10, true),
+                        StudySpace("Room 8", "WA", "City", "Level 5", 10, true),
+                        StudySpace("Room 9", "WA", "City", "Level 5", 10, true),
+                        StudySpace("Room 11", "WA", "City", "Level 6", 10, true),
+                        StudySpace("Room 12", "WA", "City", "Level 6", 10, true),
+                        StudySpace("Room 13", "WA", "City", "Level 6", 10, true),
+                        StudySpace("Room 14", "WA", "City", "Level 6", 10, true),
+                        StudySpace("Room 409", "WG", "City", "Level 4", 10, true),
+                        StudySpace("Room 410", "WG", "City", "Level 4", 10, true),
+                        StudySpace("Room 411", "WG", "City", "Level 4", 10, true),
+                        StudySpace("Room 412", "WG", "City", "Level 4", 10, true),
                         StudySpace("Room N1", "NB1 Study Rooms", "North", "Level 1", 8, true),
                         StudySpace("Room N2", "NB1 Study Rooms", "North", "Level 1", 8, true),
                         StudySpace("Room N3", "NB2 Study Rooms", "North", "Level 2", 12, true),
                         StudySpace("Room N4", "NB2 Study Rooms", "North", "Level 2", 12, true),
-                        // South Campus
                         StudySpace("Room S1", "SB1 Study Rooms", "South", "Level 1", 6, true),
                         StudySpace("Room S2", "SB1 Study Rooms", "South", "Level 1", 6, true),
                         StudySpace("Room S3", "SB2 Study Rooms", "South", "Level 2", 10, true),
                         StudySpace("Room S4", "SB2 Study Rooms", "South", "Level 2", 10, true)
                     )
-                    Log.d("BookingViewModel", "Attempting to insert ${studySpaces.size} study spaces")
+                    Logger.getLogger("BookingViewModel").info("Attempting to insert ${studySpaces.size} study spaces")
                     studySpaces.forEach { space ->
                         try {
                             studySpaceRepository.insertStudySpace(space)
-                            Log.d("BookingViewModel", "Inserted: $space")
+                            Logger.getLogger("BookingViewModel").info("Inserted: $space")
                         } catch (e: Exception) {
-                            Log.e("BookingViewModel", "Failed to insert $space: ${e.message}", e)
+                            Logger.getLogger("BookingViewModel").severe("Failed to insert $space: ${e.message}")
                         }
                     }
                     val insertedSpaces = studySpaceRepository.getAllStudySpaces()
-                    Log.d("BookingViewModel", "After insertion, study spaces: ${insertedSpaces.size}")
-                    insertedSpaces.forEach { Log.d("BookingViewModel", "Verified: $it") }
+                    Logger.getLogger("BookingViewModel").info("After insertion, study spaces: ${insertedSpaces.size}")
+                    insertedSpaces.forEach { Logger.getLogger("BookingViewModel").info("Verified: $it") }
                     if (insertedSpaces.isEmpty()) {
                         _errorMessage.value = "Failed to insert study spaces: No spaces found after insertion"
-                        Log.e("BookingViewModel", "No spaces found after insertion")
+                        Logger.getLogger("BookingViewModel").severe("No spaces found after insertion")
                     } else {
                         _errorMessage.value = null
-                        Log.d("BookingViewModel", "Successfully initialized ${insertedSpaces.size} study spaces")
+                        Logger.getLogger("BookingViewModel").info("Successfully initialized ${insertedSpaces.size} study spaces")
                     }
                 } else {
-                    Log.d("BookingViewModel", "Study spaces already exist, skipping insertion")
+                    Logger.getLogger("BookingViewModel").info("Study spaces already exist, skipping insertion")
                     _errorMessage.value = null
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "Error initializing study spaces: ${e.message}"
-                Log.e("BookingViewModel", "Error initializing study spaces", e)
+                Logger.getLogger("BookingViewModel").severe("Error initializing study spaces: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
         }
-    }
-
-    fun debugStudySpaces() {
-        viewModelScope.launch {
-            try {
-                val spaces = studySpaceRepository.getAllStudySpaces()
-                Log.d("BookingViewModel", "Debug: Current study spaces: ${spaces.size}")
-                spaces.forEach { Log.d("BookingViewModel", "Space: $it") }
-                val campuses = studySpaceRepository.getCampuses()
-                Log.d("BookingViewModel", "Debug: Current campuses: $campuses")
-                _errorMessage.value = "Debug: Found ${spaces.size} study spaces and ${campuses.size} campuses"
-            } catch (e: Exception) {
-                _errorMessage.value = "Error debugging study spaces: ${e.message}"
-                Log.e("BookingViewModel", "Error debugging study spaces", e)
-            }
-        }
-    }
-
-    fun resetStudySpaces() {
-        initializeStudySpaces(forceClear = true)
     }
 
     fun fetchCampuses() {
@@ -218,7 +204,7 @@ import java.util.*class BookingViewModel(
             try {
                 val campusList = studySpaceRepository.getCampuses()
                 _campuses.value = campusList
-                Log.d("BookingViewModel", "Fetched campuses: $campusList")
+                Logger.getLogger("BookingViewModel").info("Fetched campuses: $campusList")
                 _errorMessage.value = if (campusList.isEmpty()) {
                     "No campuses found in database"
                 } else {
@@ -226,7 +212,7 @@ import java.util.*class BookingViewModel(
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "Error fetching campuses: ${e.message}"
-                Log.e("BookingViewModel", "Error fetching campuses", e)
+                Logger.getLogger("BookingViewModel").severe("Error fetching campuses: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -240,7 +226,7 @@ import java.util.*class BookingViewModel(
                 val buildingList = studySpaceRepository.getBuildingsByCampus(campus)
                     .filter { it != "None" }
                 _buildings.value = buildingList
-                Log.d("BookingViewModel", "Fetched buildings for $campus: $buildingList")
+                Logger.getLogger("BookingViewModel").info("Fetched buildings for $campus: $buildingList")
                 _errorMessage.value = if (buildingList.isEmpty()) {
                     "No buildings found for campus: $campus"
                 } else {
@@ -248,30 +234,47 @@ import java.util.*class BookingViewModel(
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "Error fetching buildings: ${e.message}"
-                Log.e("BookingViewModel", "Error fetching buildings", e)
+                Logger.getLogger("BookingViewModel").severe("Error fetching buildings: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    fun fetchStudySpaces(campus: String, building: String) {
+    fun fetchStudySpaces(campus: String, building: String, level: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val spaces = studySpaceRepository.getStudySpacesByCampusAndBuilding(campus, building)
+                var spaces = studySpaceRepository.getStudySpacesByCampusAndBuilding(campus, building)
+                if (level != null && level != "All") {
+                    spaces = spaces.filter { it.level == level }
+                }
                 _studySpaces.value = spaces
-                Log.d("BookingViewModel", "Fetched study spaces for $campus/$building: ${spaces.size}")
+                Logger.getLogger("BookingViewModel").info("Fetched study spaces for $campus/$building${if (level != null) "/$level" else ""}: ${spaces.size}")
                 _errorMessage.value = if (spaces.isEmpty()) {
-                    "No study spaces found for $campus/$building"
+                    "No study spaces found for $campus/$building${if (level != null) "/$level" else ""}"
                 } else {
                     null
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "Error fetching study spaces: ${e.message}"
-                Log.e("BookingViewModel", "Error fetching study spaces", e)
+                Logger.getLogger("BookingViewModel").severe("Error fetching study spaces: ${e.message}")
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun fetchAllLevels(campus: String, building: String) {
+        viewModelScope.launch {
+            try {
+                val spaces = studySpaceRepository.getStudySpacesByCampusAndBuilding(campus, building)
+                val levels = spaces.map { it.level }.distinct()
+                _allLevels.value = levels
+                Logger.getLogger("BookingViewModel").info("Fetched all levels for $campus/$building: $levels")
+            } catch (e: Exception) {
+                _allLevels.value = emptyList()
+                Logger.getLogger("BookingViewModel").severe("Error fetching all levels: ${e.message}")
             }
         }
     }
@@ -280,7 +283,7 @@ import java.util.*class BookingViewModel(
         spaceId: String?,
         building: String,
         campus: String,
-        level: String,
+        level: String?,
         date: Date,
         studentId: Int
     ) {
@@ -288,20 +291,23 @@ import java.util.*class BookingViewModel(
             _isLoading.value = true
             try {
                 bookingRepository.deleteCompletedAndCancelledBookings()
-                val spaces = if (spaceId != null) {
+                var spaces = if (spaceId != null) {
                     listOfNotNull(studySpaceRepository.getStudySpaceById(spaceId))
                 } else {
                     studySpaceRepository.getStudySpacesByCampusAndBuilding(campus, building)
+                }
+                if (level != null && level != "All") {
+                    spaces = spaces.filter { it.level == level }
                 }
                 val slots = spaces.flatMap { space ->
                     generateTimeSlots(space.spaceId, space.building, space.campus, space.level, date, studentId)
                 }
                 _availableSlots.value = slots
-                Log.d("BookingViewModel", "Fetched ${slots.size} slots for $campus/$building/${spaceId ?: "All"}")
+                Logger.getLogger("BookingViewModel").info("Fetched ${slots.size} slots for $campus/$building/${spaceId ?: "All"}/${level ?: "All"}")
                 _errorMessage.value = null
             } catch (e: Exception) {
                 _errorMessage.value = "Error fetching slots: ${e.message}"
-                Log.e("BookingViewModel", "Error fetching slots", e)
+                Logger.getLogger("BookingViewModel").severe("Error fetching slots: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -311,20 +317,20 @@ import java.util.*class BookingViewModel(
     fun fetchAvailableDurations(spaceId: String, date: Date, startHour: Int, startMinute: Int) {
         viewModelScope.launch {
             try {
-                Log.d("BookingViewModel", "Fetching durations for spaceId=$spaceId, date=$date, time=$startHour:$startMinute")
+                Logger.getLogger("BookingViewModel").info("Fetching durations for spaceId=$spaceId, date=$date, time=$startHour:$startMinute")
                 val calendar = Calendar.getInstance().apply { time = date }
                 calendar.set(Calendar.HOUR_OF_DAY, startHour)
                 calendar.set(Calendar.MINUTE, startMinute)
                 calendar.set(Calendar.SECOND, 0)
                 calendar.set(Calendar.MILLISECOND, 0)
                 val startTime = calendar.time
-                Log.d("BookingViewModel", "Calculated startTime=$startTime")
+                Logger.getLogger("BookingViewModel").info("Calculated startTime=$startTime")
 
                 val now = Date()
                 if (startTime.before(now)) {
                     _availableDurations.value = emptyList()
                     _errorMessage.value = "Cannot book past time slots"
-                    Log.d("BookingViewModel", "Start time is in the past, no durations available")
+                    Logger.getLogger("BookingViewModel").info("Start time is in the past, no durations available")
                     return@launch
                 }
 
@@ -334,16 +340,16 @@ import java.util.*class BookingViewModel(
                 endOfDay.set(Calendar.SECOND, 0)
                 endOfDay.set(Calendar.MILLISECOND, 0)
                 val endOfDayTime = endOfDay.time
-                Log.d("BookingViewModel", "End of day time=$endOfDayTime")
+                Logger.getLogger("BookingViewModel").info("End of day time=$endOfDayTime")
 
                 val nextBooking = bookingRepository.getNextBooking(spaceId, startTime)
                 val maxDurationMinutes = if (nextBooking != null) {
                     val minutesUntilNext = ((nextBooking.startTime.time - startTime.time) / (1000 * 60)).toInt()
-                    Log.d("BookingViewModel", "Next booking found at ${nextBooking.startTime}, minutes until next=$minutesUntilNext")
+                    Logger.getLogger("BookingViewModel").info("Next booking found at ${nextBooking.startTime}, minutes until next=$minutesUntilNext")
                     minOf(minutesUntilNext, 120)
                 } else {
                     val minutesUntilEndOfDay = ((endOfDayTime.time - startTime.time) / (1000 * 60)).toInt()
-                    Log.d("BookingViewModel", "No next booking, minutes until end of day=$minutesUntilEndOfDay")
+                    Logger.getLogger("BookingViewModel").info("No next booking, minutes until end of day=$minutesUntilEndOfDay")
                     minOf(minutesUntilEndOfDay, 120)
                 }
 
@@ -355,10 +361,10 @@ import java.util.*class BookingViewModel(
                 } else {
                     null
                 }
-                Log.d("BookingViewModel", "Available durations=$durations, maxDuration=$validMaxDuration")
+                Logger.getLogger("BookingViewModel").info("Available durations=$durations, maxDuration=$validMaxDuration")
             } catch (e: Exception) {
                 _errorMessage.value = "Error fetching durations: ${e.message}"
-                Log.e("BookingViewModel", "Error fetching durations", e)
+                Logger.getLogger("BookingViewModel").severe("Error fetching durations: ${e.message}")
             }
         }
     }
@@ -375,7 +381,7 @@ import java.util.*class BookingViewModel(
     ) {
         viewModelScope.launch {
             try {
-                Log.d("BookingViewModel", "Creating booking: studentId=$studentId, spaceId=$spaceId, startTime=$startTime, endTime=$endTime")
+                Logger.getLogger("BookingViewModel").info("Creating booking: studentId=$studentId, spaceId=$spaceId, startTime=$startTime, endTime=$endTime")
                 val booking = Booking(
                     bookingId = 0,
                     studentId = studentId,
@@ -389,13 +395,12 @@ import java.util.*class BookingViewModel(
                     status = "ACTIVE"
                 )
                 bookingRepository.insertBooking(booking)
-                _errorMessage.value = null // Clear any previous errors on success
-                _bookingSuccess.value = true // Set success state
-                Log.d("BookingViewModel", "Booking inserted successfully")
+                _errorMessage.value = null
+                _bookingSuccess.value = true
+                Logger.getLogger("BookingViewModel").info("Booking inserted successfully")
                 fetchMyBookings(studentId)
                 fetchAvailableSlots(spaceId, building, campus, level, bookingDate, studentId)
             } catch (e: Exception) {
-                // Provide more user-friendly error messages
                 val userFriendlyMessage = when (e.message) {
                     "Cannot create more than 2 active bookings" -> "You already have 2 active bookings. Please cancel one to book another."
                     "Study space does not exist" -> "The selected study space is not available."
@@ -407,58 +412,7 @@ import java.util.*class BookingViewModel(
                     else -> "Error creating booking: ${e.message}"
                 }
                 _errorMessage.value = userFriendlyMessage
-                Log.e("BookingViewModel", "Error creating booking: ${e.message}", e)
-            }
-        }
-    }
-
-    fun createBooking(
-        studentId: Int,
-        spaceId: String,
-        building: String,
-        campus: String,
-        level: String,
-        bookingDate: Date,
-        startTime: Date,
-        endTime: Date,
-        purpose: String,
-        notes: String? = null
-    ) {
-        viewModelScope.launch {
-            try {
-                Log.d("BookingViewModel", "Creating booking with purpose: studentId=$studentId, spaceId=$spaceId, startTime=$startTime, endTime=$endTime")
-                val booking = Booking(
-                    bookingId = 0,
-                    studentId = studentId,
-                    roomId = spaceId,
-                    building = building,
-                    campus = campus,
-                    level = level,
-                    bookingDate = bookingDate,
-                    startTime = startTime,
-                    endTime = endTime,
-                    status = "ACTIVE"
-                )
-                bookingRepository.insertBooking(booking)
-                _errorMessage.value = null // Clear any previous errors on success
-                _bookingSuccess.value = true // Set success state
-                Log.d("BookingViewModel", "Booking inserted successfully")
-                fetchMyBookings(studentId)
-                fetchAvailableSlots(spaceId, building, campus, level, bookingDate, studentId)
-            } catch (e: Exception) {
-                // Provide more user-friendly error messages
-                val userFriendlyMessage = when (e.message) {
-                    "Cannot create more than 2 active bookings" -> "You already have 2 active bookings. Please cancel one to book another."
-                    "Study space does not exist" -> "The selected study space is not available."
-                    "Study space is not available" -> "The selected study space is currently unavailable."
-                    "This time slot is already booked" -> "This time slot is already taken. Please choose another."
-                    "Cannot book a time slot in the past" -> "You cannot book a time slot in the past."
-                    "Booking cannot extend past 21:00" -> "Bookings cannot extend beyond 21:00."
-                    "Booking insertion failed not found in database" -> "Failed to create booking. Please try again."
-                    else -> "Error creating booking: ${e.message}"
-                }
-                _errorMessage.value = userFriendlyMessage
-                Log.e("BookingViewModel", "Error creating booking: ${e.message}", e)
+                Logger.getLogger("BookingViewModel").severe("Error creating booking: ${e.message}")
             }
         }
     }
@@ -469,12 +423,12 @@ import java.util.*class BookingViewModel(
                 bookingRepository.deleteCompletedAndCancelledBookings()
                 val bookings = bookingRepository.getBookingsByStudent(studentId)
                 _myBookings.value = bookings.sortedBy { it.startTime }
-                Log.d("BookingViewModel", "Fetched ${bookings.size} bookings for studentId=$studentId")
-                bookings.forEach { Log.d("BookingViewModel", "Booking: $it") }
+                Logger.getLogger("BookingViewModel").info("Fetched ${bookings.size} bookings for studentId=$studentId")
+                bookings.forEach { Logger.getLogger("BookingViewModel").info("Booking: $it") }
                 _errorMessage.value = null
             } catch (e: Exception) {
                 _errorMessage.value = "Error fetching bookings: ${e.message}"
-                Log.e("BookingViewModel", "Error fetching bookings", e)
+                Logger.getLogger("BookingViewModel").severe("Error fetching bookings: ${e.message}")
             }
         }
     }
@@ -495,7 +449,7 @@ import java.util.*class BookingViewModel(
                 fetchAvailableSlots(spaceId, building, campus, level, date, booking.studentId)
             } catch (e: Exception) {
                 _errorMessage.value = "Error canceling booking: ${e.message}"
-                Log.e("BookingViewModel", "Error canceling booking", e)
+                Logger.getLogger("BookingViewModel").severe("Error canceling booking: ${e.message}")
             }
         }
     }
@@ -519,7 +473,7 @@ import java.util.*class BookingViewModel(
         var hour = 8
         var minute = 0
         while (hour < 21 || (hour == 21 && minute == 0)) {
-            timeSlots.add(String.format("%02d:%02d", hour, minute))
+            timeSlots.add(String.format(Locale.US, "%02d:%02d", hour, minute))
             minute += 30
             if (minute >= 60) {
                 hour += 1
@@ -529,18 +483,17 @@ import java.util.*class BookingViewModel(
 
         val now = Date()
         timeSlots.forEach { timeSlot ->
-            val (hour, minute) = timeSlot.split(":").map { it.toInt() }
-            calendar.set(Calendar.HOUR_OF_DAY, hour)
-            calendar.set(Calendar.MINUTE, minute)
+            val (slotHour, slotMinute) = timeSlot.split(":").map { it.toInt() }
+            calendar.set(Calendar.HOUR_OF_DAY, slotHour)
+            calendar.set(Calendar.MINUTE, slotMinute)
             val slotStart = calendar.time
             calendar.add(Calendar.MINUTE, 30)
             val slotEnd = calendar.time
 
             val isPast = slotStart.before(now)
-            Log.d("BookingViewModel", "Slot $timeSlot: start=$slotStart, end=$slotEnd, isPast=$isPast")
+            Logger.getLogger("BookingViewModel").info("Slot $timeSlot: start=$slotStart, end=$slotEnd, isPast=$isPast")
 
             val conflicts = bookingRepository.checkBookingConflict(spaceId, slotStart, slotEnd)
-            // Filter conflicts to only include bookings for the specified date
             val validConflicts = conflicts.filter { booking ->
                 val bookingCalendar = Calendar.getInstance().apply { time = booking.bookingDate }
                 val slotCalendar = Calendar.getInstance().apply { time = date }
@@ -570,14 +523,10 @@ import java.util.*class BookingViewModel(
         return slots
     }
 
-    fun formatDateTime(date: Date): String {
-        return SimpleDateFormat("dd MMM yyyy, HH:mm").format(date)
-    }
-
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val application = this[APPLICATION_KEY] as AUTApplication
+                val application = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as AUTApplication
                 val savedStateHandle = createSavedStateHandle()
                 BookingViewModel(
                     application.bookingRepository,
@@ -588,4 +537,3 @@ import java.util.*class BookingViewModel(
         }
     }
 }
-
