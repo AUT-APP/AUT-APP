@@ -34,6 +34,11 @@ import com.example.autapp.ui.DashboardViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
 import androidx.compose.ui.window.Dialog
+import androidx.compose.animation.animateContentSize
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 
 @Composable
@@ -103,8 +108,10 @@ fun StudentDashboard(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     gradePair.forEach { gradeWithAssignment ->
+                        val courseName = viewModel.courses.find {it.courseId == gradeWithAssignment.assignment.courseId}?.name ?: "Unknown"
                         GradeCard(
                             gradeWithAssignment = gradeWithAssignment,
+                            courseName = courseName,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -362,51 +369,87 @@ fun ClassCard(
 @Composable
 fun GradeCard(
     gradeWithAssignment: GradeDao.GradeWithAssignment,
+    courseName: String,
     modifier: Modifier = Modifier
 ) {
     val grade = gradeWithAssignment.grade
     val assignment = gradeWithAssignment.assignment
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize()
+            .clickable { expanded = !expanded },
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = assignment.name,
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = assignment.type,
-                color = MaterialTheme.colorScheme.onPrimary,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "Score: ${grade.score}",
-                color = MaterialTheme.colorScheme.onPrimary,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = grade.grade,
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = assignment.name,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = assignment.type,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontSize = 14.sp
+                    )
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = "Toggle",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+
+            if (expanded) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = grade.grade,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 28.sp,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+
+                Text(
+                    text = "Score: ${grade.score} / ${assignment.maxScore}",
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+                Text(
+                    text = "Weight: ${(assignment.weight * 100).toInt()}%",
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+                Text(
+                    text = "Due: ${SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(assignment.due)}",
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+                grade.feedback?.let {
+                    if (it.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Feedback: $it",
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+            }
         }
     }
 }
+
+
 
 
 @Composable
@@ -568,4 +611,5 @@ fun AssignmentCard(
         }
     }
 }
+
 
