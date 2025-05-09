@@ -23,7 +23,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.autapp.R
-import com.example.autapp.ui.login.LoginViewModel
 
 @Composable
 fun LoginScreen(
