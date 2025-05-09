@@ -20,7 +20,7 @@ object NotificationScheduler {
         dayOfWeek: Int,
         startTime: Date,
         minutesBefore: Int
-    ) {
+    ): Long {
         Log.d(TAG, "Scheduling notification ID: $notificationId for dayOfWeek: $dayOfWeek, minutesBefore: $minutesBefore")
         val calendar = Calendar.getInstance().apply { time = startTime }
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
@@ -56,10 +56,13 @@ object NotificationScheduler {
                 pendingIntent
             )
             Log.d(TAG, "Scheduled alarm ID: $notificationId for ${Date(notifyAtMillis)}")
+            return notifyAtMillis
         } catch (e: SecurityException) {
             Log.e(TAG, "Failed to schedule alarm: ${e.message}", e)
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error scheduling alarm: ${e.message}", e)
+            throw e
         }
     }
 

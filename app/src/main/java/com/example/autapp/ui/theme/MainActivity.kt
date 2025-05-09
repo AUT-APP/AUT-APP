@@ -581,9 +581,8 @@ fun AppContent(
             ) { paddingValues ->
                 NotificationScreen(
                     viewModel = notificationViewModel,
-                    navController = navController,
                     paddingValues = paddingValues,
-                    snackbarHostState = snackbarHostState // Pass to BookingDetailsScreen
+                    snackbarHostState = snackbarHostState
                 )
             }
 

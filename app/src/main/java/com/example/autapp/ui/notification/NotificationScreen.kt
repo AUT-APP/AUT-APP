@@ -2,74 +2,74 @@
 
     import android.Manifest
     import android.app.Activity
+    import android.app.AlarmManager
     import android.content.Context
     import android.content.Intent
     import android.content.pm.PackageManager
     import android.os.Build
+    import android.provider.Settings
     import android.util.Log
     import androidx.activity.compose.rememberLauncherForActivityResult
     import androidx.activity.result.contract.ActivityResultContracts
     import androidx.compose.foundation.background
-    import androidx.compose.foundation.clickable
-    import androidx.compose.foundation.layout.*
     import androidx.compose.foundation.layout.Arrangement
+    import androidx.compose.foundation.layout.Box
+    import androidx.compose.foundation.layout.Column
+    import androidx.compose.foundation.layout.PaddingValues
+    import androidx.compose.foundation.layout.Row
+    import androidx.compose.foundation.layout.Spacer
+    import androidx.compose.foundation.layout.defaultMinSize
+    import androidx.compose.foundation.layout.fillMaxSize
+    import androidx.compose.foundation.layout.fillMaxWidth
+    import androidx.compose.foundation.layout.height
+    import androidx.compose.foundation.layout.padding
+    import androidx.compose.foundation.layout.size
+    import androidx.compose.foundation.layout.width
     import androidx.compose.foundation.rememberScrollState
     import androidx.compose.foundation.shape.RoundedCornerShape
-    import androidx.compose.foundation.text.KeyboardOptions
     import androidx.compose.foundation.verticalScroll
-    import androidx.compose.material3.*
+    import androidx.compose.material3.Button
+    import androidx.compose.material3.ButtonDefaults
+    import androidx.compose.material3.Card
+    import androidx.compose.material3.CardDefaults
+    import androidx.compose.material3.Icon
+    import androidx.compose.material3.MaterialTheme
+    import androidx.compose.material3.SnackbarDuration
+    import androidx.compose.material3.SnackbarHostState
+    import androidx.compose.material3.Tab
+    import androidx.compose.material3.TabRow
+    import androidx.compose.material3.Text
     import androidx.compose.runtime.Composable
     import androidx.compose.runtime.LaunchedEffect
+    import androidx.compose.runtime.collectAsState
     import androidx.compose.runtime.getValue
+    import androidx.compose.runtime.mutableIntStateOf
     import androidx.compose.runtime.mutableStateOf
     import androidx.compose.runtime.remember
+    import androidx.compose.runtime.rememberCoroutineScope
     import androidx.compose.runtime.setValue
     import androidx.compose.ui.Alignment
     import androidx.compose.ui.Modifier
-    import androidx.compose.ui.graphics.Color
-    import androidx.compose.ui.platform.LocalContext
     import androidx.compose.ui.res.painterResource
-    import androidx.compose.ui.text.TextStyle
-    import androidx.compose.ui.text.font.Font
-    import androidx.compose.ui.text.font.FontFamily
     import androidx.compose.ui.text.font.FontWeight
-    import androidx.compose.ui.text.input.KeyboardType
-    import androidx.compose.ui.text.input.PasswordVisualTransformation
     import androidx.compose.ui.text.style.TextAlign
-    import androidx.compose.ui.text.style.TextDecoration
     import androidx.compose.ui.text.style.TextOverflow
     import androidx.compose.ui.unit.dp
     import androidx.compose.ui.unit.sp
     import androidx.core.content.ContextCompat
-    import androidx.lifecycle.viewmodel.compose.viewModel
-    import androidx.navigation.NavController
-    import com.example.autapp.R
-    import com.example.autapp.data.models.Course
+    import androidx.core.net.toUri
     import com.example.autapp.data.models.TimetableEntry
-    import com.example.autapp.ui.components.AUTTopAppBar
-    import com.example.autapp.ui.theme.ClassCard
-    import org.threeten.bp.LocalDate
-    import org.threeten.bp.ZoneId
+    import kotlinx.coroutines.CoroutineScope
+    import kotlinx.coroutines.launch
+    import org.threeten.bp.DayOfWeek
     import java.text.SimpleDateFormat
     import java.util.Date
     import java.util.Locale
-    import org.threeten.bp.DayOfWeek
     import org.threeten.bp.format.TextStyle as ADBTextStyle
-    import android.app.AlarmManager
-    import android.net.Uri
-    import android.provider.Settings
-    import androidx.compose.runtime.collectAsState
-    import androidx.compose.runtime.mutableIntStateOf
-    import androidx.compose.runtime.rememberCoroutineScope
-    import androidx.core.net.toUri
-    import kotlinx.coroutines.CoroutineScope
-    import kotlinx.coroutines.delay
-    import kotlinx.coroutines.launch
 
     @Composable
     fun NotificationScreen(
         viewModel: NotificationViewModel,
-        navController: NavController,
         paddingValues: PaddingValues,
         snackbarHostState: SnackbarHostState
     ) {
@@ -77,7 +77,6 @@
         Log.d(tag, "NotificationScreen composed")
 
         val colorScheme = MaterialTheme.colorScheme
-        val typography = MaterialTheme.typography
 
         val courses = viewModel.courses
         var selectedTabIndex = remember { mutableIntStateOf(0) }
@@ -91,14 +90,14 @@
         ) {
             if (courses.isNotEmpty()) {
                 TabRow(
-                    selectedTabIndex = selectedTabIndex.value,
+                    selectedTabIndex = selectedTabIndex.intValue,
                     containerColor = colorScheme.surface,
                     contentColor = colorScheme.onSurface
                 ) {
                     courses.forEachIndexed { index, course ->
                         Tab(
-                            selected = selectedTabIndex.value == index,
-                            onClick = { selectedTabIndex.value = index },
+                            selected = selectedTabIndex.intValue == index,
+                            onClick = { selectedTabIndex.intValue = index },
                             text = { Text(course.name, fontWeight = FontWeight.Bold) }
                         )
                     }
@@ -115,7 +114,7 @@
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Show notifications related to the selected course
-                    val selectedCourse = courses[selectedTabIndex.value]
+                    val selectedCourse = courses[selectedTabIndex.intValue]
                     CourseNotificationsTab(viewModel,
                         selectedCourse.courseId,
                         selectedCourse.name,
@@ -303,35 +302,36 @@
                             Button(
                                 shape = RoundedCornerShape(5.dp),
                                 onClick = {
-                                    val isCurrentlySet = notificationPrefs[timetableEntry.entryId] == minutes
-                                    if (isCurrentlySet) {
-                                        viewModel.deleteNotificationPreference(
-                                            context,
-                                            studentId = viewModel.studentId,
-                                            classSessionId = timetableEntry.entryId
-                                        )
-                                        coroutineScope.launch {
+                                    coroutineScope.launch {
+                                        val isCurrentlySet =
+                                            notificationPrefs[timetableEntry.entryId] == minutes
+                                        if (isCurrentlySet) {
+                                            viewModel.deleteNotificationPreference(
+                                                context,
+                                                studentId = viewModel.studentId,
+                                                classSessionId = timetableEntry.entryId
+                                            )
                                             // Dismiss any currently showing snackbar
                                             snackbarHostState.currentSnackbarData?.dismiss()
                                             snackbarHostState.showSnackbar(
                                                 message = "$courseName ${timetableEntry.type} notification disabled",
                                                 duration = SnackbarDuration.Short
                                             )
-                                        }
-                                    } else {
-                                        // Request permission before setting the notification
-                                        val activity = context as? Activity
-                                        activity?.let {
-                                            requestExactAlarmPermissionIfNeeded(it)
-                                        }
-                                        viewModel.setNotificationPreference(
-                                            context = context,
-                                            studentId = viewModel.studentId,
-                                            classSessionId = timetableEntry.entryId,
-                                            minutesBefore = minutes,
-                                            courseName = courseName
-                                        )
-                                        coroutineScope.launch {
+                                        } else {
+                                            // Request permission before setting the notification
+                                            val activity = context as? Activity
+                                            activity?.let {
+                                                requestExactAlarmPermissionIfNeeded(it)
+                                            }
+                                            // Call ViewModel function and get the scheduled time
+                                            val scheduledTimeMillis =
+                                                viewModel.setNotificationPreference(
+                                                    context = context,
+                                                    studentId = viewModel.studentId,
+                                                    classSessionId = timetableEntry.entryId,
+                                                    minutesBefore = minutes,
+                                                    courseName = courseName
+                                                )
                                             // Dismiss any currently showing snackbar
                                             snackbarHostState.currentSnackbarData?.dismiss()
                                             val warning = when {
@@ -339,8 +339,19 @@
                                                 !classRemindersEnabled -> " (Reminders disabled in settings)"
                                                 else -> ""
                                             }
+                                            val baseMessage = if (scheduledTimeMillis != null) {
+                                                // Format the scheduled time into a readable string
+                                                val scheduledDate = Date(scheduledTimeMillis)
+                                                val formatter = SimpleDateFormat("MMM dd 'at' h:mm a", Locale.getDefault())
+                                                val scheduledTimeString = formatter.format(scheduledDate)
+                                                // Construct the message
+                                                "$courseName ${timetableEntry.type} notification scheduled for $scheduledTimeString"
+                                            } else {
+                                                "Failed to schedule notification for $courseName ${timetableEntry.type}"
+                                            }
+
                                             snackbarHostState.showSnackbar(
-                                                message = "$courseName ${timetableEntry.type} notification set for $label$warning",
+                                                message = "$baseMessage$warning",
                                                 duration = SnackbarDuration.Short
                                             )
                                         }
