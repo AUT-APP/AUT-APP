@@ -283,7 +283,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 11)
                             set(Calendar.MINUTE, 0)
                         }.time,
-                        room = "WB101",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -297,7 +297,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 13)
                             set(Calendar.MINUTE, 30)
                         }.time,
-                        room = "WB102",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -311,7 +311,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 16)
                             set(Calendar.MINUTE, 0)
                         }.time,
-                        room = "WB103",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -325,7 +325,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 11)
                             set(Calendar.MINUTE, 0)
                         }.time,
-                        room = "WB104",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -339,7 +339,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 13)
                             set(Calendar.MINUTE, 30)
                         }.time,
-                        room = "WB105",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -353,7 +353,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 16)
                             set(Calendar.MINUTE, 0)
                         }.time,
-                        room = "WB106",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -367,7 +367,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 11)
                             set(Calendar.MINUTE, 0)
                         }.time,
-                        room = "WB107",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -381,7 +381,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 13)
                             set(Calendar.MINUTE, 30)
                         }.time,
-                        room = "WB108",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -395,7 +395,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 16)
                             set(Calendar.MINUTE, 0)
                         }.time,
-                        room = "WB109",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -409,7 +409,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 11)
                             set(Calendar.MINUTE, 0)
                         }.time,
-                        room = "WB110",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -423,7 +423,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 13)
                             set(Calendar.MINUTE, 30)
                         }.time,
-                        room = "WB111",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -437,7 +437,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 16)
                             set(Calendar.MINUTE, 0)
                         }.time,
-                        room = "WB112",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -451,7 +451,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 11)
                             set(Calendar.MINUTE, 0)
                         }.time,
-                        room = "WB113",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -465,7 +465,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 13)
                             set(Calendar.MINUTE, 30)
                         }.time,
-                        room = "WB114",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -479,7 +479,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 16)
                             set(Calendar.MINUTE, 0)
                         }.time,
-                        room = "WB115",
+                        room = "WG301",
                         type = "Lecture"
                     ),
                     TimetableEntry(
@@ -493,7 +493,7 @@ class LoginViewModel(
                             set(Calendar.HOUR_OF_DAY, 18)
                             set(Calendar.MINUTE, 30)
                         }.time,
-                        room = "WB116",
+                        room = "WG301",
                         type = "Lecture"
                     )
                 )
