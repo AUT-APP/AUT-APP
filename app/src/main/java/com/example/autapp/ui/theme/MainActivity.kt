@@ -1,36 +1,20 @@
 package com.example.autapp.ui.theme
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
@@ -42,14 +26,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.autapp.R
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.models.*
 import com.example.autapp.data.repository.*
 import com.example.autapp.ui.booking.BookingDetailsScreen
 import com.example.autapp.ui.booking.BookingScreen
 import com.example.autapp.ui.booking.BookingViewModel
-import com.example.autapp.ui.booking.BookingViewModelFactory
 import com.example.autapp.ui.booking.MyBookingsScreen
 import com.example.autapp.ui.calendar.CalendarScreen
 import com.example.autapp.ui.calendar.CalendarViewModel
@@ -73,9 +55,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import com.example.autapp.util.NotificationHelper
 import androidx.navigation.navDeepLink
 import com.example.autapp.data.datastores.SettingsDataStore
@@ -83,111 +62,17 @@ import com.example.autapp.data.repository.NotificationRepository
 import com.example.autapp.ui.notification.NotificationViewModel
 import com.example.autapp.ui.settings.SettingsViewModel
 import android.content.Context
+import com.example.autapp.ui.login.LoginViewModel
 
 class MainActivity : ComponentActivity() {
     private var currentStudentId by mutableStateOf<Int?>(null)
-    private val settingsDataStore by lazy { SettingsDataStore(this) }
-    private val loginViewModel: LoginViewModel by viewModels {
-        LoginViewModelFactory(
-            userRepository = UserRepository(AUTDatabase.getDatabase(this).userDao()),
-            studentRepository = StudentRepository(
-                studentDao = AUTDatabase.getDatabase(this).studentDao(),
-                userDao = AUTDatabase.getDatabase(this).userDao()
-            ),
-            courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
-            assignmentRepository = AssignmentRepository(
-                AUTDatabase.getDatabase(this).assignmentDao()
-            ),
-            gradeRepository = GradeRepository(
-                AUTDatabase.getDatabase(this).gradeDao(),
-                AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
-            ),
-            timetableEntryRepository = TimetableEntryRepository(
-                AUTDatabase.getDatabase(this).timetableEntryDao()
-            ),
-            notificationRepository = NotificationRepository(
-                AUTDatabase.getDatabase(this).notificationDao(),
-                AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
-            ),
-        )
-    }
 
-    private val dashboardViewModel: DashboardViewModel by viewModels {
-        DashboardViewModelFactory(
-            studentRepository = StudentRepository(
-                studentDao = AUTDatabase.getDatabase(this).studentDao(),
-                userDao = AUTDatabase.getDatabase(this).userDao()
-            ),
-            courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
-            gradeRepository = GradeRepository(
-                AUTDatabase.getDatabase(this).gradeDao(),
-                AssignmentRepository(AUTDatabase.getDatabase(this).assignmentDao())
-            ),
-            assignmentRepository = AssignmentRepository(
-                AUTDatabase.getDatabase(this).assignmentDao()
-            ),
-            notificationRepository = NotificationRepository(
-                AUTDatabase.getDatabase(this).notificationDao(),
-                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this)
-                    .timetableNotificationPreferenceDao(),
-            ),
-        )
-    }
-
-    private val calendarViewModel: CalendarViewModel by viewModels {
-        CalendarViewModelFactory(
-            timetableEntryRepository = TimetableEntryRepository(
-                AUTDatabase.getDatabase(this).timetableEntryDao()
-            ),
-            studentRepository = StudentRepository(
-                studentDao = AUTDatabase.getDatabase(this).studentDao(),
-                userDao = AUTDatabase.getDatabase(this).userDao()
-            ),
-            eventRepository = EventRepository(AUTDatabase.getDatabase(this).eventDao()),
-            bookingRepository = BookingRepository(
-                bookingDao = AUTDatabase.getDatabase(this).bookingDao(),
-                studySpaceDao = AUTDatabase.getDatabase(this).studySpaceDao()
-            )
-        )
-    }
-
-    private val bookingViewModel: BookingViewModel by viewModels {
-        BookingViewModelFactory(
-            bookingRepository = BookingRepository(
-                bookingDao = AUTDatabase.getDatabase(this).bookingDao(),
-                studySpaceDao = AUTDatabase.getDatabase(this).studySpaceDao()
-            ),
-            studySpaceRepository = StudySpaceRepository(
-                AUTDatabase.getDatabase(this).studySpaceDao()
-            )
-        )
-    }
-
-    private val notificationViewModel: NotificationViewModel by viewModels {
-        NotificationViewModelFactory(
-            studentRepository = StudentRepository(
-                studentDao = AUTDatabase.getDatabase(this).studentDao(),
-                userDao = AUTDatabase.getDatabase(this).userDao()
-            ),
-            notificationRepository = NotificationRepository(
-                AUTDatabase.getDatabase(this).notificationDao(),
-                timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this)
-                    .timetableNotificationPreferenceDao()
-            ),
-            timetableEntryRepository = TimetableEntryRepository(
-                AUTDatabase.getDatabase(this).timetableEntryDao()
-            ),
-            courseRepository = CourseRepository(AUTDatabase.getDatabase(this).courseDao()),
-            settingsDataStore = settingsDataStore
-        )
-    }
-
-    private val settingsViewModel: SettingsViewModel by viewModels {
-        SettingsViewModelFactory(
-            context = this
-        )
-    }
-
+    private val loginViewModel: LoginViewModel by viewModels { LoginViewModel.Factory }
+    private val dashboardViewModel: DashboardViewModel by viewModels { DashboardViewModel.Factory }
+    private val calendarViewModel: CalendarViewModel by viewModels { CalendarViewModel.Factory }
+    private val bookingViewModel: BookingViewModel by viewModels { BookingViewModel.Factory }
+    private val notificationViewModel: NotificationViewModel by viewModels { NotificationViewModel.Factory }
+    private val settingsViewModel: SettingsViewModel by viewModels { SettingsViewModel.Factory }
     private val chatViewModel: ChatViewModel by viewModels()
     private val transportViewModel: TransportViewModel by viewModels()
 
@@ -1249,123 +1134,6 @@ fun AppContent(
                     snackbarHostState = snackbarHostState // Pass to BookingDetailsScreen
                 )
             }
-
         }
-    }
-}
-
-class LoginViewModelFactory(
-    private val userRepository: UserRepository,
-    private val studentRepository: StudentRepository,
-    private val courseRepository: CourseRepository,
-    private val assignmentRepository: AssignmentRepository,
-    private val gradeRepository: GradeRepository,
-    private val timetableEntryRepository: TimetableEntryRepository,
-    private val notificationRepository: NotificationRepository
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return LoginViewModel(
-                userRepository,
-                studentRepository,
-                courseRepository,
-                assignmentRepository,
-                gradeRepository,
-                timetableEntryRepository,
-                notificationRepository
-            ) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
-class DashboardViewModelFactory(
-    private val studentRepository: StudentRepository,
-    private val courseRepository: CourseRepository,
-    private val gradeRepository: GradeRepository,
-    private val assignmentRepository: AssignmentRepository,
-    private val notificationRepository: NotificationRepository
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return DashboardViewModel(
-                studentRepository,
-                courseRepository,
-                gradeRepository,
-                assignmentRepository
-            ) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
-class CalendarViewModelFactory(
-    private val timetableEntryRepository: TimetableEntryRepository,
-    private val studentRepository: StudentRepository,
-    private val eventRepository: EventRepository,
-    private val bookingRepository: BookingRepository
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(CalendarViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return CalendarViewModel(
-                timetableEntryRepository,
-                studentRepository,
-                eventRepository,
-                bookingRepository
-            ) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
-class BookingViewModelFactory(
-    private val bookingRepository: BookingRepository,
-    private val studySpaceRepository: StudySpaceRepository
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-        if (modelClass.isAssignableFrom(BookingViewModel::class.java)) {
-            val savedStateHandle = extras.createSavedStateHandle()
-            @Suppress("UNCHECKED_CAST")
-            return BookingViewModel(bookingRepository, studySpaceRepository, savedStateHandle) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
-class NotificationViewModelFactory(
-    private val studentRepository: StudentRepository,
-    private val timetableEntryRepository: TimetableEntryRepository,
-    private val notificationRepository: NotificationRepository,
-    private val courseRepository: CourseRepository,
-    private val settingsDataStore: SettingsDataStore,
-
-    ) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(NotificationViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return NotificationViewModel(
-                studentRepository,
-                timetableEntryRepository,
-                courseRepository,
-                notificationRepository,
-                settingsDataStore
-            ) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
-class SettingsViewModelFactory(
-    private val context: Context,
-    ) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return SettingsViewModel(context) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

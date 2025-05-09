@@ -2,7 +2,13 @@ package com.example.autapp.ui.calendar
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.autapp.AUTApplication
 import com.example.autapp.data.dao.TimetableEntryDao
 import com.example.autapp.data.models.Event
 import com.example.autapp.data.models.Booking
@@ -10,6 +16,7 @@ import com.example.autapp.data.repository.TimetableEntryRepository
 import com.example.autapp.data.repository.StudentRepository
 import com.example.autapp.data.repository.EventRepository
 import com.example.autapp.data.repository.BookingRepository
+import com.example.autapp.ui.DashboardViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -419,6 +426,21 @@ class CalendarViewModel(
                     errorMessage = "Error loading events: ${e.message}",
                     events = emptyList(),
                     filteredEvents = emptyList()
+                )
+            }
+        }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = this[APPLICATION_KEY] as AUTApplication
+
+                CalendarViewModel(
+                    application.timetableEntryRepository,
+                    application.studentRepository,
+                    application.eventRepository,
+                    application.bookingRepository
                 )
             }
         }
