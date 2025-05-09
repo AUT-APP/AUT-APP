@@ -159,6 +159,8 @@ fun EmptyBookingsState(isDarkTheme: Boolean) {
 }@Composable
 fun BookingCard(booking: Booking, onCancel: () -> Unit, isDarkTheme: Boolean) {
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
+    var showCancelConfirmation by remember { mutableStateOf(false) } // State for dialog visibility
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -220,19 +222,67 @@ fun BookingCard(booking: Booking, onCancel: () -> Unit, isDarkTheme: Boolean) {
             Spacer(modifier = Modifier.height(16.dp))
             if (booking.isActive || booking.isUpcoming) {
                 Button(
-                    onClick = onCancel,
+                    onClick = { showCancelConfirmation = true }, // Show dialog instead of direct cancel
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = textColor
+                        contentColor = Color.White
                     )
                 ) {
                     Text("Cancel Booking")
                 }
             }
         }
+    }
+
+    // Confirmation Dialog for Canceling Booking
+    if (showCancelConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirmation = false },
+            title = {
+                Text("Confirm Cancellation", color = textColor, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column {
+                    Text("Are you sure you want to cancel this booking?", color = textColor)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Study Space: ${booking.level} - ${booking.roomId}", color = textColor)
+                    Text("Campus: ${booking.campus}", color = textColor)
+                    Text("Building: ${booking.building}", color = textColor)
+                    Text(
+                        "Date: ${SimpleDateFormat("dd MMM yyyy").format(booking.bookingDate)}",
+                        color = textColor
+                    )
+                    Text(
+                        "Time: ${SimpleDateFormat("HH:mm").format(booking.startTime)} - " +
+                                "${SimpleDateFormat("HH:mm").format(booking.endTime)}",
+                        color = textColor
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onCancel() // Trigger the cancel action
+                        showCancelConfirmation = false
+                    }
+                ) {
+                    Text("Confirm", color = textColor)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showCancelConfirmation = false }
+                ) {
+                    Text("Cancel", color = textColor)
+                }
+            },
+            containerColor = if (isDarkTheme) Color(0xFF242424) else Color.White,
+            titleContentColor = textColor,
+            textContentColor = textColor
+        )
     }
 }@Composable
 fun BookingStatusTag(booking: Booking, isDarkTheme: Boolean) {

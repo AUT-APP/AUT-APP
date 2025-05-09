@@ -1,4 +1,5 @@
 package com.example.autapp.ui.booking
+
 import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -27,8 +29,9 @@ import com.example.autapp.data.models.BookingSlot
 import com.example.autapp.data.models.SlotStatus
 import com.example.autapp.data.models.StudySpace
 import java.text.SimpleDateFormat
-import java.util.*@OptIn(ExperimentalMaterial3Api::class)
+import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookingScreen(
     viewModel: BookingViewModel,
@@ -42,58 +45,65 @@ fun BookingScreen(
     val campuses by viewModel.campuses.collectAsState()
     val buildings by viewModel.buildings.collectAsState()
     val studySpaces by viewModel.studySpaces.collectAsState()
+    val allLevels by viewModel.allLevels.collectAsState()
     val selectedCampus by viewModel.selectedCampus.collectAsState()
     val selectedBuilding by viewModel.selectedBuilding.collectAsState()
     val selectedSpaceId by viewModel.selectedSpaceId.collectAsState()
+    val selectedLevel by viewModel.selectedLevel.collectAsState()
     val selectedDate by viewModel.selectedDate.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val containerColor = if (isDarkTheme) Color(0xFF121212) else Color(0xFFF5F5F5)
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
 
-// Update selectedCampus when campuses are loaded
     LaunchedEffect(campuses) {
         if (campuses.isNotEmpty() && selectedCampus !in campuses) {
-            viewModel.updateFilters(campuses.first(), "", "All", selectedDate)
+            viewModel.updateFilters(campuses.first(), "", "All", allLevels.firstOrNull() ?: "", selectedDate)
             viewModel.fetchBuildings(campuses.first())
         }
     }
 
-// Update buildings when selectedCampus changes
     LaunchedEffect(selectedCampus) {
         if (selectedCampus.isNotEmpty()) {
             viewModel.fetchBuildings(selectedCampus)
+            viewModel.fetchAllLevels(selectedCampus, selectedBuilding)
             if (selectedBuilding !in buildings) {
-                viewModel.updateFilters(selectedCampus, "", "All", selectedDate)
+                viewModel.updateFilters(selectedCampus, "", "All", allLevels.firstOrNull() ?: "", selectedDate)
             }
         }
     }
 
-// Update study spaces when selectedBuilding changes
     LaunchedEffect(selectedBuilding) {
         if (selectedBuilding.isNotEmpty()) {
-            viewModel.fetchStudySpaces(selectedCampus, selectedBuilding)
+            viewModel.fetchStudySpaces(selectedCampus, selectedBuilding, selectedLevel)
+            viewModel.fetchAllLevels(selectedCampus, selectedBuilding)
             if (selectedSpaceId != "All" && studySpaces.none { it.spaceId == selectedSpaceId }) {
-                viewModel.updateFilters(selectedCampus, selectedBuilding, "All", selectedDate)
+                viewModel.updateFilters(selectedCampus, selectedBuilding, "All", allLevels.firstOrNull() ?: selectedLevel, selectedDate)
             }
         }
     }
 
-// Fetch available slots when filters change
-    LaunchedEffect(selectedCampus, selectedBuilding, selectedSpaceId, selectedDate) {
+    LaunchedEffect(selectedLevel) {
+        if (selectedBuilding.isNotEmpty()) {
+            viewModel.fetchStudySpaces(selectedCampus, selectedBuilding, selectedLevel)
+            if (selectedSpaceId != "All" && studySpaces.none { it.spaceId == selectedSpaceId }) {
+                viewModel.updateFilters(selectedCampus, selectedBuilding, "All", selectedLevel, selectedDate)
+            }
+        }
+    }
+
+    LaunchedEffect(selectedCampus, selectedBuilding, selectedSpaceId, selectedLevel, selectedDate) {
         if (selectedCampus.isNotEmpty() && selectedBuilding.isNotEmpty()) {
             viewModel.fetchAvailableSlots(
                 spaceId = if (selectedSpaceId == "All") null else selectedSpaceId,
                 building = selectedBuilding,
                 campus = selectedCampus,
-                level = studySpaces.find { it.spaceId == selectedSpaceId }?.level
-                    ?: studySpaces.firstOrNull()?.level ?: "",
+                level = if (selectedLevel.isEmpty()) null else selectedLevel,
                 date = selectedDate,
                 studentId = studentId
             )
         }
     }
 
-// Retry fetching campuses if empty
     LaunchedEffect(Unit) {
         if (campuses.isEmpty() && !isLoading) {
             viewModel.fetchCampuses()
@@ -121,23 +131,28 @@ fun BookingScreen(
         FilterBar(
             selectedCampus = selectedCampus,
             onCampusSelected = { campus ->
-                viewModel.updateFilters(campus, "", "All", selectedDate)
+                viewModel.updateFilters(campus, "", "All", allLevels.firstOrNull() ?: "", selectedDate)
             },
             selectedBuilding = selectedBuilding,
             onBuildingSelected = { building ->
-                viewModel.updateFilters(selectedCampus, building, "All", selectedDate)
+                viewModel.updateFilters(selectedCampus, building, "All", allLevels.firstOrNull() ?: "", selectedDate)
             },
             selectedSpaceId = selectedSpaceId,
             onSpaceSelected = { spaceId ->
-                viewModel.updateFilters(selectedCampus, selectedBuilding, spaceId, selectedDate)
+                viewModel.updateFilters(selectedCampus, selectedBuilding, spaceId, selectedLevel, selectedDate)
+            },
+            selectedLevel = selectedLevel,
+            onLevelSelected = { level ->
+                viewModel.updateFilters(selectedCampus, selectedBuilding, "All", level, selectedDate)
             },
             selectedDate = selectedDate,
             onDateSelected = { date ->
-                viewModel.updateFilters(selectedCampus, selectedBuilding, selectedSpaceId, date)
+                viewModel.updateFilters(selectedCampus, selectedBuilding, selectedSpaceId, selectedLevel, date)
             },
             campuses = campuses,
             buildings = buildings,
             studySpaces = studySpaces,
+            allLevels = allLevels,
             isDarkTheme = isDarkTheme
         )
 
@@ -171,8 +186,9 @@ fun BookingScreen(
             )
         }
     }
+}
 
-}@Composable
+@Composable
 fun BookingLegend(isDarkTheme: Boolean) {
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
     Row(
@@ -185,7 +201,9 @@ fun BookingLegend(isDarkTheme: Boolean) {
         LegendItem(color = Color(0xFF26A69A), text = "My Booking", textColor = textColor)
         LegendItem(color = Color.Gray, text = "Past", textColor = textColor)
     }
-}@Composable
+}
+
+@Composable
 fun LegendItem(color: Color, text: String, textColor: Color) {
     Row(
         verticalAlignment = Alignment.CenterVertically
@@ -198,7 +216,9 @@ fun LegendItem(color: Color, text: String, textColor: Color) {
         Spacer(modifier = Modifier.width(4.dp))
         Text(text, fontSize = 12.sp, color = textColor)
     }
-}@Composable
+}
+
+@Composable
 fun RoomBookingContent(
     levels: List<String>,
     bookingSlots: List<BookingSlot>,
@@ -233,8 +253,9 @@ fun RoomBookingContent(
             }
         }
     }
+}
 
-}@Composable
+@Composable
 fun LevelHeader(level: String, expanded: Boolean, onToggle: () -> Unit, isDarkTheme: Boolean) {
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
     Row(
@@ -253,7 +274,9 @@ fun LevelHeader(level: String, expanded: Boolean, onToggle: () -> Unit, isDarkTh
             tint = textColor
         )
     }
-}@Composable
+}
+
+@Composable
 fun BookingTable(
     bookingSlots: List<BookingSlot>,
     navController: NavController,
@@ -369,10 +392,9 @@ fun BookingTable(
                                 val slot = bookingSlots.find { it.roomId == spaceId && it.timeSlot == timeSlot }
                                 BookingSlotItem(
                                     slot = slot,
-                                    timeSlot = timeSlot,
                                     onClick = {
                                         if (slot?.status == SlotStatus.AVAILABLE) {
-                                            val dateStr = SimpleDateFormat("yyyy-MM-dd").format(selectedDate)
+                                            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(selectedDate)
                                             navController.navigate(
                                                 "booking_details/${slot.roomId}/${slot.level}/$dateStr/$timeSlot/$studentId/${slot.campus}/${slot.building}"
                                             )
@@ -390,11 +412,11 @@ fun BookingTable(
             }
         }
     }
+}
 
-}@Composable
+@Composable
 fun BookingSlotItem(
     slot: BookingSlot?,
-    timeSlot: String,
     onClick: () -> Unit,
     isDarkTheme: Boolean,
     modifier: Modifier = Modifier
@@ -434,8 +456,9 @@ fun BookingSlotItem(
             overflow = TextOverflow.Ellipsis
         )
     }
+}
 
-}@Composable
+@Composable
 fun FilterBar(
     selectedCampus: String,
     onCampusSelected: (String) -> Unit,
@@ -443,11 +466,14 @@ fun FilterBar(
     onBuildingSelected: (String) -> Unit,
     selectedSpaceId: String,
     onSpaceSelected: (String) -> Unit,
+    selectedLevel: String,
+    onLevelSelected: (String) -> Unit,
     selectedDate: Date,
     onDateSelected: (Date) -> Unit,
     campuses: List<String>,
     buildings: List<String>,
     studySpaces: List<StudySpace>,
+    allLevels: List<String>,
     isDarkTheme: Boolean
 ) {
     val context = LocalContext.current
@@ -455,7 +481,18 @@ fun FilterBar(
     var campusExpanded by remember { mutableStateOf(false) }
     var buildingExpanded by remember { mutableStateOf(false) }
     var spaceExpanded by remember { mutableStateOf(false) }
-    val spaceOptions = listOf("All") + studySpaces.map { it.spaceId }.sorted()
+    var levelExpanded by remember { mutableStateOf(false) }
+
+    // Remove "All" from levelOptions
+    val levelOptions = allLevels.sorted()
+    val spaceOptions = listOf("All") + studySpaces
+        .filter { selectedLevel.isEmpty() || it.level == selectedLevel }
+        .map { it.spaceId }
+        .sorted()
+
+    val isBuildingEnabled = selectedCampus.isNotEmpty() && campuses.contains(selectedCampus)
+    val isLevelEnabled = isBuildingEnabled && selectedBuilding.isNotEmpty() && buildings.contains(selectedBuilding)
+    val isSpaceEnabled = isLevelEnabled && selectedLevel.isNotEmpty() && levelOptions.contains(selectedLevel)
 
     Column {
         Row(
@@ -472,6 +509,7 @@ fun FilterBar(
                     onValueChange = { },
                     label = { Text("Campus", color = textColor) },
                     readOnly = true,
+                    enabled = campuses.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
                         Text(
@@ -497,7 +535,8 @@ fun FilterBar(
                         unfocusedBorderColor = textColor.copy(alpha = 0.5f),
                         disabledBorderColor = textColor.copy(alpha = 0.3f),
                         focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent
                     )
                 )
                 DropdownMenu(
@@ -530,7 +569,7 @@ fun FilterBar(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .clickable { campusExpanded = true }
+                        .clickable(enabled = campuses.isNotEmpty()) { campusExpanded = true }
                 )
             }
 
@@ -540,14 +579,15 @@ fun FilterBar(
                     .padding(start = 4.dp)
             ) {
                 OutlinedTextField(
-                    value = selectedBuilding.ifEmpty { "Select Building" },
+                    value = selectedBuilding.ifEmpty { if (isBuildingEnabled) "Select Building" else "Select Campus First" },
                     onValueChange = { },
                     label = { Text("Building", color = textColor) },
                     readOnly = true,
+                    enabled = isBuildingEnabled && buildings.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
                         Text(
-                            if (buildings.isEmpty()) "Select a campus first" else "Select Building",
+                            if (!isBuildingEnabled) "Select Campus" else if (buildings.isEmpty()) "Loading..." else "Select Building",
                             color = textColor.copy(alpha = 0.5f)
                         )
                     },
@@ -569,7 +609,8 @@ fun FilterBar(
                         unfocusedBorderColor = textColor.copy(alpha = 0.5f),
                         disabledBorderColor = textColor.copy(alpha = 0.3f),
                         focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent
                     )
                 )
                 DropdownMenu(
@@ -579,9 +620,9 @@ fun FilterBar(
                         .background(if (isDarkTheme) Color(0xFF242424) else Color.White)
                         .width(200.dp)
                 ) {
-                    if (buildings.isEmpty()) {
+                    if (!isBuildingEnabled || buildings.isEmpty()) {
                         DropdownMenuItem(
-                            text = { Text("Select a campus first", color = textColor, fontSize = 14.sp) },
+                            text = { Text(if (!isBuildingEnabled) "Select Campus First" else "Loading...", color = textColor, fontSize = 14.sp) },
                             onClick = { },
                             enabled = false,
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
@@ -602,85 +643,173 @@ fun FilterBar(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .clickable { buildingExpanded = true }
+                        .clickable(enabled = isBuildingEnabled && buildings.isNotEmpty()) { buildingExpanded = true }
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Box(
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            OutlinedTextField(
-                value = selectedSpaceId,
-                onValueChange = { },
-                label = { Text("Study Space", color = textColor) },
-                readOnly = true,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text(
-                        if (studySpaces.isEmpty()) "Select a building first" else "Select Space",
-                        color = textColor.copy(alpha = 0.5f)
-                    )
-                },
-                trailingIcon = {
-                    Icon(
-                        imageVector = if (spaceExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                        contentDescription = "Toggle Space Dropdown",
-                        tint = textColor
-                    )
-                },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = textColor,
-                    unfocusedTextColor = textColor,
-                    disabledTextColor = textColor.copy(alpha = 0.5f),
-                    focusedLabelColor = textColor,
-                    unfocusedLabelColor = textColor,
-                    disabledLabelColor = textColor.copy(alpha = 0.5f),
-                    focusedBorderColor = textColor,
-                    unfocusedBorderColor = textColor.copy(alpha = 0.5f),
-                    disabledBorderColor = textColor.copy(alpha = 0.3f),
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent
-                )
-            )
-            DropdownMenu(
-                expanded = spaceExpanded,
-                onDismissRequest = { spaceExpanded = false },
-                modifier = Modifier
-                    .background(if (isDarkTheme) Color(0xFF242424) else Color.White)
-                    .width(200.dp)
-            ) {
-                if (spaceOptions.isEmpty()) {
-                    DropdownMenuItem(
-                        text = { Text("Select a building first", color = textColor, fontSize = 14.sp) },
-                        onClick = { },
-                        enabled = false,
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                } else {
-                    spaceOptions.forEach { space ->
-                        DropdownMenuItem(
-                            text = { Text(space, color = textColor, fontSize = 14.sp) },
-                            onClick = {
-                                onSpaceSelected(space)
-                                spaceExpanded = false
-                            },
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-            }
             Box(
                 modifier = Modifier
-                    .matchParentSize()
-                    .clickable { spaceExpanded = true }
-            )
+                    .weight(1f)
+                    .padding(end = 4.dp)
+            ) {
+                OutlinedTextField(
+                    value = if (selectedLevel.isEmpty()) {
+                        if (isLevelEnabled) "Select Level" else "Select Building"
+                    } else {
+                        selectedLevel
+                    },
+                    onValueChange = { },
+                    label = { Text("Level", color = textColor) },
+                    readOnly = true,
+                    enabled = isLevelEnabled && levelOptions.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(
+                            if (!isLevelEnabled) "Select Building" else if (levelOptions.isEmpty()) "Loading..." else "Select Level",
+                            color = textColor.copy(alpha = 0.5f)
+                        )
+                    },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = if (levelExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                            contentDescription = "Toggle Level Dropdown",
+                            tint = textColor
+                        )
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = textColor,
+                        unfocusedTextColor = textColor,
+                        disabledTextColor = textColor.copy(alpha = 0.5f),
+                        focusedLabelColor = textColor,
+                        unfocusedLabelColor = textColor,
+                        disabledLabelColor = textColor.copy(alpha = 0.5f),
+                        focusedBorderColor = textColor,
+                        unfocusedBorderColor = textColor.copy(alpha = 0.5f),
+                        disabledBorderColor = textColor.copy(alpha = 0.3f),
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent
+                    )
+                )
+                DropdownMenu(
+                    expanded = levelExpanded,
+                    onDismissRequest = { levelExpanded = false },
+                    modifier = Modifier
+                        .background(if (isDarkTheme) Color(0xFF242424) else Color.White)
+                        .width(200.dp)
+                ) {
+                    if (!isLevelEnabled || levelOptions.isEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text(if (!isLevelEnabled) "Select Building First" else "Loading...", color = textColor, fontSize = 14.sp) },
+                            onClick = { },
+                            enabled = false,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    } else {
+                        levelOptions.forEach { level ->
+                            DropdownMenuItem(
+                                text = { Text(level, color = textColor, fontSize = 14.sp) },
+                                onClick = {
+                                    onLevelSelected(level)
+                                    levelExpanded = false
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable(enabled = isLevelEnabled && levelOptions.isNotEmpty()) { levelExpanded = true }
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 4.dp)
+            ) {
+                OutlinedTextField(
+                    value = selectedSpaceId.ifEmpty { if (isSpaceEnabled) "Select Space" else "Select Level First" },
+                    onValueChange = { },
+                    label = { Text("Space", color = textColor) },
+                    readOnly = true,
+                    enabled = isSpaceEnabled && spaceOptions.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(
+                            if (!isSpaceEnabled) "Select Level First" else if (spaceOptions.isEmpty()) "Loading..." else "Select Space",
+                            color = textColor.copy(alpha = 0.5f)
+                        )
+                    },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = if (spaceExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                            contentDescription = "Toggle Space Dropdown",
+                            tint = textColor
+                        )
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = textColor,
+                        unfocusedTextColor = textColor,
+                        disabledTextColor = textColor.copy(alpha = 0.5f),
+                        focusedLabelColor = textColor,
+                        unfocusedLabelColor = textColor,
+                        disabledLabelColor = textColor.copy(alpha = 0.5f),
+                        focusedBorderColor = textColor,
+                        unfocusedBorderColor = textColor.copy(alpha = 0.5f),
+                        disabledBorderColor = textColor.copy(alpha = 0.3f),
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent
+                    )
+                )
+                DropdownMenu(
+                    expanded = spaceExpanded,
+                    onDismissRequest = { spaceExpanded = false },
+                    modifier = Modifier
+                        .background(if (isDarkTheme) Color(0xFF242424) else Color.White)
+                        .width(200.dp)
+                ) {
+                    if (!isSpaceEnabled || spaceOptions.isEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text(if (!isSpaceEnabled) "Select Level First" else "Loading...", color = textColor, fontSize = 14.sp) },
+                            onClick = { },
+                            enabled = false,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    } else {
+                        spaceOptions.forEach { space ->
+                            DropdownMenuItem(
+                                text = { Text(space, color = textColor, fontSize = 14.sp) },
+                                onClick = {
+                                    onSpaceSelected(space)
+                                    spaceExpanded = false
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable(enabled = isSpaceEnabled && spaceOptions.isNotEmpty()) { spaceExpanded = true }
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Old Button for Date Selection
         Button(
             onClick = {
                 val calendar = Calendar.getInstance().apply { time = selectedDate }
@@ -701,14 +830,25 @@ fun FilterBar(
                 contentColor = textColor
             )
         ) {
-            Text(
-                "Date: ${SimpleDateFormat("dd MMM yyyy").format(selectedDate)}",
-                color = textColor
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarToday,
+                    contentDescription = "Select Date",
+                    tint = textColor
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Date: ${SimpleDateFormat("dd MMM yyyy", Locale.US).format(selectedDate)}",
+                    color = Color.White
+                )
+            }
         }
     }
+}
 
-}@Composable
+@Composable
 fun EmptyBookingSlotsState(isDarkTheme: Boolean) {
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
     Box(
@@ -722,13 +862,13 @@ fun EmptyBookingSlotsState(isDarkTheme: Boolean) {
         ) {
             Icon(
                 imageVector = Icons.Default.EventBusy,
-                contentDescription = "No Booking Slots",
+                contentDescription = "No Slots",
                 tint = textColor,
                 modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                "No booking slots found",
+                "No booking slots available",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 color = textColor
@@ -742,4 +882,3 @@ fun EmptyBookingSlotsState(isDarkTheme: Boolean) {
         }
     }
 }
-
