@@ -619,7 +619,7 @@ class MainActivity : ComponentActivity() {
                     ),
                     TimetableEntry(
                         courseId = 1,
-                        dayOfWeek = 5,
+                        dayOfWeek = 4,
                         startTime = calendar.apply {
                             set(Calendar.HOUR_OF_DAY, 9)
                             set(Calendar.MINUTE, 0)
