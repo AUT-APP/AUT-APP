@@ -109,9 +109,11 @@ fun StudentDashboard(
                 ) {
                     gradePair.forEach { gradeWithAssignment ->
                         val courseName = viewModel.courses.find {it.courseId == gradeWithAssignment.assignment.courseId}?.name ?: "Unknown"
+                        val courseTitle = viewModel.courses.find { it.courseId == gradeWithAssignment.assignment.courseId }?.title ?: "Untitled"
                         GradeCard(
                             gradeWithAssignment = gradeWithAssignment,
                             courseName = courseName,
+                            courseTitle = courseTitle,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -370,6 +372,7 @@ fun ClassCard(
 fun GradeCard(
     gradeWithAssignment: GradeDao.GradeWithAssignment,
     courseName: String,
+    courseTitle: String,
     modifier: Modifier = Modifier
 ) {
     val grade = gradeWithAssignment.grade
@@ -392,18 +395,16 @@ fun GradeCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
+
                     Text(
-                        text = assignment.name,
+                        text = courseTitle,
                         color = MaterialTheme.colorScheme.onPrimary,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1,
+                        maxLines = 2,
+                        fontSize = 16.sp,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = assignment.type,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontSize = 14.sp
-                    )
+
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -422,13 +423,8 @@ fun GradeCard(
                     fontSize = 28.sp,
                     modifier = Modifier.padding(top = 8.dp)
                 )
-
                 Text(
                     text = "Score: ${grade.score} / ${assignment.maxScore}",
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-                Text(
-                    text = "Weight: ${(assignment.weight * 100).toInt()}%",
                     color = MaterialTheme.colorScheme.onPrimary
                 )
                 Text(
