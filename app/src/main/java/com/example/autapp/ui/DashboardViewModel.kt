@@ -15,12 +15,15 @@ import com.example.autapp.data.repository.StudentRepository
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.autapp.data.models.TimetableEntry
+import com.example.autapp.data.repository.TimetableEntryRepository
 
 class DashboardViewModel(
     private val studentRepository: StudentRepository,
     private val courseRepository: CourseRepository,
     private val gradeRepository: GradeRepository,
-    private val assignmentRepository: AssignmentRepository
+    private val assignmentRepository: AssignmentRepository,
+    private val timetableEntryRepository: TimetableEntryRepository
 ) : ViewModel() {
 
     var studentId by mutableStateOf(0)
@@ -29,6 +32,7 @@ class DashboardViewModel(
     var courses by mutableStateOf<List<Course>>(emptyList())
     var studentGpa by mutableStateOf<Double?>(null)
     var errorMessage by mutableStateOf<String?>(null)
+    var timetableEntries by mutableStateOf<List<TimetableEntry>>(emptyList())
 
     private val dateFormat = SimpleDateFormat("EEEE - dd MMMM yyyy", Locale.getDefault())
     private val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
@@ -55,6 +59,9 @@ class DashboardViewModel(
                 assignments = assignmentRepository.getAllAssignments()
                     .filter { it.due.after(Date()) }
                     .sortedBy { it.due }
+
+                // fetch timetable entries
+                timetableEntries = timetableEntryRepository.getAllTimetableEntries()
 
                 errorMessage = null
             } catch (e: Exception) {

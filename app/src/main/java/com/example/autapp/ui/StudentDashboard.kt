@@ -39,13 +39,16 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.example.autapp.data.models.TimetableEntry
+
 
 
 @Composable
 fun StudentDashboard(
     viewModel: DashboardViewModel,
     paddingValues: PaddingValues,
-    isDarkTheme: Boolean
+    isDarkTheme: Boolean,
+    timetableEntries: List<TimetableEntry>
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
@@ -77,6 +80,7 @@ fun StudentDashboard(
                 viewModel.courses.take(2).forEach { course ->
                     ClassCard(
                         course = course,
+                        timetableEntries = viewModel.timetableEntries,
                         modifier = Modifier
                             .weight(1f)
                             .height(180.dp)
@@ -163,6 +167,7 @@ fun StudentDashboard(
                         coursePair.forEach { course ->
                             ClassCard(
                                 course = course,
+                                timetableEntries = viewModel.timetableEntries,
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(120.dp)
@@ -193,9 +198,15 @@ fun StudentDashboard(
 @Composable
 fun ClassCard(
     course: Course,
+    timetableEntries: List<TimetableEntry>,
     modifier: Modifier = Modifier
 ) {
     var showDialog by remember { mutableStateOf(false) }
+
+    val today = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+    val hasScheduleToday = timetableEntries.any {
+        it.courseId == course.courseId && it.dayOfWeek == today
+    }
 
     Card(
         modifier = modifier
@@ -301,6 +312,15 @@ fun ClassCard(
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        if (!hasScheduleToday) {
+                            Text(
+                                text = "No course scheduled for today.",
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
 
                         // Description Section
                         Row(verticalAlignment = Alignment.CenterVertically) {

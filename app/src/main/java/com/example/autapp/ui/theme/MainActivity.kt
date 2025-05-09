@@ -81,6 +81,7 @@ import androidx.navigation.navDeepLink
 import com.example.autapp.data.repository.NotificationRepository
 import com.example.autapp.ui.notification.NotificationViewModel
 
+
 class MainActivity : ComponentActivity() {
     private var currentStudentId by mutableStateOf<Int?>(null)
     private val loginViewModel: LoginViewModel by viewModels {
@@ -120,6 +121,7 @@ class MainActivity : ComponentActivity() {
                 AUTDatabase.getDatabase(this).notificationDao(),
                 timetableNotificationPreferenceDao = AUTDatabase.getDatabase(this).timetableNotificationPreferenceDao(),
             ),
+            timetableEntryRepository = TimetableEntryRepository(AUTDatabase.getDatabase(this).timetableEntryDao())
         )
     }
 
@@ -880,7 +882,8 @@ fun AppContent(
                 StudentDashboard(
                     viewModel = dashboardViewModel,
                     paddingValues = paddingValues,
-                    isDarkTheme = isDarkTheme
+                    isDarkTheme = isDarkTheme,
+                            timetableEntries = dashboardViewModel.timetableEntries
                 )
             }
         }
@@ -1225,7 +1228,8 @@ class DashboardViewModelFactory(
     private val courseRepository: CourseRepository,
     private val gradeRepository: GradeRepository,
     private val assignmentRepository: AssignmentRepository,
-    private val notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository,
+    private val timetableEntryRepository: TimetableEntryRepository,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
@@ -1234,7 +1238,9 @@ class DashboardViewModelFactory(
                 studentRepository,
                 courseRepository,
                 gradeRepository,
-                assignmentRepository
+                assignmentRepository,
+                timetableEntryRepository
+
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
