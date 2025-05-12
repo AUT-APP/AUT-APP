@@ -661,7 +661,7 @@ fun FilterBar(
             ) {
                 OutlinedTextField(
                     value = if (selectedLevel.isEmpty()) {
-                        if (isLevelEnabled) "Select Level" else "Select Building"
+                        if (isLevelEnabled) "Select Level" else "Select Level"
                     } else {
                         selectedLevel
                     },
