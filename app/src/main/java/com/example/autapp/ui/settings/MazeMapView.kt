@@ -70,7 +70,7 @@ fun MazeMapView() {
                     view?.evaluateJavascript("""
                         var style = document.createElement('style');
                         style.type = 'text/css';
-                        style.innerHTML = 'svg { width: 100% !important; height: 100% !important; } .maze-header { width: 400px !important; max-width: 400px !important; } .maze-header .search-button .maze-header-search-inset { font-size: 12px !important; line-height: 28px !important; border-width: 4px !important; padding: 4px 8px !important; } .maze-header .search-button .maze-header-search-inset svg { width: 12px !important; height: 12px !important; }';
+                        style.innerHTML = 'svg { width: 100% !important; height: 100% !important; } .maze-header { width: 360px !important; max-width: 360px !important; } .maze-header .search-button .maze-header-search-inset { font-size: 16px !important; line-height: 28px !important; border-width: 4px !important; padding: 4px 8px !important; } .maze-header .search-button .maze-header-search-inset svg { width: 6px !important; height: 12px !important; }';
                         document.head.appendChild(style);
                     """.trimIndent(), null)
                 }
