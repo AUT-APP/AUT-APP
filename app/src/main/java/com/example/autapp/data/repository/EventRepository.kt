@@ -13,10 +13,6 @@ class EventRepository(private val eventDao: EventDao) {
         eventDao.updateEvent(event)
     }
 
-    suspend fun deleteEvent(event: Event) {
-        eventDao.deleteEvent(event)
-    }
-
     suspend fun getEventById(eventId: Int): Event? {
         return eventDao.getEventById(eventId)
     }
@@ -35,10 +31,6 @@ class EventRepository(private val eventDao: EventDao) {
 
     suspend fun getEventsBetweenDates(studentId: Int, startDate: Date, endDate: Date): List<Event> {
         return eventDao.getEventsBetweenDates(studentId, startDate, endDate)
-    }
-
-    suspend fun deleteAllEventsByStudent(studentId: Int) {
-        eventDao.deleteAllEventsByStudent(studentId)
     }
 
     suspend fun getEventsByTitleAndDate(title: String, date: Date): List<Event> {

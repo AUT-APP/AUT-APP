@@ -17,6 +17,4 @@ interface StudentCourseCrossRefDao {
     @Query("SELECT * FROM student_course_cross_ref WHERE courseId = :courseId")
     suspend fun getByCourseId(courseId: Int): List<StudentCourseCrossRef>
 
-    @Query("DELETE FROM student_course_cross_ref")
-    suspend fun deleteAll()
-} 
+}

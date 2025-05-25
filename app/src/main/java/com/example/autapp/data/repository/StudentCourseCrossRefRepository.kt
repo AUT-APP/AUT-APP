@@ -22,7 +22,4 @@ class StudentCourseCrossRefRepository(
         return studentCourseCrossRefDao.getByCourseId(courseId)
     }
 
-    suspend fun deleteAll() {
-        studentCourseCrossRefDao.deleteAll()
-    }
-} 
+}

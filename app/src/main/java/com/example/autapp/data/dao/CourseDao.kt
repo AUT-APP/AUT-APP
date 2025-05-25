@@ -18,15 +18,12 @@ interface CourseDao {
     @Query("SELECT * FROM course_table")
     suspend fun getAllCourses(): List<Course>
 
+    @Query("SELECT * FROM course_table WHERE teacherId = :teacherId")
+    suspend fun getTeacherCourses(teacherId: Int): List<Course>
+
     @Query("SELECT * FROM timetable_entry_table WHERE courseId = :courseId")
     fun getTimetableForCourse(courseId: Int): List<TimetableEntry>
 
-    @Delete
-    suspend fun deleteCourse(course: Course)
-
     @Update
     suspend fun updateCourse(course: Course)
-
-    @Query("DELETE FROM course_table")
-    suspend fun deleteAll()
 }

@@ -17,15 +17,15 @@ class AssignmentRepository(private val assignmentDao: AssignmentDao) {
         return assignmentDao.getAllAssignments()
     }
 
-    suspend fun deleteAssignment(assignment: Assignment) {
-        assignmentDao.deleteAssignment(assignment)
+    suspend fun getAssignmentsForTeacherCourses(teacherId: Int): List<Assignment> {
+        return assignmentDao.getAssignmentsForTeacherCourses(teacherId)
     }
 
     suspend fun updateAssignment(assignment: Assignment) {
         assignmentDao.updateAssignment(assignment)
     }
 
-    suspend fun deleteAll() {
-        assignmentDao.deleteAll()
+    suspend fun deleteAssignment(assignment: Assignment) {
+        assignmentDao.deleteAssignment(assignment)
     }
 }

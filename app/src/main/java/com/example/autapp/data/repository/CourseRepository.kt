@@ -24,21 +24,18 @@ class CourseRepository(private val courseDao: CourseDao) {
         return courseDao.getAllCourses()
     }
 
+    suspend fun getTeacherCourses(teacherId: Int): List<Course> {
+        return courseDao.getTeacherCourses(teacherId)
+    }
+
     suspend fun getTimetableForCourse(courseId: Int): List<TimetableEntry> {
         return withContext(Dispatchers.IO) {
             courseDao.getTimetableForCourse(courseId)
         }
     }
 
-    suspend fun deleteCourse(course: Course) {
-        courseDao.deleteCourse(course)
-    }
-
     suspend fun updateCourse(course: Course) {
         courseDao.updateCourse(course)
     }
 
-    suspend fun deleteAll() {
-        courseDao.deleteAll()
-    }
 }

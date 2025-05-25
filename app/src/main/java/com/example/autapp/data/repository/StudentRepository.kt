@@ -53,15 +53,6 @@ class StudentRepository(
         return studentDao.getAllStudents()
     }
 
-    suspend fun deleteStudent(student: Student) {
-        studentDao.deleteStudent(student)
-        val user = userDao.getUserByUsername(student.username)
-        user?.let {
-            userDao.deleteUser(it)
-            Log.d("StudentRepository", "Deleted user: ${student.username}")
-        }
-    }
-
     suspend fun updateStudent(student: Student) {
         studentDao.updateStudent(student)
         val user = userDao.getUserByUsername(student.username)
@@ -88,11 +79,6 @@ class StudentRepository(
 
     suspend fun insertStudentCourseCrossRef(crossRef: StudentCourseCrossRef) {
         studentDao.insertStudentCourseCrossRef(crossRef)
-    }
-
-    suspend fun deleteAll() {
-        studentDao.deleteAll()
-        Log.d("StudentRepository", "Deleted all students and cross-references")
     }
 
     suspend fun getStudentCount(): Int {

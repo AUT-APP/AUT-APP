@@ -11,6 +11,7 @@ import com.example.autapp.data.repository.GradeRepository
 import com.example.autapp.data.repository.NotificationRepository
 import com.example.autapp.data.repository.StudentRepository
 import com.example.autapp.data.repository.StudySpaceRepository
+import com.example.autapp.data.repository.TeacherRepository
 import com.example.autapp.data.repository.TimetableEntryRepository
 import com.example.autapp.data.repository.TimetableNotificationPreferenceRepository
 import com.example.autapp.data.repository.UserRepository
@@ -21,7 +22,6 @@ class AUTApplication : Application() {
 
     // Initialize Room database
     val database: AUTDatabase by lazy {
-        AUTDatabase.resetInstance()
         AUTDatabase.getDatabase(this)
     }
 
@@ -46,6 +46,7 @@ class AUTApplication : Application() {
     val timetableNotificationPreferenceRepository by lazy {
         TimetableNotificationPreferenceRepository(database.timetableNotificationPreferenceDao())
     }
+    val teacherRepository by lazy { TeacherRepository(database.teacherDao(), database.userDao()) }
 
     override fun onCreate() {
         super.onCreate()

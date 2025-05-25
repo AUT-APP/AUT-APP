@@ -42,7 +42,8 @@ fun AUTTopAppBar(
     title: String,
     showBackButton: Boolean,
     currentRoute: String?,
-    currentStudentId: Int?,
+    currentUserId: Int?,
+    isTeacher: Boolean,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFF2F7A78)
@@ -55,7 +56,6 @@ fun AUTTopAppBar(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentRoute ?: navBackStackEntry?.destination?.route
-    val currentStudentId = currentStudentId ?: navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
 
     val expanded = remember { mutableStateOf(false) }
 
@@ -105,7 +105,11 @@ fun AUTTopAppBar(
                     tint = actionIconColor,
                     modifier = Modifier
                         .size(24.dp)
-                        .clickable { navController.navigate("notification/${currentStudentId}") }
+                        .clickable {
+                            currentUserId?.let { userId ->
+                                navController.navigate("notification/$userId")
+                            }
+                        }
                 )
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -170,13 +174,13 @@ fun AUTBottomBar(
     navController: NavController,
     calendarViewModel: CalendarViewModel,
     currentRoute: String?,
-    currentStudentId: Int?
+    currentUserId: Int?,
+    isTeacher: Boolean
 ) {
     val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
     val iconTint = if (isDarkTheme) Color.White else Color.Black
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentRoute ?: navBackStackEntry?.destination?.route
-    val currentStudentId = currentStudentId ?: navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
 
     NavigationBar(
         containerColor = backgroundColor,
@@ -185,12 +189,15 @@ fun AUTBottomBar(
         NavigationBarItem(
             icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = iconTint) },
             label = { Text("Home") },
-            selected = currentRoute?.startsWith("dashboard") == true,
+            selected = currentRoute?.startsWith("dashboard") == true || currentRoute?.startsWith("teacherDashboard") == true,
             onClick = {
-                if (currentStudentId != null && currentRoute?.startsWith("dashboard") != true) {
-                    navController.navigate("dashboard/$currentStudentId") {
-                        popUpTo("dashboard/$currentStudentId") { inclusive = false }
-                        launchSingleTop = true
+                currentUserId?.let { userId ->
+                    val destinationRoute = if (isTeacher) "teacherDashboard" else "dashboard/$userId"
+                    if (currentRoute != destinationRoute) {
+                        navController.navigate(destinationRoute) {
+                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 }
             }
@@ -200,13 +207,16 @@ fun AUTBottomBar(
             label = { Text("Calendar") },
             selected = currentRoute?.startsWith("calendar") == true,
             onClick = {
-                Log.d("MainActivity", "Calendar icon clicked")
-                if (currentRoute?.startsWith("calendar") != true) {
-                    currentStudentId?.let { studentId ->
-                        Log.d("MainActivity", "Navigating to calendar with student ID: $studentId")
-                        calendarViewModel.initialize(studentId)
-                        navController.navigate("calendar/$studentId") {
-                            popUpTo("dashboard/$studentId") { inclusive = false }
+                currentUserId?.let { userId ->
+                    Log.d("MainActivity", "Calendar icon clicked")
+                    if (currentRoute?.startsWith("calendar") != true) {
+                        Log.d("MainActivity", "Navigating to calendar with user ID: $userId")
+                        navController.navigate("calendar/$userId") {
+                            if (isTeacher) {
+                                popUpTo("teacherDashboard") { inclusive = false }
+                            } else {
+                                popUpTo("dashboard/$userId") { inclusive = false }
+                            }
                             launchSingleTop = true
                         }
                     }
@@ -218,12 +228,14 @@ fun AUTBottomBar(
             label = { Text("Bookings") },
             selected = currentRoute?.startsWith("bookings") == true,
             onClick = {
-                if (currentRoute?.startsWith("bookings") != true) {
-                    currentStudentId?.let { studentId ->
-                        navController.navigate("bookings/$studentId") {
-                            popUpTo("dashboard/$studentId") { inclusive = false }
+                currentUserId?.let { userId ->
+                    if (!isTeacher && currentRoute?.startsWith("bookings") != true) {
+                        navController.navigate("bookings/$userId") {
+                            popUpTo("dashboard/$userId") { inclusive = false }
                             launchSingleTop = true
                         }
+                    } else if (isTeacher) {
+                        Log.d("AUTBottomBar", "Teacher clicked Bookings, not supported yet.")
                     }
                 }
             }
@@ -239,10 +251,16 @@ fun AUTBottomBar(
             label = { Text("Transport") },
             selected = currentRoute?.startsWith("transport") == true,
             onClick = {
-                if (currentStudentId != null && currentRoute?.startsWith("transport") != true) {
-                    navController.navigate("transport/$currentStudentId") {
-                        popUpTo("dashboard/$currentStudentId") { inclusive = false }
-                        launchSingleTop = true
+                currentUserId?.let { userId ->
+                    if (currentRoute?.startsWith("transport") != true) {
+                        navController.navigate("transport/$userId") {
+                            if (isTeacher) {
+                                popUpTo("teacherDashboard") { inclusive = false }
+                            } else {
+                                popUpTo("dashboard/$userId") { inclusive = false }
+                            }
+                            launchSingleTop = true
+                        }
                     }
                 }
             }
