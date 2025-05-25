@@ -351,11 +351,6 @@ class CalendarViewModel(
             try {
                 // Get all events with the same title and date
                 val existingEvents = eventRepository.getEventsByTitleAndDate(event.title, event.date)
-                
-                // Delete all existing events
-                existingEvents.forEach { existingEvent ->
-                    eventRepository.deleteEvent(existingEvent)
-                }
 
                 // Insert the updated event
                 eventRepository.insertEvent(event)
@@ -397,9 +392,6 @@ class CalendarViewModel(
     fun deleteEvent(event: Event) {
         viewModelScope.launch {
             try {
-                // Delete the specific event
-                eventRepository.deleteEvent(event)
-                fetchEvents()
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }

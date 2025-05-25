@@ -14,12 +14,12 @@ interface AssignmentDao {
     @Query("SELECT * FROM assignment_table")
     suspend fun getAllAssignments(): List<Assignment>
 
-    @Delete
-    suspend fun deleteAssignment(assignment: Assignment)
+    @Query("SELECT * FROM assignment_table WHERE courseId IN (SELECT courseId FROM course_table WHERE teacherId = :teacherId)")
+    suspend fun getAssignmentsForTeacherCourses(teacherId: Int): List<Assignment>
 
     @Update
     suspend fun updateAssignment(assignment: Assignment)
 
-    @Query("DELETE FROM assignment_table")
-    suspend fun deleteAll()
+    @Delete
+    suspend fun deleteAssignment(assignment: Assignment)
 }

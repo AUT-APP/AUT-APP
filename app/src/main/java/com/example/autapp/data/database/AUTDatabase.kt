@@ -9,6 +9,9 @@ import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.autapp.data.dao.*
 import com.example.autapp.data.models.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Database(
     entities = [
@@ -26,7 +29,7 @@ import com.example.autapp.data.models.*
         StudySpace::class,
         Notification::class
     ],
-    version = 24,
+    version = 27,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -54,12 +57,13 @@ abstract class AUTDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AUTDatabase::class.java,
-                    "AUT_database_v24" // Change to Notification model
+                    "AUT_database" // Use a generic name, version is handled by annotation
                 )
                     .fallbackToDestructiveMigration()
                     .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
                     .addCallback(object : RoomDatabase.Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
+                            super.onCreate(db)
                             Log.d("AUTDatabase", "Database created")
                             // Enable foreign key constraints
                             db.execSQL("PRAGMA foreign_keys = ON;")
@@ -69,9 +73,6 @@ abstract class AUTDatabase : RoomDatabase() {
                             Log.d("AUTDatabase", "Database opened")
                             // Enable foreign key constraints
                             db.execSQL("PRAGMA foreign_keys = ON;")
-                            // Reset auto-increment counters by clearing sqlite_sequence
-                            db.execSQL("DELETE FROM sqlite_sequence")
-                            Log.d("AUTDatabase", "Auto-increment counters reset")
                             // Log current tables for debugging
                             val tables =
                                 db.query("SELECT name FROM sqlite_master WHERE type='table'")

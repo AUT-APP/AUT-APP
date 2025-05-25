@@ -5,6 +5,7 @@ import com.example.autapp.data.dao.TeacherDao
 import com.example.autapp.data.dao.UserDao
 import com.example.autapp.data.models.Teacher
 import com.example.autapp.data.models.User
+import com.example.autapp.data.models.Student
 
 class TeacherRepository(
     private val teacherDao: TeacherDao,
@@ -45,15 +46,6 @@ class TeacherRepository(
         return teacherDao.getAllTeachers()
     }
 
-    suspend fun deleteTeacher(teacher: Teacher) {
-        teacherDao.deleteTeacher(teacher)
-        val user = userDao.getUserByUsername(teacher.username)
-        user?.let {
-            userDao.deleteUser(it)
-            Log.d("TeacherRepository", "Deleted user: ${teacher.username}")
-        }
-    }
-
     suspend fun updateTeacher(teacher: Teacher) {
         teacherDao.updateTeacher(teacher)
         val user = userDao.getUserByUsername(teacher.username)
@@ -68,5 +60,9 @@ class TeacherRepository(
             userDao.updateUser(updatedUser)
             Log.d("TeacherRepository", "Updated user: ${teacher.username}")
         } ?: Log.w("TeacherRepository", "No user found for username: ${teacher.username}")
+    }
+
+    suspend fun getStudentsForCourse(teacherId: Int, courseId: Int): List<Student> {
+        return teacherDao.getStudentsInCourse(teacherId, courseId)
     }
 }

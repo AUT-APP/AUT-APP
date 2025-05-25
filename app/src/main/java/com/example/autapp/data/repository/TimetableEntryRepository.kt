@@ -37,7 +37,4 @@ class TimetableEntryRepository(private val timetableEntryDao: TimetableEntryDao)
         return timetableEntryDao.getTimetableEntriesWithCourseByDay(dayOfWeek)
     }
 
-    suspend fun deleteAll() {
-        timetableEntryDao.deleteAll()
-    }
-} 
+}

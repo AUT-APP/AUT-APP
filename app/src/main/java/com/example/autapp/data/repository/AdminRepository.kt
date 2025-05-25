@@ -45,15 +45,6 @@ class AdminRepository(
         return adminDao.getAllAdmins()
     }
 
-    suspend fun deleteAdmin(admin: Admin) {
-        adminDao.deleteAdmin(admin)
-        val user = userDao.getUserByUsername(admin.username)
-        user?.let {
-            userDao.deleteUser(it)
-            Log.d("AdminRepository", "Deleted user: ${admin.username}")
-        }
-    }
-
     suspend fun updateAdmin(admin: Admin) {
         adminDao.updateAdmin(admin)
         val user = userDao.getUserByUsername(admin.username)

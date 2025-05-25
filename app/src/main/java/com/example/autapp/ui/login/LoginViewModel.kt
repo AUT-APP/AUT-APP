@@ -12,6 +12,12 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.autapp.AUTApplication
 import com.example.autapp.data.repository.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import com.example.autapp.data.models.User
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class LoginViewModel(
     private val userRepository: UserRepository,
@@ -27,6 +33,9 @@ class LoginViewModel(
     var loginResult by mutableStateOf<String?>(null)
         private set
 
+    private val _currentUser = MutableStateFlow<User?>(null)
+    val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
+
     fun updateUsername(newUsername: String) {
         username = newUsername
     }
@@ -38,24 +47,37 @@ class LoginViewModel(
     fun login(onSuccess: (Int) -> Unit, onFailure: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val isValid = userRepository.checkUser(username, password)
+                val user = userRepository.getUserByUsername(username)
+
+                val isValid = user != null && userRepository.checkUser(username, password)
+
                 if (!isValid) {
                     loginResult = "Invalid credentials"
-                    onFailure("Invalid credentials")
+                    _currentUser.value = null
+                    withContext(Dispatchers.Main) { onFailure("Invalid credentials") }
                     return@launch
                 }
 
-                val student = studentRepository.getStudentByUsername(username)
-                if (student?.studentId != null) {
-                    loginResult = "Login successful"
-                    onSuccess(student.studentId)
-                } else {
-                    loginResult = "Error: Student not found"
-                    onFailure("Error: Student not found")
+                if (user != null) {
+                    _currentUser.value = user
+
+                    val student = studentRepository.getStudentByUsername(username)
+                    if (student?.studentId != null) {
+                        loginResult = "Login successful"
+                        withContext(Dispatchers.Main) { onSuccess(student.studentId) }
+                    } else if (user.role == "Teacher") {
+                        loginResult = "Teacher login successful"
+                        withContext(Dispatchers.Main) { onSuccess(user.id) }
+                    } else {
+                        loginResult = "Login successful, but not a recognized role"
+                        withContext(Dispatchers.Main) { onSuccess(user.id) }
+                    }
                 }
+
             } catch (e: Exception) {
                 loginResult = "Login error: ${e.message}"
-                onFailure("Login error: ${e.message}")
+                _currentUser.value = null
+                withContext(Dispatchers.Main) { onFailure("Login error: ${e.message}") }
             }
         }
     }
@@ -64,6 +86,7 @@ class LoginViewModel(
         username = ""
         password = ""
         loginResult = null
+        _currentUser.value = null
     }
 
     companion object {

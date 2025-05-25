@@ -33,10 +33,6 @@ class GradeRepository(
         return gradeDao.getAllGrades()
     }
 
-    suspend fun deleteGrade(grade: Grade) {
-        gradeDao.deleteGrade(grade)
-    }
-
     suspend fun updateGrade(grade: Grade) {
         gradeDao.updateGrade(grade)
     }
@@ -80,7 +76,4 @@ class GradeRepository(
         return if (gpa != null) String.format("%.3f / 9.0", gpa) else "GPA: Not available (insufficient credits)"
     }
 
-    suspend fun deleteAll() {
-        gradeDao.deleteAll()
-    }
 }

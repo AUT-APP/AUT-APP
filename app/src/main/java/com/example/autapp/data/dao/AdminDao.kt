@@ -17,9 +17,6 @@ interface AdminDao {
     @Query("SELECT * FROM admin_table")
     suspend fun getAllAdmins(): List<Admin>
 
-    @Delete
-    suspend fun deleteAdmin(admin: Admin)
-
     @Update
     suspend fun updateAdmin(admin: Admin)
 }
