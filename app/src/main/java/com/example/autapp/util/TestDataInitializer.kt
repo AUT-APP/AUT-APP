@@ -108,21 +108,24 @@ object TestDataInitializer {
                     name = "COMP101",
                     title = "Introduction to Programming",
                     description = "Basics of programming in Python",
-                    location = "WG-301"
+                    location = "WG-301",
+                    teacherId = 1
                 ),
                 Course(
                     courseId = 2,
                     name = "ENG201",
                     title = "Engineering Mechanics",
                     description = "Fundamentals of statics and dynamics",
-                    location = "WA-402"
+                    location = "WA-402",
+                    teacherId = 1
                 ),
                 Course(
                     courseId = 3,
                     name = "BUS301",
                     title = "Business Management",
                     description = "Principles of management and leadership",
-                    location = "WZ-503"
+                    location = "WZ-503",
+                    teacherId = 1
                 )
             )
 
