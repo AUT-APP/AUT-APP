@@ -41,6 +41,10 @@ class TeacherRepository(
         return teacherDao.getTeacherById(teacherId)
     }
 
+    suspend fun getTeacherByTeacherId(teacherId: Int): Teacher? {
+        return teacherDao.getTeacherByTeacherId(teacherId)
+    }
+
     suspend fun getAllTeachers(): List<Teacher> {
         return teacherDao.getAllTeachers()
     }

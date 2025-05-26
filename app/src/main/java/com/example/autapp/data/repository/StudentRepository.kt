@@ -3,12 +3,8 @@ package com.example.autapp.data.repository
 import android.util.Log
 import androidx.room.Transaction
 import com.example.autapp.data.dao.StudentDao
-import com.example.autapp.data.models.CourseWithEnrollmentInfo
 import com.example.autapp.data.dao.UserDao
-import com.example.autapp.data.models.Student
-import com.example.autapp.data.models.StudentCourseCrossRef
-import com.example.autapp.data.models.StudentWithCourses
-import com.example.autapp.data.models.User
+import com.example.autapp.data.models.*
 
 class StudentRepository(
     private val studentDao: StudentDao,
@@ -49,6 +45,10 @@ class StudentRepository(
         return studentDao.getStudentById(studentId)
     }
 
+    suspend fun getStudentByStudentId(studentId: Int): Student? {
+        return studentDao.getStudentByStudentId(studentId)
+    }
+
     suspend fun getAllStudents(): List<Student> {
         return studentDao.getAllStudents()
     }
@@ -87,11 +87,21 @@ class StudentRepository(
     }
 
     suspend fun insertStudentCourseCrossRef(crossRef: StudentCourseCrossRef) {
-        studentDao.insertStudentCourseCrossRef(crossRef)
+        if (!isEnrolled(crossRef.studentId, crossRef.courseId, crossRef.year, crossRef.semester)) {
+            studentDao.insertStudentCourseCrossRef(crossRef)
+            Log.d("StudentRepository", "Enrolled student ${crossRef.studentId} in course ${crossRef.courseId} for ${crossRef.year}, Semester ${crossRef.semester}")
+        } else {
+            Log.d("StudentRepository", "Skipped duplicate enrollment for student ${crossRef.studentId} in course ${crossRef.courseId} for ${crossRef.year}, Semester ${crossRef.semester}")
+        }
+    }
+
+    suspend fun isEnrolled(studentId: Int, courseId: Int, year: Int, semester: Int): Boolean {
+        return studentDao.getCrossRef(studentId, courseId, year, semester) != null
     }
 
     suspend fun deleteAll() {
         studentDao.deleteAll()
+        studentDao.deleteAllCrossRefs()
         Log.d("StudentRepository", "Deleted all students and cross-references")
     }
 
@@ -99,5 +109,28 @@ class StudentRepository(
         val count = studentDao.getAllStudents().size
         Log.d("StudentRepository", "Student count: $count")
         return count
+    }
+
+    suspend fun updateStudentCourses(studentId: Int, courseIds: List<Int>, year: Int, semester: Int) {
+        // Remove existing course enrollments for the student
+        studentDao.deleteCrossRefsByStudentId(studentId)
+
+        // Add new course enrollments
+        courseIds.forEach { courseId ->
+            if (!isEnrolled(studentId, courseId, year, semester)) {
+                studentDao.insertStudentCourseCrossRef(
+                    StudentCourseCrossRef(studentId, courseId, year, semester)
+                )
+            }
+        }
+        Log.d("StudentRepository", "Updated courses for student $studentId")
+    }
+
+    suspend fun deleteCrossRefsByStudentId(studentId: Int) {
+        studentDao.deleteCrossRefsByStudentId(studentId)
+    }
+
+    suspend fun getStudentCourses(studentId: Int): List<Course> {
+        return studentDao.getStudentCoursesWithEnrollmentInfo(studentId).map { it.course }
     }
 }

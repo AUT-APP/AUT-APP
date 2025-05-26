@@ -81,7 +81,6 @@ dependencies {
 
 // Time dependencies
     implementation("com.jakewharton.threetenabp:threetenabp:1.4.6")
-
 // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
 

@@ -24,16 +24,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.autapp.R
 import com.example.autapp.ui.calendar.CalendarViewModel
-import kotlin.String
 
-// Define the TopAppBar composable
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AUTTopAppBar(
@@ -58,6 +55,7 @@ fun AUTTopAppBar(
     val currentStudentId = currentStudentId ?: navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
 
     val expanded = remember { mutableStateOf(false) }
+    val isAdminRoute = currentRoute?.startsWith("admin_dashboard") == true
 
     TopAppBar(
         title = {
@@ -67,7 +65,7 @@ fun AUTTopAppBar(
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp)
             ) {
-                if (showBackButton) {
+                if (showBackButton && !isAdminRoute) {
                     IconButton(onClick = {
                         if (currentRoute?.startsWith("dashboard") != true) {
                             navController.navigateUp()
@@ -90,25 +88,26 @@ fun AUTTopAppBar(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Icon(
-                    painter = painterResource(id = R.drawable.chatbot_assistant_icon),
-                    contentDescription = "AI Chat",
-                    tint = actionIconColor,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable { navController.navigate("chat") }
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Notifications",
-                    tint = actionIconColor,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable { navController.navigate("notification/${currentStudentId}") }
-                )
-
-                Spacer(modifier = Modifier.width(16.dp))
+                if (!isAdminRoute) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.chatbot_assistant_icon),
+                        contentDescription = "AI Chat",
+                        tint = actionIconColor,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { navController.navigate("chat") }
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Icon(
+                        imageVector = Icons.Outlined.Notifications,
+                        contentDescription = "Notifications",
+                        tint = actionIconColor,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { currentStudentId?.let { navController.navigate("notification/$it") } }
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                }
                 Box(
                     modifier = Modifier
                         .size(32.dp)
@@ -143,7 +142,6 @@ fun AUTTopAppBar(
                             text = { Text("Logout") },
                             onClick = {
                                 expanded.value = false
-                                // TODO: Add proper user sessions
                                 if (currentRoute?.startsWith("login") != true) {
                                     navController.navigate("login")
                                 }
@@ -163,7 +161,6 @@ fun AUTTopAppBar(
     )
 }
 
-// Define the Bottom NavigationBar composable
 @Composable
 fun AUTBottomBar(
     isDarkTheme: Boolean,
@@ -177,86 +174,88 @@ fun AUTBottomBar(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentRoute ?: navBackStackEntry?.destination?.route
     val currentStudentId = currentStudentId ?: navBackStackEntry?.arguments?.getString("studentId")?.toIntOrNull()
+    val isAdminRoute = currentRoute?.startsWith("admin_dashboard") == true
 
-    NavigationBar(
-        containerColor = backgroundColor,
-        contentColor = iconTint
-    ) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = iconTint) },
-            label = { Text("Home") },
-            selected = currentRoute?.startsWith("dashboard") == true,
-            onClick = {
-                if (currentStudentId != null && currentRoute?.startsWith("dashboard") != true) {
-                    navController.navigate("dashboard/$currentStudentId") {
-                        popUpTo("dashboard/$currentStudentId") { inclusive = false }
-                        launchSingleTop = true
-                    }
-                }
-            }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar", tint = iconTint) },
-            label = { Text("Calendar") },
-            selected = currentRoute?.startsWith("calendar") == true,
-            onClick = {
-                Log.d("MainActivity", "Calendar icon clicked")
-                if (currentRoute?.startsWith("calendar") != true) {
-                    currentStudentId?.let { studentId ->
-                        Log.d("MainActivity", "Navigating to calendar with student ID: $studentId")
-                        calendarViewModel.initialize(studentId)
-                        navController.navigate("calendar/$studentId") {
-                            popUpTo("dashboard/$studentId") { inclusive = false }
+    if (!isAdminRoute) {
+        NavigationBar(
+            containerColor = backgroundColor,
+            contentColor = iconTint
+        ) {
+            NavigationBarItem(
+                icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = iconTint) },
+                label = { Text("Home") },
+                selected = currentRoute?.startsWith("dashboard") == true,
+                onClick = {
+                    if (currentStudentId != null && currentRoute?.startsWith("dashboard") != true) {
+                        navController.navigate("dashboard/$currentStudentId") {
+                            popUpTo("dashboard/$currentStudentId") { inclusive = false }
                             launchSingleTop = true
                         }
                     }
                 }
-            }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Event, contentDescription = "Bookings", tint = iconTint) },
-            label = { Text("Bookings") },
-            selected = currentRoute?.startsWith("bookings") == true,
-            onClick = {
-                if (currentRoute?.startsWith("bookings") != true) {
-                    currentStudentId?.let { studentId ->
-                        navController.navigate("bookings/$studentId") {
-                            popUpTo("dashboard/$studentId") { inclusive = false }
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar", tint = iconTint) },
+                label = { Text("Calendar") },
+                selected = currentRoute?.startsWith("calendar") == true,
+                onClick = {
+                    Log.d("MainActivity", "Calendar icon clicked")
+                    if (currentRoute?.startsWith("calendar") != true) {
+                        currentStudentId?.let { studentId ->
+                            Log.d("MainActivity", "Navigating to calendar with student ID: $studentId")
+                            calendarViewModel.initialize(studentId)
+                            navController.navigate("calendar/$studentId") {
+                                popUpTo("dashboard/$studentId") { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                }
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Outlined.Event, contentDescription = "Bookings", tint = iconTint) },
+                label = { Text("Bookings") },
+                selected = currentRoute?.startsWith("bookings") == true,
+                onClick = {
+                    if (currentRoute?.startsWith("bookings") != true) {
+                        currentStudentId?.let { studentId ->
+                            navController.navigate("bookings/$studentId") {
+                                popUpTo("dashboard/$studentId") { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                }
+            )
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_directions),
+                        contentDescription = "Transport",
+                        tint = iconTint
+                    )
+                },
+                label = { Text("Transport") },
+                selected = currentRoute?.startsWith("transport") == true,
+                onClick = {
+                    if (currentStudentId != null && currentRoute?.startsWith("transport") != true) {
+                        navController.navigate("transport/$currentStudentId") {
+                            popUpTo("dashboard/$currentStudentId") { inclusive = false }
                             launchSingleTop = true
                         }
                     }
                 }
-            }
-        )
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    painter = painterResource(id = android.R.drawable.ic_menu_directions),
-                    contentDescription = "Transport",
-                    tint = iconTint
-                )
-            },
-            label = { Text("Transport") },
-            selected = currentRoute?.startsWith("transport") == true,
-            onClick = {
-                if (currentStudentId != null && currentRoute?.startsWith("transport") != true) {
-                    navController.navigate("transport/$currentStudentId") {
-                        popUpTo("dashboard/$currentStudentId") { inclusive = false }
-                        launchSingleTop = true
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = iconTint) },
+                label = { Text("More") },
+                selected = currentRoute == "settings",
+                onClick = {
+                    if (currentRoute?.startsWith("settings") != true) {
+                        navController.navigate("settings")
                     }
                 }
-            }
-        )
-
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = iconTint) },
-            label = { Text("More") },
-            selected = currentRoute == "settings",
-            onClick = {
-                if (currentRoute?.startsWith("settings") != true) {
-                    navController.navigate("settings")
-                }
-            }
-        )
+            )
+        }
     }
 }

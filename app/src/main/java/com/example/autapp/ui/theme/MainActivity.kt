@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.autapp.ui.admin.AdminDashboardScreen
 import com.example.autapp.ui.booking.BookingDetailsScreen
 import com.example.autapp.ui.booking.BookingScreen
 import com.example.autapp.ui.booking.BookingViewModel
@@ -54,6 +55,8 @@ import com.example.autapp.ui.login.LoginViewModel
 import com.example.autapp.ui.notification.NotificationViewModel
 import com.example.autapp.ui.settings.SettingsViewModel
 import com.example.autapp.util.TestDataInitializer
+import com.example.autapp.AUTApplication
+import com.example.autapp.ui.login.ChangePasswordScreen
 
 class MainActivity : ComponentActivity() {
     private var currentStudentId by mutableStateOf<Int?>(null)
@@ -71,21 +74,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
 
-        // Insert test data
-        runBlocking {
-            try {
-                TestDataInitializer.insertTestData(applicationContext)
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Error inserting test data: ${e.message}", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Error inserting test data: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-        }
 
         val settingsDataStore = SettingsDataStore(applicationContext)
         val coroutineScope = CoroutineScope(Dispatchers.Main)
@@ -118,7 +106,8 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     currentStudentId = currentStudentId,
-                    onStudentIdChange = { currentStudentId = it }
+                    onStudentIdChange = { currentStudentId = it },
+                    application = application as AUTApplication
                 )
             }
         }
@@ -134,11 +123,12 @@ fun AppContent(
     chatViewModel: ChatViewModel,
     transportViewModel: TransportViewModel,
     notificationViewModel: NotificationViewModel,
+    settingsViewModel: SettingsViewModel,
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit,
     currentStudentId: Int?,
     onStudentIdChange: (Int) -> Unit,
-    settingsViewModel: SettingsViewModel
+    application: AUTApplication
 ) {
     val navController = rememberNavController()
 
@@ -209,13 +199,40 @@ fun AppContent(
         composable("login") {
             LoginScreen(
                 viewModel = loginViewModel,
-                onLoginSuccess = { studentId ->
-                    onStudentIdChange(studentId)
-                    dashboardViewModel.initialize(studentId)
-                    navController.navigate("dashboard/$studentId") {
-                        popUpTo("login") { inclusive = true }
+                onLoginSuccess = { userId, role ->
+                    when (role) {
+                        "Admin" -> {
+                            navController.navigate("admin_dashboard") {
+                                popUpTo("login") { inclusive = true }
+                            }
+                        }
+                        "Student" -> {
+                            onStudentIdChange(userId)
+                            dashboardViewModel.initialize(userId)
+                            navController.navigate("dashboard/$userId") {
+                                popUpTo("login") { inclusive = true }
+                            }
+                        }
+                        "Teacher" -> {
+                            onStudentIdChange(userId)
+                            dashboardViewModel.initialize(userId)
+                            navController.navigate("dashboard/$userId") {
+                                popUpTo("login") { inclusive = true }
+                            }
+                        }
                     }
-                }
+                },
+                navController = navController,
+                isDarkTheme = isDarkTheme
+            )
+        }
+        composable("admin_dashboard") {
+            AdminDashboardScreen(
+                studentRepository = application.studentRepository,
+                teacherRepository = application.teacherRepository,
+                courseRepository = application.courseRepository,
+                departmentRepository = application.departmentRepository,
+                navController = navController
             )
         }
         composable(
@@ -258,7 +275,7 @@ fun AppContent(
                     viewModel = dashboardViewModel,
                     paddingValues = paddingValues,
                     isDarkTheme = isDarkTheme,
-                            timetableEntries = dashboardViewModel.timetableEntries
+                    timetableEntries = dashboardViewModel.timetableEntries
                 )
             }
         }
@@ -397,7 +414,7 @@ fun AppContent(
             val studentId = currentStudentId ?: backStackEntry.arguments?.getInt("studentId") ?: 0
             val campus = backStackEntry.arguments?.getString("campus") ?: ""
             val building = backStackEntry.arguments?.getString("building") ?: ""
-            val snackbarHostState = remember { SnackbarHostState() } // Define here
+            val snackbarHostState = remember { SnackbarHostState() }
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -421,7 +438,7 @@ fun AppContent(
                 snackbarHost = {
                     SnackbarHost(
                         hostState = snackbarHostState,
-                        modifier = Modifier.padding(16.dp) // Ensure visibility
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             ) { paddingValues ->
@@ -437,7 +454,7 @@ fun AppContent(
                     building = building,
                     isDarkTheme = isDarkTheme,
                     paddingValues = paddingValues,
-                    snackbarHostState = snackbarHostState // Pass to BookingDetailsScreen
+                    snackbarHostState = snackbarHostState
                 )
             }
         }
@@ -445,7 +462,8 @@ fun AppContent(
             route = "transport/{studentId}",
             arguments = listOf(navArgument("studentId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments!!.getInt("studentId")
+            val studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
+            onStudentIdChange(studentId)
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -538,7 +556,7 @@ fun AppContent(
                     isClassRemindersEnabled = settingsViewModel.isClassRemindersEnabled.collectAsState(initial = true).value,
                     onToggleClassReminders = { settingsViewModel.setClassRemindersEnabled(it) },
                     onToggleTheme = onToggleTheme,
-                    paddingValues = paddingValues,
+                    paddingValues = paddingValues
                 )
             }
         }
@@ -555,7 +573,7 @@ fun AppContent(
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
-                        title = "Bookings",
+                        title = "Notifications",
                         isDarkTheme = isDarkTheme,
                         navController = navController,
                         showBackButton = true,
@@ -575,7 +593,7 @@ fun AppContent(
                 snackbarHost = {
                     SnackbarHost(
                         hostState = snackbarHostState,
-                        modifier = Modifier.padding(16.dp) // Ensure visibility
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             ) { paddingValues ->
@@ -585,7 +603,36 @@ fun AppContent(
                     snackbarHostState = snackbarHostState
                 )
             }
-
+        }
+        composable(
+            route = "change_password/{username}/{role}/{userId}",
+            arguments = listOf(
+                navArgument("username") { type = NavType.StringType },
+                navArgument("role") { type = NavType.StringType },
+                navArgument("userId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val username = backStackEntry.arguments?.getString("username") ?: ""
+            val role = backStackEntry.arguments?.getString("role") ?: ""
+            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+            ChangePasswordScreen(
+                viewModel = loginViewModel,
+                navController = navController,
+                username = username,
+                role = role,
+                userId = userId,
+                isDarkTheme = isDarkTheme,
+                onPasswordChanged = {
+                    when (role) {
+                        "Admin" -> navController.navigate("admin_dashboard") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                        "Student", "Teacher" -> navController.navigate("dashboard/$userId") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    }
+                }
+            )
         }
     }
 }

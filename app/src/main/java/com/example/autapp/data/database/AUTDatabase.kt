@@ -6,6 +6,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.autapp.data.dao.*
 import com.example.autapp.data.models.*
@@ -24,10 +25,13 @@ import com.example.autapp.data.models.*
         Event::class,
         Booking::class,
         StudySpace::class,
-        Notification::class
+        Notification::class,
+        Admin::class,
+        Department::class,
+        ActivityLog::class
     ],
-    version = 24,
-    exportSchema = false
+    version = 30,
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AUTDatabase : RoomDatabase() {
@@ -43,38 +47,55 @@ abstract class AUTDatabase : RoomDatabase() {
     abstract fun studySpaceDao(): StudySpaceDao
     abstract fun notificationDao(): NotificationDao
     abstract fun timetableNotificationPreferenceDao(): TimetableNotificationPreferenceDao
-
+    abstract fun adminDao(): AdminDao
+    abstract fun departmentDao(): DepartmentDao
+    abstract fun activityLogDao(): ActivityLogDao
 
     companion object {
         @Volatile
         private var INSTANCE: AUTDatabase? = null
+
+        // Migration from 28 to 29 (no-op, as per original)
+        val MIGRATION_28_29 = object : Migration(28, 29) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                Log.d("AUTDatabase", "Migrating from version 28 to 29")
+                // No schema changes; preserves existing data
+            }
+        }
+
+        // Migration from 29 to 30: Add activity_log table
+        val MIGRATION_29_30 = object : Migration(29, 30) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                Log.d("AUTDatabase", "Migrating from version 29 to 30")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS activity_log (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        description TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
         fun getDatabase(context: Context): AUTDatabase {
             return INSTANCE ?: synchronized(this) {
                 Log.d("AUTDatabase", "Building new database instance")
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AUTDatabase::class.java,
-                    "AUT_database_v24" // Change to Notification model
+                    "AUT_database"
                 )
-                    .fallbackToDestructiveMigration()
                     .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
                     .addCallback(object : RoomDatabase.Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             Log.d("AUTDatabase", "Database created")
-                            // Enable foreign key constraints
                             db.execSQL("PRAGMA foreign_keys = ON;")
                         }
 
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             Log.d("AUTDatabase", "Database opened")
-                            // Enable foreign key constraints
                             db.execSQL("PRAGMA foreign_keys = ON;")
-                            // Reset auto-increment counters by clearing sqlite_sequence
-                            db.execSQL("DELETE FROM sqlite_sequence")
-                            Log.d("AUTDatabase", "Auto-increment counters reset")
-                            // Log current tables for debugging
-                            val tables =
-                                db.query("SELECT name FROM sqlite_master WHERE type='table'")
+                            val tables = db.query("SELECT name FROM sqlite_master WHERE type='table'")
                             tables.use {
                                 while (it.moveToNext()) {
                                     Log.d("AUTDatabase", "Table on open: ${it.getString(0)}")
@@ -82,15 +103,12 @@ abstract class AUTDatabase : RoomDatabase() {
                             }
                         }
                     })
+                    .addMigrations(MIGRATION_28_29, MIGRATION_29_30)
+                    .fallbackToDestructiveMigration() // Wipe database if migrations are missing
                     .build()
                 INSTANCE = instance
                 instance
             }
-        }
-
-        fun resetInstance() {
-            INSTANCE = null
-            Log.d("AUTDatabase", "Database instance reset")
         }
     }
 }
