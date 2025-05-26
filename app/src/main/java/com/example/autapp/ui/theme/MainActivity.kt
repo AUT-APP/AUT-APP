@@ -243,6 +243,57 @@ fun AppContent(
                 }
             }
         }
+        composable("teacherDashboard") {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            val userId = currentTeacherId
+
+            if (userId != null) {
+                LaunchedEffect(userId) {
+                    if (teacherDashboardViewModel.teacherId != userId) {
+                        teacherDashboardViewModel.initialize(userId)
+                    }
+                }
+                
+                Scaffold(
+                    topBar = {
+                        AUTTopAppBar(
+                            title = "Teacher Dashboard",
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            showBackButton = false,
+                            currentRoute = currentRoute,
+                            currentUserId = userId,
+                            isTeacher = true
+                        )
+                    },
+                    bottomBar = {
+                        AUTBottomBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            calendarViewModel = calendarViewModel,
+                            currentRoute = currentRoute,
+                            currentUserId = userId,
+                            isTeacher = true
+                        )
+                    }
+                ) { paddingValues ->
+                    TeacherDashboard(
+                        viewModel = teacherDashboardViewModel,
+                        modifier = Modifier.fillMaxSize(),
+                        teacherId = userId,
+                        paddingValues = paddingValues
+                    )
+                }
+            } else {
+                // If no teacher ID is available, navigate to login
+                LaunchedEffect(Unit) {
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
+                }
+            }
+        }
         composable(
             route = "calendar/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.IntType })
