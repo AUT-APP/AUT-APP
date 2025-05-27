@@ -8,6 +8,7 @@ import com.example.autapp.data.repository.BookingRepository
 import com.example.autapp.data.repository.CourseRepository
 import com.example.autapp.data.repository.EventRepository
 import com.example.autapp.data.repository.GradeRepository
+import com.example.autapp.data.repository.MaterialRepository
 import com.example.autapp.data.repository.NotificationRepository
 import com.example.autapp.data.repository.StudentRepository
 import com.example.autapp.data.repository.StudySpaceRepository
@@ -28,6 +29,7 @@ class AUTApplication : Application() {
     // Initialize repositories
     val userRepository by lazy { UserRepository(database.userDao()) }
     val studentRepository by lazy { StudentRepository(database.studentDao(), database.userDao()) }
+    val materialRepository by lazy { MaterialRepository(database.materialDao()) }
     val courseRepository by lazy { CourseRepository(database.courseDao()) }
     val assignmentRepository by lazy { AssignmentRepository(database.assignmentDao()) }
     val gradeRepository by lazy { GradeRepository(database.gradeDao(), assignmentRepository) }

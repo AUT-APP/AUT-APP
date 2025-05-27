@@ -24,9 +24,10 @@ import com.example.autapp.data.models.*
         Event::class,
         Booking::class,
         StudySpace::class,
-        Notification::class
+        Notification::class,
+        Material::class
     ],
-    version = 24,
+    version = 25,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -43,6 +44,8 @@ abstract class AUTDatabase : RoomDatabase() {
     abstract fun studySpaceDao(): StudySpaceDao
     abstract fun notificationDao(): NotificationDao
     abstract fun timetableNotificationPreferenceDao(): TimetableNotificationPreferenceDao
+    abstract fun materialDao(): MaterialDao
+
 
 
     companion object {
