@@ -3,7 +3,6 @@ package com.example.autapp.data.dao
 import androidx.room.*
 import com.example.autapp.data.models.Assignment
 import com.example.autapp.data.models.Grade
-import java.util.Date
 
 @Dao
 interface GradeDao {
@@ -21,9 +20,6 @@ interface GradeDao {
 
     @Query("SELECT * FROM grade_table")
     suspend fun getAllGrades(): List<Grade>
-
-    @Delete
-    suspend fun deleteGrade(grade: Grade)
 
     @Update
     suspend fun updateGrade(grade: Grade)
@@ -53,6 +49,4 @@ interface GradeDao {
     @Query("SELECT * FROM grade_table WHERE studentId = :studentId AND assignmentId IN (SELECT assignmentId FROM assignment_table WHERE type = :type)")
     suspend fun getGradesWithAssignmentsByType(studentId: Int, type: String): List<GradeWithAssignment>
 
-    @Query("DELETE FROM grade_table")
-    suspend fun deleteAll()
 }

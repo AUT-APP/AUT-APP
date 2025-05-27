@@ -24,6 +24,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 import com.example.autapp.data.models.TimetableEntry
 import com.example.autapp.data.repository.TimetableEntryRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class DashboardViewModel(
     private val studentRepository: StudentRepository,
@@ -39,7 +42,8 @@ class DashboardViewModel(
     var courses by mutableStateOf<List<Course>>(emptyList())
     var studentGpa by mutableStateOf<Double?>(null)
     var errorMessage by mutableStateOf<String?>(null)
-    var timetableEntries by mutableStateOf<List<TimetableEntry>>(emptyList())
+    private val _timetableEntries = MutableStateFlow<List<TimetableEntry>>(emptyList())
+    val timetableEntries: StateFlow<List<TimetableEntry>> = _timetableEntries.asStateFlow()
 
     private val dateFormat = SimpleDateFormat("EEEE - dd MMMM yyyy", Locale.getDefault())
     private val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
@@ -68,7 +72,7 @@ class DashboardViewModel(
                     .sortedBy { it.due }
 
                 // fetch timetable entries
-                timetableEntries = timetableEntryRepository.getAllTimetableEntries()
+                _timetableEntries.value = timetableEntryRepository.getAllTimetableEntries()
 
                 errorMessage = null
             } catch (e: Exception) {

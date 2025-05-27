@@ -12,9 +12,6 @@ interface EventDao {
     @Update
     suspend fun updateEvent(event: Event)
 
-    @Delete
-    suspend fun deleteEvent(event: Event)
-
     @Query("SELECT * FROM event_table WHERE eventId = :eventId")
     suspend fun getEventById(eventId: Int): Event?
 
@@ -29,9 +26,6 @@ interface EventDao {
 
     @Query("SELECT * FROM event_table WHERE studentId = :studentId AND date BETWEEN :startDate AND :endDate ORDER BY date, startTime")
     suspend fun getEventsBetweenDates(studentId: Int, startDate: Date, endDate: Date): List<Event>
-
-    @Query("DELETE FROM event_table WHERE studentId = :studentId")
-    suspend fun deleteAllEventsByStudent(studentId: Int)
 
     @Query("SELECT * FROM event_table WHERE title = :title AND date = :date")
     suspend fun getEventsByTitleAndDate(title: String, date: Date): List<Event>

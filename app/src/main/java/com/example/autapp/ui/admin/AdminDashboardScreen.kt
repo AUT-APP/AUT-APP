@@ -42,6 +42,7 @@ fun AdminDashboardScreen(
     courseRepository: CourseRepository,
     departmentRepository: DepartmentRepository,
     navController: NavController,
+    isDarkTheme: Boolean = false // Added for dynamic theme
 ) {
     val viewModel: AdminDashboardViewModel = viewModel(
         factory = AdminDashboardViewModel.Factory
@@ -74,17 +75,18 @@ fun AdminDashboardScreen(
         topBar = {
             AUTTopAppBar(
                 title = "Admin Dashboard",
-                isDarkTheme = false,
+                isDarkTheme = isDarkTheme,
                 navController = navController,
                 showBackButton = false, // Admin dashboard is top-level
                 currentRoute = "admin_dashboard",
-                currentStudentId = null,
+                currentUserId = null, // No user ID for admin
+                isTeacher = false // Admin is not a teacher
             )
         },
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(8.dp)
             ) { data ->
                 Snackbar(
                     snackbarData = data,
@@ -115,7 +117,7 @@ fun AdminDashboardScreen(
                     courses = courses,
                     departments = departments,
                     onCreateStudent = { showCreateStudentDialog = true },
-                    onEditStudent = { showEditStudentDialog = it },
+                    onEditClickStudent = { showEditStudentDialog = it },
                     onDeleteStudents = { showDeleteStudentDialog = it },
                     onBulkEnroll = { showBulkEnrollDialog = true }
                 )
@@ -336,14 +338,13 @@ fun AdminDashboardScreen(
     }
 }
 
-// Rest of the file (StudentsTab, TeachersTab, etc.) remains unchanged
 @Composable
 fun StudentsTab(
     students: List<Student>,
     courses: List<Course>,
     departments: List<Department>,
     onCreateStudent: () -> Unit,
-    onEditStudent: (Student) -> Unit,
+    onEditClickStudent: (Student) -> Unit,
     onDeleteStudents: (List<Student>) -> Unit,
     onBulkEnroll: () -> Unit
 ) {
@@ -410,15 +411,18 @@ fun StudentsTab(
                 ) {
                     DropdownMenuItem(
                         text = { Text("Name") },
-                        onClick = { sortBy = "name"; sortExpanded = false }
+                        onClick = { sortBy = "name"; sortExpanded = false },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     )
                     DropdownMenuItem(
                         text = { Text("ID") },
-                        onClick = { sortBy = "id"; sortExpanded = false }
+                        onClick = { sortBy = "id"; sortExpanded = false },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     )
                     DropdownMenuItem(
                         text = { Text("Enrollment Date") },
-                        onClick = { sortBy = "enrollment"; sortExpanded = false }
+                        onClick = { sortBy = "enrollment"; sortExpanded = false },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
             }
@@ -490,7 +494,7 @@ fun StudentsTab(
                         student = student,
                         courses = courses,
                         departments = departments,
-                        onEdit = { onEditStudent(student) },
+                        onEdit = { onEditClickStudent(student) },
                         onDelete = { onDeleteStudents(listOf(student)) }
                     )
                 }
@@ -568,11 +572,13 @@ fun TeachersTab(
                 ) {
                     DropdownMenuItem(
                         text = { Text("Name") },
-                        onClick = { sortBy = "name"; sortExpanded = false }
+                        onClick = { sortBy = "name"; sortExpanded = false },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     )
                     DropdownMenuItem(
                         text = { Text("ID") },
-                        onClick = { sortBy = "id"; sortExpanded = false }
+                        onClick = { sortBy = "id"; sortExpanded = false },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
             }
@@ -698,7 +704,7 @@ fun ActivityTab(
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        "Time: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date(activity.timestamp))}",
+                        "Time: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date(activity.timestamp))}",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -858,7 +864,7 @@ fun StudentFormDialog(
     var firstName by remember { mutableStateOf(student?.firstName ?: "") }
     var lastName by remember { mutableStateOf(student?.lastName ?: "") }
     var role by remember { mutableStateOf(student?.role ?: "Student") }
-    var enrollmentDate by remember { mutableStateOf(student?.enrollmentDate ?: SimpleDateFormat("yyyy-MM-dd").format(Date())) }
+    var enrollmentDate by remember { mutableStateOf(student?.enrollmentDate ?: SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())) }
     var majorId by remember { mutableStateOf(student?.majorId ?: 0) }
     var minorId by remember { mutableStateOf(student?.minorId) }
     var yearOfStudy by remember { mutableStateOf(student?.yearOfStudy?.toString() ?: "") }
@@ -891,7 +897,7 @@ fun StudentFormDialog(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            dob = SimpleDateFormat("yyyy-MM-dd").format(Date(millis))
+                            dob = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(millis))
                         }
                         showDatePicker = false
                     }
@@ -960,7 +966,8 @@ fun StudentFormDialog(
                                 onClick = {
                                     majorId = department.departmentId
                                     majorExpanded = false
-                                }
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
                     }
@@ -984,7 +991,8 @@ fun StudentFormDialog(
                             onClick = {
                                 minorId = null
                                 minorExpanded = false
-                            }
+                            },
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                         )
                         departments.filter { it.type == "Minor" }.forEach { department ->
                             DropdownMenuItem(
@@ -992,7 +1000,8 @@ fun StudentFormDialog(
                                 onClick = {
                                     minorId = department.departmentId
                                     minorExpanded = false
-                                }
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
                     }
@@ -1172,7 +1181,8 @@ fun BulkEnrollDialog(
                                 onClick = {
                                     courseId = course.courseId
                                     courseExpanded = false
-                                }
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
                     }
@@ -1286,7 +1296,7 @@ fun TeacherFormDialog(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            dob = SimpleDateFormat("yyyy-MM-dd").format(Date(millis))
+                            dob = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(millis))
                         }
                         showDatePicker = false
                     }
@@ -1349,7 +1359,8 @@ fun TeacherFormDialog(
                                 onClick = {
                                     departmentId = department.departmentId
                                     expanded = false
-                                }
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
                     }
@@ -1414,7 +1425,8 @@ fun TeacherFormDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
+        },
+        modifier = Modifier.width(600.dp)
     )
 }
 
@@ -1469,7 +1481,8 @@ fun DepartmentFormDialog(
                                 onClick = {
                                     type = t
                                     expanded = false
-                                }
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
                     }
@@ -1509,6 +1522,7 @@ fun DepartmentFormDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
+        },
+        modifier = Modifier.width(600.dp)
     )
 }

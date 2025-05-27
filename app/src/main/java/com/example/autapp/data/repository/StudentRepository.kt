@@ -53,15 +53,6 @@ class StudentRepository(
         return studentDao.getAllStudents()
     }
 
-    suspend fun deleteStudent(student: Student) {
-        studentDao.deleteStudent(student)
-        val user = userDao.getUserByUsername(student.username)
-        user?.let {
-            userDao.deleteUser(it)
-            Log.d("StudentRepository", "Deleted user: ${student.username}")
-        }
-    }
-
     suspend fun updateStudent(student: Student) {
         studentDao.updateStudent(student)
         val user = userDao.getUserByUsername(student.username)
@@ -74,8 +65,8 @@ class StudentRepository(
                 role = student.role
             )
             userDao.updateUser(updatedUser)
-            Log.d("StudentRepository", "Updated user: ${student.username}")
-        } ?: Log.w("StudentRepository", "No user found for username: ${student.username}")
+            Log.d("StudentRepository", "Updated user: ${student.id}")
+        } ?: Log.w("StudentRepository", "No user found for username: ${student.id}")
     }
 
     suspend fun getStudentWithCourses(studentId: Int): StudentWithCourses? {
@@ -105,6 +96,20 @@ class StudentRepository(
         Log.d("StudentRepository", "Deleted all students and cross-references")
     }
 
+    @Transaction
+    suspend fun deleteStudent(student: Student) {
+        // Delete course enrollments
+        studentDao.deleteCrossRefsByStudentId(student.studentId)
+        // Delete student
+        studentDao.deleteStudent(student)
+        // Delete associated user
+        userDao.getUserByUsername(student.username)?.let {
+            userDao.deleteUser(it)
+            Log.d("StudentRepository", "Deleted user: ${student.username}")
+        }
+        Log.d("StudentRepository", "Deleted student: ${student.firstName} ${student.lastName} (ID: ${student.studentId})")
+    }
+
     suspend fun getStudentCount(): Int {
         val count = studentDao.getAllStudents().size
         Log.d("StudentRepository", "Student count: $count")
@@ -112,10 +117,10 @@ class StudentRepository(
     }
 
     suspend fun updateStudentCourses(studentId: Int, courseIds: List<Int>, year: Int, semester: Int) {
-        // Remove existing course enrollments for the student
+        // Remove existing courses for the student
         studentDao.deleteCrossRefsByStudentId(studentId)
 
-        // Add new course enrollments
+        // Add new courses
         courseIds.forEach { courseId ->
             if (!isEnrolled(studentId, courseId, year, semester)) {
                 studentDao.insertStudentCourseCrossRef(

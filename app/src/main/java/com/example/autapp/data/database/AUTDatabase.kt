@@ -10,6 +10,9 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.autapp.data.dao.*
 import com.example.autapp.data.models.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Database(
     entities = [
@@ -30,7 +33,7 @@ import com.example.autapp.data.models.*
         Department::class,
         ActivityLog::class
     ],
-    version = 30,
+    version = 20,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -83,11 +86,12 @@ abstract class AUTDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AUTDatabase::class.java,
-                    "AUT_database"
+                    "database"
                 )
                     .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
                     .addCallback(object : RoomDatabase.Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
+                            super.onCreate(db)
                             Log.d("AUTDatabase", "Database created")
                             db.execSQL("PRAGMA foreign_keys = ON;")
                         }
@@ -95,6 +99,7 @@ abstract class AUTDatabase : RoomDatabase() {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             Log.d("AUTDatabase", "Database opened")
                             db.execSQL("PRAGMA foreign_keys = ON;")
+                            // Log current tables for debugging
                             val tables = db.query("SELECT name FROM sqlite_master WHERE type='table'")
                             tables.use {
                                 while (it.moveToNext()) {

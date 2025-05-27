@@ -23,9 +23,6 @@ interface StudentDao {
     @Query("SELECT * FROM student_table")
     suspend fun getAllStudents(): List<Student>
 
-    @Delete
-    suspend fun deleteStudent(student: Student)
-
     @Update
     suspend fun updateStudent(student: Student)
 
@@ -35,8 +32,8 @@ interface StudentDao {
 
     @Transaction
     @Query("""
-        SELECT course_table.courseId, course_table.name, course_table.title, course_table.description,
-               course_table.location, student_course_cross_ref.year, student_course_cross_ref.semester
+        SELECT course_table.courseId, course_table.name, course_table.title, course_table.description, course_table.objectives, course_table.location, course_table.teacherId,
+               student_course_cross_ref.year, student_course_cross_ref.semester
         FROM course_table
         INNER JOIN student_course_cross_ref
         ON course_table.courseId = student_course_cross_ref.courseId
@@ -58,4 +55,7 @@ interface StudentDao {
 
     @Query("SELECT * FROM student_course_cross_ref WHERE studentId = :studentId AND courseId = :courseId AND year = :year AND semester = :semester")
     suspend fun getCrossRef(studentId: Int, courseId: Int, year: Int, semester: Int): StudentCourseCrossRef?
+
+    @Delete
+    suspend fun deleteStudent(student: Student)
 }
