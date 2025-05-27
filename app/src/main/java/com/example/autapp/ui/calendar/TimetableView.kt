@@ -4,6 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
@@ -22,6 +26,18 @@ fun TimetableView(
     onEventClick: (Event) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var selectedEntryForReminder by remember { mutableStateOf<TimetableEntryDao.TimetableEntryWithCourse?>(null) }
+
+    selectedEntryForReminder?.let { selectedEntry ->
+        ReminderBottomSheet(
+            onDismiss = { selectedEntryForReminder = null },
+            onSelectTime = { minutes ->
+                // You could call a ViewModel method here to save reminder time
+                // e.g., viewModel.setReminder(selectedEntry, minutes)
+                selectedEntryForReminder = null
+            }
+        )
+    }
     val today = LocalDate.now()
     LazyColumn(
         modifier = modifier
@@ -95,7 +111,10 @@ fun TimetableView(
                                     entry = entry,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
+                                        .padding(vertical = 4.dp),
+                                    onReminderClick = {
+                                        selectedEntryForReminder = entry
+                                    }
                                 )
                             }
                             is Event -> {

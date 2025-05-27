@@ -54,6 +54,20 @@ fun CalendarView(
     // State to keep track of the currently displayed month and year.
     // Initialized with the month and year of the initially selected date from uiState.
     var currentYearMonth by remember { mutableStateOf(YearMonth.from(uiState.selectedDate)) }
+    var selectedEntryForReminder by remember { mutableStateOf<TimetableEntryDao.TimetableEntryWithCourse?>(null) }
+
+    selectedEntryForReminder?.let { selectedEntry ->
+        ReminderBottomSheet(
+            onDismiss = { selectedEntryForReminder = null },
+            onSelectTime = { minutes ->
+                // You could call a ViewModel method here to save reminder time
+                // e.g., viewModel.setReminder(selectedEntry, minutes)
+                selectedEntryForReminder = null
+            }
+        )
+    }
+
+
 
     Column(
         modifier = modifier.fillMaxWidth()
@@ -203,7 +217,12 @@ fun CalendarView(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(selectedDateEntries) { entry: TimetableEntryDao.TimetableEntryWithCourse ->
-                    TimetableEntryCard(entry = entry)
+                    TimetableEntryCard(
+                        entry = entry,
+                        onReminderClick = {
+                            selectedEntryForReminder = entry
+                        }
+                    )
                 }
 
                 items(selectedDateEvents) { event: Event ->
