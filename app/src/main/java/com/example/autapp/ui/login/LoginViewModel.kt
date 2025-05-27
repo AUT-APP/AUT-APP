@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.autapp.data.models.User
+import android.util.Log
 
 class LoginViewModel(
     private val userRepository: UserRepository,
@@ -59,6 +60,7 @@ class LoginViewModel(
                     loginResult = "Login successful"
                     currentUserRole = "Admin"
                     _currentUser.value = null // No user object for admin
+                    Log.d("LoginViewModel", "Admin login successful")
                     onSuccess(0, "Admin", false, null)
                     return@launch
                 }
@@ -70,6 +72,7 @@ class LoginViewModel(
                 if (!isValid) {
                     loginResult = "Invalid credentials"
                     _currentUser.value = null
+                    Log.d("LoginViewModel", "Invalid credentials for username: $username")
                     withContext(Dispatchers.Main) { onFailure("Invalid credentials") }
                     return@launch
                 }
@@ -83,10 +86,12 @@ class LoginViewModel(
                                 loginResult = "Login successful"
                                 dob = student.dob
                                 currentUserRole = "Student"
+                                Log.d("LoginViewModel", "Student login successful: ${user.username}, isFirstLogin: ${user.isFirstLogin}")
                                 onSuccess(student.studentId, "Student", user.isFirstLogin, student.dob)
                             } else {
                                 loginResult = "Error: Student not found"
                                 _currentUser.value = null
+                                Log.d("LoginViewModel", "Student not found for username: $username")
                                 onFailure("Error: Student not found")
                             }
                         }
@@ -96,16 +101,19 @@ class LoginViewModel(
                                 loginResult = "Login successful"
                                 dob = teacher.dob
                                 currentUserRole = "Teacher"
+                                Log.d("LoginViewModel", "Teacher login successful: ${user.username}, isFirstLogin: ${user.isFirstLogin}")
                                 onSuccess(teacher.teacherId, "Teacher", user.isFirstLogin, teacher.dob)
                             } else {
                                 loginResult = "Error: Teacher not found"
                                 _currentUser.value = null
+                                Log.d("LoginViewModel", "Teacher not found for username: $username")
                                 onFailure("Error: Teacher not found")
                             }
                         }
                         else -> {
                             loginResult = "Error: Invalid user role"
                             _currentUser.value = null
+                            Log.d("LoginViewModel", "Invalid user role for username: $username")
                             onFailure("Error: Invalid user role")
                         }
                     }
@@ -114,6 +122,7 @@ class LoginViewModel(
             } catch (e: Exception) {
                 loginResult = "Login error: ${e.message}"
                 _currentUser.value = null
+                Log.e("LoginViewModel", "Login error: ${e.message}")
                 withContext(Dispatchers.Main) { onFailure("Login error: ${e.message}") }
             }
         }
@@ -141,11 +150,14 @@ class LoginViewModel(
                             }
                         }
                     }
+                    Log.d("LoginViewModel", "Password updated for: $username, isFirstLogin set to false")
                     onSuccess()
                 } else {
+                    Log.d("LoginViewModel", "User not found for password update: $username")
                     onFailure("User not found")
                 }
             } catch (e: Exception) {
+                Log.e("LoginViewModel", "Error updating password: ${e.message}")
                 onFailure("Error updating password: ${e.message}")
             }
         }
@@ -162,6 +174,7 @@ class LoginViewModel(
         dob = null
         currentUserRole = null
         _currentUser.value = null
+        Log.d("LoginViewModel", "State reset")
     }
 
     companion object {

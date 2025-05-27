@@ -143,7 +143,9 @@ fun LoginScreen(
                         viewModel.login(
                             onSuccess = { userId, role, isFirstLogin, _ ->
                                 if (isFirstLogin && role != "Admin") {
-                                    navController.navigate("change_password/$username/$role/$userId")
+                                    navController.navigate("change_password/$username/$role/$userId") {
+                                        popUpTo("login") { inclusive = true } // Clear back stack
+                                    }
                                 } else {
                                     onLoginSuccess(userId, role)
                                 }

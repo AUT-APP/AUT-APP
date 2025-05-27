@@ -18,13 +18,14 @@ class TeacherRepository(
         val existingUser = userDao.getUserByUsername(teacher.username)
         var userId: Int
         if (existingUser == null) {
-            // Insert user and get the generated ID
+            // Insert user with isFirstLogin = true
             val user = User(
                 firstName = teacher.firstName,
                 lastName = teacher.lastName,
                 username = teacher.username,
                 password = teacher.password,
-                role = teacher.role
+                role = teacher.role,
+                isFirstLogin = true // Explicitly set to true
             )
             userId = userDao.insertUser(user).toInt()
             Log.d("TeacherRepository", "Inserted new user: ${teacher.username} with ID: $userId")

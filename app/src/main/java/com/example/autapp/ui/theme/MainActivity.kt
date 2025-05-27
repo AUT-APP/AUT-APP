@@ -47,8 +47,6 @@ import com.example.autapp.ui.components.AUTBottomBar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import com.example.autapp.data.datastores.SettingsDataStore
 
 class MainActivity : ComponentActivity() {
@@ -140,6 +138,7 @@ fun AppContent(
 
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
+            Log.d("AppContent", "Current user: ${currentUser.username}, role: ${currentUser.role}, isFirstLogin: ${currentUser.isFirstLogin}")
             val teacher = currentUser.role == "Teacher"
             onIsTeacherChange(teacher)
             if (teacher) {
@@ -150,6 +149,7 @@ fun AppContent(
                 // dashboardViewModel initialization happens in the dashboard composable
             }
         } else {
+            Log.d("AppContent", "No current user")
             onIsTeacherChange(false)
             onTeacherIdChange(null)
             onStudentIdChange(null)
@@ -157,17 +157,15 @@ fun AppContent(
     }
 
     val navController = rememberNavController()
-    val startDestination = if (currentUser != null) {
-        if (currentUser.role == "Teacher") "dashboard/${currentUser.id}" else "dashboard/${currentUser.id}"
-    } else {
-        "login"
-    }
+    // Always start at login to ensure LoginScreen handles navigation
+    val startDestination = "login"
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable("login") {
             LoginScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = { userId, role ->
+                    Log.d("AppContent", "onLoginSuccess: userId=$userId, role=$role")
                     when (role) {
                         "Admin" -> {
                             onIsTeacherChange(false)
@@ -256,7 +254,7 @@ fun AppContent(
                 if (isTeacher) {
                     TeacherDashboard(
                         viewModel = teacherDashboardViewModel,
-                        departmentRepository = application.departmentRepository, // Added
+                        departmentRepository = application.departmentRepository,
                         modifier = Modifier.fillMaxSize(),
                         teacherId = userId,
                         paddingValues = paddingValues
@@ -272,7 +270,6 @@ fun AppContent(
                 }
             }
         }
-        // Other composable routes remain unchanged
         composable(
             route = "calendar/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.IntType })
