@@ -42,7 +42,7 @@ fun AdminDashboardScreen(
     courseRepository: CourseRepository,
     departmentRepository: DepartmentRepository,
     navController: NavController,
-    isDarkTheme: Boolean = false // Added for dynamic theme
+    isDarkTheme: Boolean = false
 ) {
     val viewModel: AdminDashboardViewModel = viewModel(
         factory = AdminDashboardViewModel.Factory
@@ -56,13 +56,16 @@ fun AdminDashboardScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Students", "Teachers", "Departments", "Activity")
+    val tabs = listOf("Students", "Teachers", "Courses", "Departments", "Activity")
     var showCreateStudentDialog by remember { mutableStateOf(false) }
     var showEditStudentDialog by remember { mutableStateOf<Student?>(null) }
     var showDeleteStudentDialog by remember { mutableStateOf<List<Student>?>(null) }
     var showCreateTeacherDialog by remember { mutableStateOf(false) }
     var showEditTeacherDialog by remember { mutableStateOf<Teacher?>(null) }
     var showDeleteTeacherDialog by remember { mutableStateOf<List<Teacher>?>(null) }
+    var showCreateCourseDialog by remember { mutableStateOf(false) }
+    var showEditCourseDialog by remember { mutableStateOf<Course?>(null) }
+    var showDeleteCourseDialog by remember { mutableStateOf<List<Course>?>(null) }
     var showCreateDepartmentDialog by remember { mutableStateOf(false) }
     var showEditDepartmentDialog by remember { mutableStateOf<Department?>(null) }
     var showDeleteDepartmentDialog by remember { mutableStateOf<Department?>(null) }
@@ -77,10 +80,10 @@ fun AdminDashboardScreen(
                 title = "Admin Dashboard",
                 isDarkTheme = isDarkTheme,
                 navController = navController,
-                showBackButton = false, // Admin dashboard is top-level
+                showBackButton = false,
                 currentRoute = "admin_dashboard",
-                currentUserId = null, // No user ID for admin
-                isTeacher = false // Admin is not a teacher
+                currentUserId = null,
+                isTeacher = false
             )
         },
         snackbarHost = {
@@ -128,13 +131,20 @@ fun AdminDashboardScreen(
                     onEditTeacher = { showEditTeacherDialog = it },
                     onDeleteTeachers = { showDeleteTeacherDialog = it }
                 )
-                2 -> DepartmentsTab(
+                2 -> CoursesTab(
+                    courses = courses,
+                    teachers = teachers,
+                    onCreateCourse = { showCreateCourseDialog = true },
+                    onEditCourse = { showEditCourseDialog = it },
+                    onDeleteCourses = { showDeleteCourseDialog = it }
+                )
+                3 -> DepartmentsTab(
                     departments = departments,
                     onCreateDepartment = { showCreateDepartmentDialog = true },
                     onEditDepartment = { showEditDepartmentDialog = it },
                     onDeleteDepartment = { showDeleteDepartmentDialog = it }
                 )
-                3 -> ActivityTab(
+                4 -> ActivityTab(
                     activities = activities
                 )
             }
@@ -295,6 +305,64 @@ fun AdminDashboardScreen(
                 )
             }
 
+            if (showCreateCourseDialog) {
+                CourseFormDialog(
+                    teachers = teachers,
+                    isEditing = false,
+                    onDismiss = { showCreateCourseDialog = false },
+                    onSave = { name, title, description, location, teacherId, objectives ->
+                        viewModel.createCourse(name, title, description, location, teacherId, objectives)
+                        showCreateCourseDialog = false
+                    }
+                )
+            }
+
+            showEditCourseDialog?.let { course ->
+                CourseFormDialog(
+                    course = course,
+                    teachers = teachers,
+                    isEditing = true,
+                    onDismiss = { showEditCourseDialog = null },
+                    onSave = { name, title, description, location, teacherId, objectives ->
+                        viewModel.updateCourse(
+                            course.copy(
+                                name = name,
+                                title = title,
+                                description = description,
+                                location = location,
+                                teacherId = teacherId,
+                                objectives = objectives
+                            )
+                        )
+                        showEditCourseDialog = null
+                    }
+                )
+            }
+
+            showDeleteCourseDialog?.let { coursesToDelete ->
+                AlertDialog(
+                    onDismissRequest = { showDeleteCourseDialog = null },
+                    title = { Text("Confirm Deletion") },
+                    text = {
+                        Text(
+                            if (coursesToDelete.size == 1)
+                                "Are you sure you want to delete ${coursesToDelete[0].name}?"
+                            else
+                                "Are you sure you want to delete ${coursesToDelete.size} courses?"
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.deleteCourses(coursesToDelete)
+                            showDeleteCourseDialog = null
+                        }) { Text("Delete") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteCourseDialog = null }) { Text("Cancel") }
+                    }
+                )
+            }
+
             if (showCreateDepartmentDialog) {
                 DepartmentFormDialog(
                     onDismiss = { showCreateDepartmentDialog = false },
@@ -339,6 +407,323 @@ fun AdminDashboardScreen(
 }
 
 @Composable
+fun CoursesTab(
+    courses: List<Course>,
+    teachers: List<Teacher>,
+    onCreateCourse: () -> Unit,
+    onEditCourse: (Course) -> Unit,
+    onDeleteCourses: (List<Course>) -> Unit
+) {
+    var searchText by remember { mutableStateOf("") }
+    var sortBy by remember { mutableStateOf("name") }
+    var sortAscending by remember { mutableStateOf(true) }
+    var selectedCourseIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var sortExpanded by remember { mutableStateOf(false) }
+
+    val sortedAndFilteredCourses by remember(courses, searchText, sortBy, sortAscending) {
+        derivedStateOf {
+            courses
+                .filter {
+                    searchText.isEmpty() ||
+                            it.name.contains(searchText, ignoreCase = true) ||
+                            it.title.contains(searchText, ignoreCase = true)
+                }
+                .sortedWith(
+                    when (sortBy) {
+                        "id" -> compareBy<Course> { it.courseId }
+                        else -> compareBy<Course> { it.name }
+                    }.let { comparator ->
+                        if (sortAscending) comparator else comparator.reversed()
+                    }
+                )
+        }
+    }
+
+    Column {
+        OutlinedTextField(
+            value = searchText,
+            onValueChange = { searchText = it },
+            label = { Text("Search Courses") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedTextField(
+                    value = when (sortBy) {
+                        "name" -> "Name"
+                        "id" -> "ID"
+                        else -> "Name"
+                    },
+                    onValueChange = {},
+                    label = { Text("Sort By") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { sortExpanded = true },
+                    readOnly = true
+                )
+                DropdownMenu(
+                    expanded = sortExpanded,
+                    onDismissRequest = { sortExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Name") },
+                        onClick = { sortBy = "name"; sortExpanded = false },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    DropdownMenuItem(
+                        text = { Text("ID") },
+                        onClick = { sortBy = "id"; sortExpanded = false },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+            }
+            IconButton(
+                onClick = { sortAscending = !sortAscending },
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Icon(
+                    imageVector = if (sortAscending) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                    contentDescription = "Toggle sort order"
+                )
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(
+                onClick = onCreateCourse,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 4.dp)
+            ) {
+                Text("Create Course")
+            }
+            Button(
+                onClick = {
+                    val coursesToDelete = courses.filter { selectedCourseIds.contains(it.courseId) }
+                    if (coursesToDelete.isNotEmpty()) {
+                        onDeleteCourses(coursesToDelete)
+                    }
+                },
+                enabled = selectedCourseIds.isNotEmpty(),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 4.dp)
+            ) {
+                Text("Delete Selected")
+            }
+        }
+        LazyColumn {
+            items(sortedAndFilteredCourses) { course ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 2.dp)
+                ) {
+                    Checkbox(
+                        checked = selectedCourseIds.contains(course.courseId),
+                        onCheckedChange = { isChecked ->
+                            selectedCourseIds = if (isChecked) {
+                                selectedCourseIds + course.courseId
+                            } else {
+                                selectedCourseIds - course.courseId
+                            }
+                        },
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    CourseItem(
+                        course = course,
+                        teachers = teachers,
+                        onEdit = { onEditCourse(course) },
+                        onDelete = { onDeleteCourses(listOf(course)) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CourseItem(
+    course: Course,
+    teachers: List<Teacher>,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable { expanded = !expanded },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    course.name,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Row {
+                    TextButton(onClick = onEdit) { Text("Edit") }
+                    TextButton(onClick = onDelete) { Text("Delete") }
+                }
+            }
+            if (expanded) {
+                Text("ID: ${course.courseId}", style = MaterialTheme.typography.bodyMedium)
+                Text("Title: ${course.title}", style = MaterialTheme.typography.bodyMedium)
+                Text("Description: ${course.description}", style = MaterialTheme.typography.bodyMedium)
+                Text("Objectives: ${course.objectives ?: "N/A"}", style = MaterialTheme.typography.bodyMedium)
+                Text("Location: ${course.location ?: "N/A"}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "Teacher: ${teachers.find { it.teacherId == course.teacherId }?.let { "${it.firstName} ${it.lastName}" } ?: "Unassigned"}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CourseFormDialog(
+    course: Course? = null,
+    teachers: List<Teacher>,
+    isEditing: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String, String?, Int, String) -> Unit
+) {
+    var name by remember { mutableStateOf(course?.name ?: "") }
+    var title by remember { mutableStateOf(course?.title ?: "") }
+    var description by remember { mutableStateOf(course?.description ?: "") }
+    var objectives by remember { mutableStateOf(course?.objectives ?: "") }
+    var location by remember { mutableStateOf(course?.location ?: "") }
+    var teacherId by remember { mutableStateOf(course?.teacherId ?: 0) }
+    var teacherExpanded by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (isEditing) "Edit Course" else "Create Course") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Course Code *") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Course Title *") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
+                )
+                OutlinedTextField(
+                    value = objectives,
+                    onValueChange = { objectives = it },
+                    label = { Text("Objectives (Optional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
+                )
+                OutlinedTextField(
+                    value = location,
+                    onValueChange = { location = it },
+                    label = { Text("Location (Optional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box {
+                    OutlinedTextField(
+                        value = teachers.find { it.teacherId == teacherId }?.let { "${it.firstName} ${it.lastName}" } ?: "Select Teacher *",
+                        onValueChange = {},
+                        label = { Text("Teacher") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { teacherExpanded = true },
+                        readOnly = true
+                    )
+                    DropdownMenu(
+                        expanded = teacherExpanded,
+                        onDismissRequest = { teacherExpanded = false }
+                    ) {
+                        teachers.forEach { teacher ->
+                            DropdownMenuItem(
+                                text = { Text("${teacher.firstName} ${teacher.lastName}") },
+                                onClick = {
+                                    teacherId = teacher.teacherId
+                                    teacherExpanded = false
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
+                Text(
+                    "* indicates required field",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    try {
+                        if (name.isBlank() || title.isBlank() || description.isBlank() || teacherId == 0) {
+                            throw IllegalArgumentException("Please fill all required fields")
+                        }
+                        onSave(name, title, description, location.takeIf { it.isNotBlank() }, teacherId, objectives)
+                    } catch (e: Exception) {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(e.message ?: "Invalid input")
+                        }
+                    }
+                }
+            ) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+        modifier = Modifier.width(600.dp)
+    )
+}
+
+@Composable
 fun StudentsTab(
     students: List<Student>,
     courses: List<Course>,
@@ -368,7 +753,7 @@ fun StudentsTab(
                         "enrollment" -> compareBy<Student> { parseEnrollmentDate(it.enrollmentDate) }
                         else -> compareBy<Student> { "${it.firstName} ${it.lastName}" }
                     }.let { comparator ->
-                        if (sortAscending) comparator else compareByDescending { comparator.compare(it, it) }
+                        if (sortAscending) comparator else comparator.reversed()
                     }
                 )
         }
@@ -530,7 +915,7 @@ fun TeachersTab(
                         "id" -> compareBy<Teacher> { it.teacherId }
                         else -> compareBy<Teacher> { "${it.firstName} ${it.lastName}" }
                     }.let { comparator ->
-                        if (sortAscending) comparator else compareByDescending { comparator.compare(it, it) }
+                        if (sortAscending) comparator else comparator.reversed()
                     }
                 )
         }
@@ -1511,7 +1896,7 @@ fun DepartmentFormDialog(
                         if (name.isBlank() || type.isBlank()) {
                             throw IllegalArgumentException("Please fill all required fields")
                         }
-                        onSave(name, type, description)
+                        onSave(name, type, description.takeIf { it.isNotBlank() })
                     } catch (e: Exception) {
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(e.message ?: "Invalid input")

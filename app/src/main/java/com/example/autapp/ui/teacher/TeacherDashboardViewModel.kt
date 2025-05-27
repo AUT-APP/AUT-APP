@@ -88,14 +88,15 @@ class TeacherDashboardViewModel(
     fun createCourse(teacherId: Int, course: Course) {
         viewModelScope.launch {
             try {
-                // Create the complete Course object with the teacherId
+                // Create the complete Course object with the teacherId and objectives
                 val courseWithTeacherId = Course(
                     courseId = course.courseId, // Should be 0 from the dialog, assuming auto-generate
                     name = course.name,
                     title = course.title,
                     description = course.description,
                     location = course.location,
-                    teacherId = teacherId // Assign the correct teacherId
+                    teacherId = teacherId, // Assign the correct teacherId
+                    objectives = course.objectives ?: "" // Include objectives, default to empty string
                 )
                 courseRepository.insertCourse(courseWithTeacherId)
                 fetchTeacherData() // Refresh data after creating course
@@ -199,4 +200,4 @@ class TeacherDashboardViewModel(
             }
         }
     }
-} 
+}
