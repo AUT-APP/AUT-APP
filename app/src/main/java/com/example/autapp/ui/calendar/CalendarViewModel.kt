@@ -1,6 +1,10 @@
 package com.example.autapp.ui.calendar
 
+import android.content.Context
 import android.util.Log
+import androidx.collection.MutableIntIntMap
+import androidx.collection.emptyIntIntMap
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -12,11 +16,14 @@ import com.example.autapp.AUTApplication
 import com.example.autapp.data.dao.TimetableEntryDao
 import com.example.autapp.data.models.Event
 import com.example.autapp.data.models.Booking
+import com.example.autapp.data.models.TimetableNotificationPreference
 import com.example.autapp.data.repository.TimetableEntryRepository
 import com.example.autapp.data.repository.StudentRepository
 import com.example.autapp.data.repository.EventRepository
 import com.example.autapp.data.repository.BookingRepository
+import com.example.autapp.data.repository.TimetableNotificationPreferenceRepository
 import com.example.autapp.ui.DashboardViewModel
+import com.example.autapp.util.NotificationScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,14 +49,17 @@ data class CalendarUiState(
     val filteredBookings: List<Booking> = emptyList(), // List of bookings filtered for the selectedDate.
     val isCalendarView: Boolean = true, // Flag to determine if the calendar view or timetable list view is active.
     val errorMessage: String? = null, // Holds any error message to be displayed to the user.
-    val isLoading: Boolean = false // Flag to indicate if data is currently being loaded.
+    val isLoading: Boolean = false, // Flag to indicate if data is currently being loaded.
+    val notificationPrefs: MutableIntIntMap = emptyIntIntMap() as MutableIntIntMap// classSessionId -> minutesBefore
+
 )
 
 class CalendarViewModel(
     private val timetableEntryRepository: TimetableEntryRepository,
     private val studentRepository: StudentRepository,
     private val eventRepository: EventRepository,
-    private val bookingRepository: BookingRepository
+    private val bookingRepository: BookingRepository,
+    private val timetableNotificationPreferenceRepository: TimetableNotificationPreferenceRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState()) // Private MutableStateFlow to hold the UI state.
@@ -431,6 +441,90 @@ class CalendarViewModel(
         }
     }
 
+    /**
+     * Updates an existing event. This implementation deletes all events with the same title and date,
+     * then inserts the updated event. This handles cases where an event might change significantly (e.g. recurring to single).
+     * Consider a more targeted update if events have unique persistent IDs that don't change based on title/date.
+     */
+    fun updateReminder(context: Context, event: Event, timeBefore: Int) {
+        viewModelScope.launch {
+            // Handle reminder logic for an Event
+        }
+    }
+
+    suspend fun updateReminder(
+            context: Context,
+            entry: TimetableEntryDao.TimetableEntryWithCourse,
+            minutesBefore: Int
+    ): Long? = withContext(Dispatchers.IO) {
+        try {
+            // Handle reminder logic for a TimetableEntry
+            val classSessionId = entry.entry.entryId
+            val courseName = entry.course.name
+            val pref = TimetableNotificationPreference(
+                studentId = _studentId,
+                classSessionId = entry.entry.entryId,
+                minutesBefore = minutesBefore,
+                enabled = true
+            )
+
+            // Cancel any existing alarm for this class session
+            val notificationId = classSessionId.hashCode()
+            NotificationScheduler.cancelScheduledNotification(context, notificationId)
+
+            // Save to DB
+            timetableNotificationPreferenceRepository.insertOrUpdatePreference(pref)
+
+            // Update local state
+            _uiState.update { currentState ->
+                val updatedPrefs = currentState.notificationPrefs.apply {
+                    put(classSessionId, minutesBefore)
+                }
+                currentState.copy(notificationPrefs = updatedPrefs)
+            }
+
+
+            // Schedule notification
+            val session = timetableEntryRepository.getTimetableEntryById(classSessionId)
+            if (session != null) {
+                val minutesBefore = pref.minutesBefore
+                val notificationText = when (minutesBefore) {
+                    0 -> "Your $courseName ${session.type} at ${session.room} is starting now!"
+                    60 -> "Your $courseName ${session.type} at ${session.room} is coming up in an hour!"
+                    else -> "Your $courseName ${session.type} at ${session.room} is coming up in $minutesBefore minutes!"
+                }
+                val scheduledTimeMillis = NotificationScheduler.scheduleClassNotification(
+                    context = context,
+                    notificationId = pref.classSessionId.hashCode(),
+                    title = "$courseName starts soon!",
+                    text = notificationText,
+                    dayOfWeek = session.dayOfWeek,
+                    startTime = session.startTime,
+                    deepLinkUri = "myapp://dashboard/$studentId",
+                    minutesBefore = minutesBefore
+                )
+                return@withContext scheduledTimeMillis
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Class session not found."
+                )
+                return@withContext null
+            }
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Failed to set notification preference: ${e.message}"
+            )
+            return@withContext null
+        }
+    }
+
+    fun updateReminder(context: Context, entry: Booking, minutesBefore: Int) {
+        viewModelScope.launch {
+            // Handle reminder logic for a Booking
+
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
@@ -440,7 +534,8 @@ class CalendarViewModel(
                     application.timetableEntryRepository,
                     application.studentRepository,
                     application.eventRepository,
-                    application.bookingRepository
+                    application.bookingRepository,
+                    application.timetableNotificationPreferenceRepository,
                 )
             }
         }

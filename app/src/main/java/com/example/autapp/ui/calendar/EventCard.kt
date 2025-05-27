@@ -17,7 +17,8 @@ import java.util.Locale
 fun EventCard(
     event: Event,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onReminderClick: () -> Unit
 ) {
     // Card composable to display event information.
     // It's clickable to trigger the onClick lambda, likely for opening an edit/detail view.

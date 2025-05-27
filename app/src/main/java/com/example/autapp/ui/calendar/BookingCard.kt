@@ -16,6 +16,7 @@ import java.util.*
 @Composable
 fun BookingCard(
     booking: Booking,
+    onReminderClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(

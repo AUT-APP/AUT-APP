@@ -24,16 +24,16 @@ import java.util.Locale
 fun TimetableView(
     uiState: CalendarUiState,
     onEventClick: (Event) -> Unit,
+    onSetReminder: (Any, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedEntryForReminder by remember { mutableStateOf<TimetableEntryDao.TimetableEntryWithCourse?>(null) }
+    var selectedEntryForReminder by remember { mutableStateOf<Any?>(null) }
 
     selectedEntryForReminder?.let { selectedEntry ->
         ReminderBottomSheet(
             onDismiss = { selectedEntryForReminder = null },
             onSelectTime = { minutes ->
-                // You could call a ViewModel method here to save reminder time
-                // e.g., viewModel.setReminder(selectedEntry, minutes)
+                onSetReminder(selectedEntry, minutes)
                 selectedEntryForReminder = null
             }
         )
@@ -123,7 +123,10 @@ fun TimetableView(
                                     onClick = { onEventClick(entry) },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
+                                        .padding(vertical = 4.dp),
+                                    onReminderClick = {
+                                        selectedEntryForReminder = entry
+                                    }
                                 )
                             }
                             is Booking -> {
@@ -131,7 +134,10 @@ fun TimetableView(
                                     booking = entry,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
+                                        .padding(vertical = 4.dp),
+                                    onReminderClick = {
+                                        selectedEntryForReminder = entry
+                                    }
                                 )
                             }
                         }

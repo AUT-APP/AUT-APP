@@ -8,9 +8,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autapp.data.dao.TimetableEntryDao
+import com.example.autapp.data.models.Booking
 import com.example.autapp.data.models.Event
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 @Composable
 fun CalendarScreen(
@@ -121,15 +126,35 @@ fun CalendarScreen(
             }
         // Display the main content (Calendar or Timetable view) if data is loaded successfully
         } else {
+            val coroutineScope = rememberCoroutineScope()
+            val context = LocalContext.current
             if (showCalendarView) {
                 CalendarView(
                     uiState = uiState,
                     onDateSelected = viewModel::updateSelectedDate,
+                    onSetReminder = { item, minutes ->
+                        coroutineScope.launch {
+                            when (item) {
+                                is TimetableEntryDao.TimetableEntryWithCourse -> viewModel.updateReminder(context, item, minutes)
+                                is Event -> viewModel.updateReminder(context, item, minutes)
+                                is Booking -> viewModel.updateReminder(context, item, minutes)
+                            }
+                        }
+                    },  // Passing a general handler that checks the type of item
                     onEventClick = { selectedEvent = it }
                 )
             } else {
                 TimetableView(
                     uiState = uiState,
+                    onSetReminder = { item, minutes ->
+                        coroutineScope.launch {
+                            when (item) {
+                                is TimetableEntryDao.TimetableEntryWithCourse -> viewModel.updateReminder(context, item, minutes)
+                                is Event -> viewModel.updateReminder(context, item, minutes)
+                                is Booking -> viewModel.updateReminder(context, item, minutes)
+                            }
+                        }
+                    },  // Passing a general handler that checks the type of item
                     onEventClick = { selectedEvent = it }
                 )
             }

@@ -49,19 +49,19 @@ fun CalendarView(
     uiState: CalendarUiState,
     onDateSelected: (LocalDate) -> Unit,
     onEventClick: (Event) -> Unit,
+    onSetReminder: (Any, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // State to keep track of the currently displayed month and year.
     // Initialized with the month and year of the initially selected date from uiState.
     var currentYearMonth by remember { mutableStateOf(YearMonth.from(uiState.selectedDate)) }
-    var selectedEntryForReminder by remember { mutableStateOf<TimetableEntryDao.TimetableEntryWithCourse?>(null) }
+    var selectedEntryForReminder by remember { mutableStateOf<Any?>(null) }
 
     selectedEntryForReminder?.let { selectedEntry ->
         ReminderBottomSheet(
             onDismiss = { selectedEntryForReminder = null },
             onSelectTime = { minutes ->
-                // You could call a ViewModel method here to save reminder time
-                // e.g., viewModel.setReminder(selectedEntry, minutes)
+                onSetReminder(selectedEntry, minutes)
                 selectedEntryForReminder = null
             }
         )
@@ -228,12 +228,20 @@ fun CalendarView(
                 items(selectedDateEvents) { event: Event ->
                     EventCard(
                         event = event,
-                        onClick = { onEventClick(event) }
+                        onClick = { onEventClick(event) },
+                        onReminderClick = {
+                            selectedEntryForReminder = event
+                        }
                     )
                 }
 
                 items(selectedDateBookings) { booking: Booking ->
-                    BookingCard(booking = booking)
+                    BookingCard(
+                        booking = booking,
+                        onReminderClick = {
+                            selectedEntryForReminder = booking
+                        }
+                    )
                 }
             }
         } else {
