@@ -309,7 +309,8 @@ fun AppContent(
                         viewModel = teacherDashboardViewModel,
                         modifier = Modifier.fillMaxSize(),
                         teacherId = userId,
-                        paddingValues = paddingValues
+                        paddingValues = paddingValues,
+                        departmentRepository = application.departmentRepository
                     )
                 }
             } else {
