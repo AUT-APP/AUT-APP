@@ -41,7 +41,8 @@ object TestDataInitializer {
                     password = "password123",
                     role = "Student",
                     enrollmentDate = "2024-01-01",
-                    major = "Computer Science",
+                    majorId = 1,
+                    dob = "2000-01-01",
                     yearOfStudy = 2,
                     gpa = 0.0
                 ),
@@ -52,7 +53,8 @@ object TestDataInitializer {
                     username = "john_doe",
                     password = "password123",
                     enrollmentDate = "2023-09-01",
-                    major = "Computer Science",
+                    majorId = 2,
+                    dob = "2000-01-01",
                     yearOfStudy = 2,
                     gpa = 3.5
                 ),
@@ -63,7 +65,8 @@ object TestDataInitializer {
                     username = "jane_smith",
                     password = "password123",
                     enrollmentDate = "2022-09-01",
-                    major = "Engineering",
+                    majorId = 3,
+                    dob = "2000-01-01",
                     yearOfStudy = 3,
                     gpa = 3.8
                 ),
@@ -74,7 +77,8 @@ object TestDataInitializer {
                     username = "alex_johnson",
                     password = "password123",
                     enrollmentDate = "2024-02-01",
-                    major = "Business",
+                    majorId = 4,
+                    dob = "2000-01-01",
                     yearOfStudy = 1,
                     gpa = 3.2
                 ),
@@ -85,7 +89,8 @@ object TestDataInitializer {
                     username = "emma_brown",
                     password = "password123",
                     enrollmentDate = "2023-02-01",
-                    major = "Psychology",
+                    majorId = 5,
+                    dob = "2000-01-01",
                     yearOfStudy = 2,
                     gpa = 3.6
                 )

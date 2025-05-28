@@ -17,8 +17,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.autapp.AUTApplication
-import com.example.autapp.data.models.TimetableEntry
-import com.example.autapp.data.models.User
 import com.example.autapp.ui.admin.AdminDashboardScreen
 import com.example.autapp.ui.booking.BookingDetailsScreen
 import com.example.autapp.ui.booking.BookingScreen
@@ -32,13 +30,9 @@ import com.example.autapp.ui.StudentDashboard
 import com.example.autapp.ui.DashboardViewModel
 import com.example.autapp.ui.login.ChangePasswordScreen
 import com.example.autapp.ui.login.LoginScreen
-import com.example.autapp.ui.login.LoginViewModel
 import com.example.autapp.ui.notification.NotificationScreen
-import com.example.autapp.ui.notification.NotificationViewModel
 import com.example.autapp.ui.settings.SettingsScreen
-import com.example.autapp.ui.settings.SettingsViewModel
 import com.example.autapp.ui.teacher.TeacherDashboard
-import com.example.autapp.ui.teacher.TeacherDashboardViewModel
 import com.example.autapp.ui.transport.TransportScreen
 import com.example.autapp.ui.transport.TransportViewModel
 import com.example.autapp.ui.components.AUTTopAppBar

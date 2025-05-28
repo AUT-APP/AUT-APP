@@ -211,7 +211,7 @@ fun AUTBottomBar(
                         Log.d("MainActivity", "Calendar icon clicked")
                         if (currentRoute?.startsWith("calendar") != true) {
                             Log.d("MainActivity", "Navigating to calendar with user ID: $userId")
-                            calendarViewModel.initialize(userId)
+                            calendarViewModel.initialize(userId, isTeacher)
                             navController.navigate("calendar/$userId") {
                                 if (isTeacher) {
                                     popUpTo("teacherDashboard") { inclusive = false }
@@ -370,4 +370,4 @@ fun AUTBottomBar(
             }
         )
     }
-}
+}}
