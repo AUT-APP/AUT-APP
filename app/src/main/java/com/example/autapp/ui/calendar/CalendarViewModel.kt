@@ -16,6 +16,7 @@ import com.example.autapp.data.repository.TimetableEntryRepository
 import com.example.autapp.data.repository.StudentRepository
 import com.example.autapp.data.repository.EventRepository
 import com.example.autapp.data.repository.BookingRepository
+import com.example.autapp.data.repository.CourseRepository
 import com.example.autapp.ui.DashboardViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,21 +43,26 @@ data class CalendarUiState(
     val filteredBookings: List<Booking> = emptyList(), // List of bookings filtered for the selectedDate.
     val isCalendarView: Boolean = true, // Flag to determine if the calendar view or timetable list view is active.
     val errorMessage: String? = null, // Holds any error message to be displayed to the user.
-    val isLoading: Boolean = false // Flag to indicate if data is currently being loaded.
+    val isLoading: Boolean = false, // Flag to indicate if data is currently being loaded.
+    val isTeacher: Boolean,  // New field to track if user is a teacher
+    val userId: Int
 )
 
 class CalendarViewModel(
     private val timetableEntryRepository: TimetableEntryRepository,
     private val studentRepository: StudentRepository,
     private val eventRepository: EventRepository,
-    private val bookingRepository: BookingRepository
+    private val bookingRepository: BookingRepository,
+    private val courseRepository: CourseRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CalendarUiState()) // Private MutableStateFlow to hold the UI state.
+    private val _uiState = MutableStateFlow(CalendarUiState(isTeacher = false, userId = 0)) // Private MutableStateFlow to hold the UI state.
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow() // Publicly exposed StateFlow for observing UI state changes.
     
-    private var _studentId: Int = 0 // Stores the ID of the current student.
-    val studentId: Int get() = _studentId
+    private var _userId: Int = 0
+    private var _isTeacher: Boolean = false
+    val userId: Int get() = _userId
+    val isTeacher: Boolean get() = _isTeacher
 
     // StateFlow to signal navigation to the ManageEventsScreen.
     private val _navigateToManageEvents = MutableStateFlow(false)
@@ -86,30 +92,56 @@ class CalendarViewModel(
      * This should be called once when the ViewModel is created.
      */
 
-    fun initialize(studentId: Int) {
-        _studentId = studentId
+    fun initialize(userId: Int, isTeacher: Boolean) {
+        _userId = userId
+        _isTeacher = isTeacher
+        _uiState.value = _uiState.value.copy(isTeacher = isTeacher)
+        
         CoroutineScope(Dispatchers.Main + Job()).launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             
             try {
-                val studentWithCourses = studentRepository.getStudentWithCourses(studentId)
-                val courseIds = studentWithCourses?.courses?.map { it.courseId } ?: emptyList()
-                
-                val allEntries = timetableEntryRepository.getTimetableEntriesWithCourseByDay(_uiState.value.selectedDate.dayOfWeek.value)
-                val filteredEntries = allEntries
-                    .filter { entry -> courseIds.contains(entry.entry.courseId) }
-                    .distinctBy { entry -> 
-                        "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
-                    }
-                    .sortedBy { it.entry.startTime }
-                
-                val events = eventRepository.getEventsByStudent(studentId)
-                val filteredEvents = events.filter { event ->
-                    event.date.toLocalDate() == _uiState.value.selectedDate
+                val courseIds = if (isTeacher) {
+                    // Get courses taught by the teacher
+                    courseRepository.getTeacherCourses(userId).map { course -> course.courseId }
+                } else {
+                    // Get courses enrolled by the student
+                    val studentWithCourses = studentRepository.getStudentWithCourses(userId)
+                    studentWithCourses?.courses?.map { course -> course.courseId } ?: emptyList()
                 }
-                val bookings = bookingRepository.getActiveBookingsByStudent(studentId)
-                val filteredBookings = bookings.filter { booking ->
-                    booking.bookingDate.toLocalDate() == _uiState.value.selectedDate
+
+                val allEntries = if (isTeacher) {
+                    timetableEntryRepository.getTimetableEntriesWithCourseByTeacherDay(userId, _uiState.value.selectedDate.dayOfWeek.value)
+                } else {
+                    timetableEntryRepository.getTimetableEntriesWithCourseByDay(_uiState.value.selectedDate.dayOfWeek.value)
+                }
+                
+                val filteredEntries = withContext(Dispatchers.Default) {
+                    if (isTeacher) {
+                        allEntries // No need to filter further, the DAO query already filtered by teacher
+                    } else {
+                        allEntries
+                            .filter { entry: TimetableEntryDao.TimetableEntryWithCourse -> courseIds.contains(entry.entry.courseId) }
+                            .distinctBy { entry ->
+                                "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
+                            }
+                    }
+                        .sortedBy { entry -> entry.entry.startTime }
+                }
+                
+                val events = eventRepository.getEventsByUser(userId, isTeacher)
+                val filteredEvents = withContext(Dispatchers.Default) {
+                    events.filter { event: Event -> event.date.toLocalDate() == _uiState.value.selectedDate }
+                }
+                
+                val bookings = if (!isTeacher) {
+                    bookingRepository.getActiveBookingsByStudent(userId)
+                } else {
+                    emptyList() // Teachers don't have bookings
+                }
+                
+                val filteredBookings = withContext(Dispatchers.Default) {
+                     bookings.filter { booking -> booking.bookingDate.toLocalDate() == _uiState.value.selectedDate }
                 }
                 
                 _uiState.value = _uiState.value.copy(
@@ -139,22 +171,43 @@ class CalendarViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val studentWithCourses = studentRepository.getStudentWithCourses(_studentId)
-                val courseIds = studentWithCourses?.courses?.map { it.courseId } ?: emptyList()
+                val courseIds = if (_isTeacher) {
+                    courseRepository.getTeacherCourses(_userId).map { course -> course.courseId }
+                } else {
+                    val studentWithCourses = studentRepository.getStudentWithCourses(_userId)
+                    studentWithCourses?.courses?.map { course -> course.courseId } ?: emptyList()
+                }
                 
                 val dayOfWeek = _uiState.value.selectedDate.dayOfWeek.value
-                val allEntries = timetableEntryRepository.getTimetableEntriesWithCourseByDay(dayOfWeek)
+                val allEntries = if (_isTeacher) {
+                    timetableEntryRepository.getTimetableEntriesWithCourseByTeacherDay(_userId, dayOfWeek)
+                } else {
+                    timetableEntryRepository.getTimetableEntriesWithCourseByDay(dayOfWeek)
+                }
                 
-                val filteredEntries = allEntries
-                    .filter { entry -> courseIds.contains(entry.entry.courseId) }
-                    .distinctBy { entry ->
-                        "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
+                val filteredEntries = withContext(Dispatchers.Default) {
+                    if (_isTeacher) {
+                        allEntries // No need for further filtering, query already did it
+                    } else {
+                        allEntries
+                            .filter { entry: TimetableEntryDao.TimetableEntryWithCourse -> courseIds.contains(entry.entry.courseId) }
+                            .distinctBy { entry ->
+                                "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
+                            }
                     }
-                    .sortedBy { it.entry.startTime }
-
-                val bookings = bookingRepository.getActiveBookingsByStudent(_studentId)
-                val filteredBookings = bookings.filter { booking ->
-                    booking.bookingDate.toLocalDate() == _uiState.value.selectedDate
+                        .sortedBy { entry -> entry.entry.startTime }
+                }
+                
+                val bookings = if (!_isTeacher) {
+                    bookingRepository.getActiveBookingsByStudent(_userId)
+                } else {
+                    emptyList()
+                }
+                
+                val filteredBookings = withContext(Dispatchers.Default) {
+                     bookings.filter { booking ->
+                        booking.bookingDate.toLocalDate() == _uiState.value.selectedDate
+                    }
                 }
                 
                 _uiState.update { currentState ->
@@ -190,7 +243,7 @@ class CalendarViewModel(
         viewModelScope.launch {
             try {
                 // Don't fetch events again, just filter the existing ones
-                val filteredEvents = _uiState.value.events.filter { event ->
+                val filteredEvents = _uiState.value.events.filter { event: Event ->
                     event.date.toLocalDate() == _uiState.value.selectedDate
                 }
                 
@@ -217,7 +270,7 @@ class CalendarViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val studentWithCourses = studentRepository.getStudentWithCourses(_studentId)
+                val studentWithCourses = studentRepository.getStudentWithCourses(_userId)
                 val courseIds = studentWithCourses?.courses?.map { it.courseId } ?: emptyList()
                 
                 val today = LocalDate.now()
@@ -227,25 +280,36 @@ class CalendarViewModel(
                     val date = today.plusDays(dayOffset.toLong())
                     val dayOfWeek = date.dayOfWeek.value
                     
-                    val entriesForDay = timetableEntryRepository.getTimetableEntriesWithCourseByDay(dayOfWeek)
-                        .filter { entry -> courseIds.contains(entry.entry.courseId) }
-                        .distinctBy { entry -> 
-                            "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
+                    val entriesForDay = withContext(Dispatchers.Default) {
+                         if (_isTeacher) {
+                            timetableEntryRepository.getTimetableEntriesWithCourseByTeacherDay(_userId, dayOfWeek)
+                        } else {
+                            timetableEntryRepository.getTimetableEntriesWithCourseByDay(dayOfWeek)
                         }
-                        .sortedBy { it.entry.startTime }
+                            .filter { entry: TimetableEntryDao.TimetableEntryWithCourse ->
+                                // Apply filtering based on courseIds only for students
+                                if (_isTeacher) true else courseIds.contains(entry.entry.courseId)
+                            }
+                            .distinctBy { entry ->
+                                "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
+                            }
+                            .sortedBy { it.entry.startTime }
+                    }
                     
                     entriesForDay.forEach { entry ->
                         allEntries.add(date to entry)
                     }
                 }
 
-                val sortedEntries = allEntries
-                    .sortedWith(compareBy<Pair<LocalDate, TimetableEntryDao.TimetableEntryWithCourse>> 
-                        { it.first }
-                        .thenBy { it.second.entry.startTime })
-                    .map { it.second }
+                val sortedEntries = withContext(Dispatchers.Default) {
+                     allEntries
+                        .sortedWith(compareBy<Pair<LocalDate, TimetableEntryDao.TimetableEntryWithCourse>>
+                            { it.first }
+                            .thenBy { it.second.entry.startTime })
+                        .map { it.second }
+                }
 
-                val bookings = bookingRepository.getActiveBookingsByStudent(_studentId)
+                val bookings = bookingRepository.getActiveBookingsByStudent(_userId)
                 
                 _uiState.update { currentState ->
                     currentState.copy(
@@ -323,15 +387,20 @@ class CalendarViewModel(
             _uiState.value = _uiState.value.copy(errorMessage = "This event overlaps with an existing event")
             return
         }
-        
+
         viewModelScope.launch {
             try {
-                eventRepository.insertEvent(event.copy(studentId = _studentId))
+                val eventToInsert = if (_isTeacher) {
+                    event.copy(teacherId = _userId, studentId = 0, isTeacherEvent = true)
+                } else {
+                    event.copy(studentId = _userId, teacherId = null, isTeacherEvent = false)
+                }
+                eventRepository.insertEvent(eventToInsert)
                 // Fetch all events again to update both lists
-                val updatedEvents = eventRepository.getEventsByStudent(_studentId)
+                val updatedEvents = eventRepository.getEventsByUser(_userId, _isTeacher)
                 _uiState.value = _uiState.value.copy(
                     events = updatedEvents,
-                    filteredEvents = updatedEvents.filter { it.date.toLocalDate() == _uiState.value.selectedDate },
+                    filteredEvents = updatedEvents.filter { event: Event -> event.date.toLocalDate() == _uiState.value.selectedDate },
                     errorMessage = null
                 )
             } catch (e: Exception) {
@@ -353,7 +422,12 @@ class CalendarViewModel(
                 val existingEvents = eventRepository.getEventsByTitleAndDate(event.title, event.date)
 
                 // Insert the updated event
-                eventRepository.insertEvent(event)
+                val eventToUpdate = if (_isTeacher) {
+                    event.copy(teacherId = _userId, studentId = 0, isTeacherEvent = true)
+                } else {
+                    event.copy(studentId = _userId, teacherId = null, isTeacherEvent = false)
+                }
+                eventRepository.insertEvent(eventToUpdate)
 
                 // Fetch and update the UI state
                 fetchEvents()
@@ -374,7 +448,7 @@ class CalendarViewModel(
 
         val eventDate = newEvent.date.toLocalDate()
         
-        return _uiState.value.events.any { existingEvent ->
+        return _uiState.value.events.any { existingEvent: Event ->
             if (existingEvent.eventId == excludeEventId) return@any false // Don't compare an event with itself.
             if (existingEvent.isToDoList) return@any false // Ignore to-do items for overlap checks.
             if (existingEvent.startTime == null || existingEvent.endTime == null) return@any false // Existing event must have times.
@@ -406,10 +480,10 @@ class CalendarViewModel(
     private fun fetchEvents() {
         viewModelScope.launch {
             try {
-                val events = eventRepository.getEventsByStudent(_studentId)
+                val events = eventRepository.getEventsByUser(_userId, _isTeacher)
                 _uiState.value = _uiState.value.copy(
                     events = events,
-                    filteredEvents = events.filter { it.date.toLocalDate() == _uiState.value.selectedDate },
+                    filteredEvents = events.filter { event: Event -> event.date.toLocalDate() == _uiState.value.selectedDate },
                     errorMessage = null
                 )
             } catch (e: Exception) {
@@ -432,7 +506,8 @@ class CalendarViewModel(
                     application.timetableEntryRepository,
                     application.studentRepository,
                     application.eventRepository,
-                    application.bookingRepository
+                    application.bookingRepository,
+                    application.courseRepository
                 )
             }
         }

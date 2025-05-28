@@ -1,5 +1,6 @@
 package com.example.autapp.ui.teacher
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -51,12 +52,19 @@ class TeacherDashboardViewModel(
         viewModelScope.launch {
             try {
                 // Fetch teacher data
-                teacher = teacherRepository.getTeacherById(teacherId)
+                Log.d("TeacherDashboardVM", "Attempting to fetch teacher with ID: $teacherId")
+                val fetchedTeacher = teacherRepository.getTeacherById(teacherId)
+                teacher = fetchedTeacher
+                Log.d("TeacherDashboardVM", "Fetched teacher: $teacher")
 
                 // Fetch teacher's courses
-                courses = courseRepository.getTeacherCourses(teacherId)
+                Log.d("TeacherDashboardVM", "Attempting to fetch courses for teacher ID: $teacherId")
+                val fetchedCourses = courseRepository.getTeacherCourses(teacherId)
+                courses = fetchedCourses
+                Log.d("TeacherDashboardVM", "Fetched courses: ${courses.size}")
 
                 // Fetch assignments for teacher's courses
+                Log.d("TeacherDashboardVM", "Attempting to fetch all assignments")
                 val allAssignments = assignmentRepository.getAllAssignments()
                 assignments = allAssignments.filter { assignment ->
                     courses.any { course -> course.courseId == assignment.courseId }

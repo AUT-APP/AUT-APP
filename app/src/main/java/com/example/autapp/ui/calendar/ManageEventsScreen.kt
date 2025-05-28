@@ -80,7 +80,9 @@ fun ManageEventsScreen(
             onDelete = {
                 viewModel.deleteEvent(event)
                 selectedEvent = null
-            }
+            },
+            isTeacher = uiState.isTeacher,
+            userId = uiState.userId
         )
     }
 

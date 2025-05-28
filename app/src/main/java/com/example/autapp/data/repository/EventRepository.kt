@@ -36,4 +36,12 @@ class EventRepository(private val eventDao: EventDao) {
     suspend fun getEventsByTitleAndDate(title: String, date: Date): List<Event> {
         return eventDao.getEventsByTitleAndDate(title, date)
     }
-} 
+
+    suspend fun getEventsByUser(userId: Int, isTeacher: Boolean): List<Event> {
+        return if (isTeacher) {
+            eventDao.getEventsByTeacher(teacherId = userId)
+        } else {
+            eventDao.getEventsByStudent(studentId = userId)
+        }
+    }
+}

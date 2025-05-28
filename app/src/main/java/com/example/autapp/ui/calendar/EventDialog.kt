@@ -26,6 +26,8 @@ fun EventDialog(
     event: Event?,
     isToDoList: Boolean,
     selectedDate: LocalDate,
+    userId: Int,
+    isTeacher: Boolean,
     onDismiss: () -> Unit,
     onSave: (Event) -> Unit,
     onDelete: (() -> Unit)? = null
@@ -202,7 +204,9 @@ fun EventDialog(
                                 details = details.takeIf { it.isNotBlank() },
                                 isToDoList = isToDoList,
                                 frequency = null,
-                                studentId = event?.studentId ?: 0
+                                studentId = userId,
+                                teacherId = if (isTeacher) userId else null,
+                                isTeacherEvent = isTeacher
                             )
                             onSave(newEvent)
                         },

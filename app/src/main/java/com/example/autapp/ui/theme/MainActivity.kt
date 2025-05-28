@@ -2,7 +2,6 @@ package com.example.autapp.ui.theme
 
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -34,8 +33,6 @@ import com.example.autapp.ui.transport.TransportViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import com.example.autapp.ui.notification.NotificationScreen
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +48,7 @@ import com.example.autapp.ui.teacher.TeacherDashboardViewModel
 import com.example.autapp.data.models.TimetableEntry
 import com.example.autapp.data.models.User
 import com.example.autapp.ui.StudentDashboard
+import com.example.autapp.util.TestDataInitializer
 
 class MainActivity : ComponentActivity() {
     private var currentStudentId by mutableStateOf<Int?>(null)
@@ -73,6 +71,11 @@ class MainActivity : ComponentActivity() {
 
         val settingsDataStore = SettingsDataStore(applicationContext)
         val coroutineScope = CoroutineScope(Dispatchers.Main)
+
+        // Initialize test data
+        coroutineScope.launch(Dispatchers.IO) {
+            TestDataInitializer.insertTestData(applicationContext)
+        }
 
         var isDarkTheme by mutableStateOf(false)
 
@@ -209,7 +212,7 @@ fun AppContent(
                         isDarkTheme = isDarkTheme,
                         navController = navController,
                         showBackButton = false,
-                        currentRoute = "dashboard",
+                        currentRoute = (if (isTeacher) "dashboard/$userId" else "dashboard/$userId"),
                         currentUserId = userId,
                         isTeacher = isTeacher
                     )
@@ -219,9 +222,15 @@ fun AppContent(
                         isDarkTheme = isDarkTheme,
                         navController = navController,
                         calendarViewModel = calendarViewModel,
-                        currentRoute = "dashboard",
+                        currentRoute = (if (isTeacher) "dashboard/$userId" else "dashboard/$userId"),
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        onClick = {
+                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                            if (userId != null) {
+                                navController.navigate("dashboard/$userId")
+                            }
+                        }
                     )
                 }
             ) { paddingValues ->
@@ -274,7 +283,13 @@ fun AppContent(
                             calendarViewModel = calendarViewModel,
                             currentRoute = currentRoute,
                             currentUserId = userId,
-                            isTeacher = true
+                            isTeacher = true,
+                            onClick = {
+                                Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: true")
+                                if (userId != null) {
+                                    navController.navigate("dashboard/$userId")
+                                }
+                            }
                         )
                     }
                 ) { paddingValues ->
@@ -301,10 +316,10 @@ fun AppContent(
             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
             LaunchedEffect(userId, isTeacher) {
                 if (isTeacher) {
-                    calendarViewModel.initialize(userId)
+                    calendarViewModel.initialize(userId, isTeacher)
                 } else {
-                    if (userId != 0 && calendarViewModel.studentId != userId) {
-                        calendarViewModel.initialize(userId)
+                    if (userId != 0 && calendarViewModel.userId != userId) {
+                        calendarViewModel.initialize(userId, isTeacher)
                     }
                 }
             }
@@ -327,7 +342,13 @@ fun AppContent(
                         calendarViewModel = calendarViewModel,
                         currentRoute = "calendar",
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        onClick = {
+                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                            if (userId != null) {
+                                navController.navigate("dashboard/$userId")
+                            }
+                        }
                     )
                 }
             ) { paddingValues ->
@@ -347,10 +368,10 @@ fun AppContent(
             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
             LaunchedEffect(userId, isTeacher) {
                 if (isTeacher) {
-                    calendarViewModel.initialize(userId)
+                    calendarViewModel.initialize(userId, isTeacher)
                 } else {
-                    if (userId != 0 && calendarViewModel.studentId != userId) {
-                        calendarViewModel.initialize(userId)
+                    if (userId != 0 && calendarViewModel.userId != userId) {
+                        calendarViewModel.initialize(userId, isTeacher)
                     }
                 }
             }
@@ -373,7 +394,13 @@ fun AppContent(
                         calendarViewModel = calendarViewModel,
                         currentRoute = "manage_events",
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        onClick = {
+                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                            if (userId != null) {
+                                navController.navigate("dashboard/$userId")
+                            }
+                        }
                     )
                 }
             ) { paddingValues ->
@@ -391,40 +418,42 @@ fun AppContent(
             if (!isTeacher && (currentStudentId == null || currentStudentId != userId)) {
                 onStudentIdChange(userId)
             }
-            if (!isTeacher) {
-                Scaffold(
-                    topBar = {
-                        AUTTopAppBar(
-                            title = "Bookings",
-                            isDarkTheme = isDarkTheme,
-                            navController = navController,
-                            showBackButton = true,
-                            currentRoute = "bookings",
-                            currentUserId = userId,
-                            isTeacher = isTeacher
-                        )
-                    },
-                    bottomBar = {
-                        AUTBottomBar(
-                            isDarkTheme = isDarkTheme,
-                            navController = navController,
-                            calendarViewModel = calendarViewModel,
-                            currentRoute = "bookings",
-                            currentUserId = userId,
-                            isTeacher = isTeacher
-                        )
-                    }
-                ) { paddingValues ->
-                    BookingScreen(
-                        viewModel = bookingViewModel,
-                        navController = navController,
-                        studentId = userId,
+            Scaffold(
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Bookings",
                         isDarkTheme = isDarkTheme,
-                        paddingValues = paddingValues
+                        navController = navController,
+                        showBackButton = true,
+                        currentRoute = "bookings",
+                        currentUserId = userId,
+                        isTeacher = isTeacher
+                    )
+                },
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = "bookings",
+                        currentUserId = userId,
+                        isTeacher = isTeacher,
+                        onClick = {
+                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                            if (userId != null) {
+                                navController.navigate("dashboard/$userId")
+                            }
+                        }
                     )
                 }
-            } else {
-                Text("Access Denied: Bookings are for students.")
+            ) { paddingValues ->
+                BookingScreen(
+                    viewModel = bookingViewModel,
+                    navController = navController,
+                    studentId = userId,
+                    isDarkTheme = isDarkTheme,
+                    paddingValues = paddingValues
+                )
             }
         }
         composable(
@@ -443,60 +472,62 @@ fun AppContent(
             if (!isTeacher && (currentStudentId == null || currentStudentId != userId)) {
                 onStudentIdChange(userId)
             }
-            if (!isTeacher) {
-                val spaceId = backStackEntry.arguments?.getString("spaceId") ?: ""
-                val level = backStackEntry.arguments?.getString("level") ?: ""
-                val date = backStackEntry.arguments?.getString("date") ?: ""
-                val timeSlot = backStackEntry.arguments?.getString("timeSlot") ?: ""
-                val campus = backStackEntry.arguments?.getString("campus") ?: ""
-                val building = backStackEntry.arguments?.getString("building") ?: ""
-                val snackbarHostState = remember { SnackbarHostState() }
-                Scaffold(
-                    topBar = {
-                        AUTTopAppBar(
-                            title = "Booking Details",
-                            isDarkTheme = isDarkTheme,
-                            navController = navController,
-                            showBackButton = true,
-                            currentRoute = "booking_details",
-                            currentUserId = userId,
-                            isTeacher = isTeacher
-                        )
-                    },
-                    bottomBar = {
-                        AUTBottomBar(
-                            isDarkTheme = isDarkTheme,
-                            navController = navController,
-                            calendarViewModel = calendarViewModel,
-                            currentRoute = "booking_details",
-                            currentUserId = userId,
-                            isTeacher = isTeacher
-                        )
-                    },
-                    snackbarHost = {
-                        SnackbarHost(
-                            hostState = snackbarHostState,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                ) { paddingValues ->
-                    BookingDetailsScreen(
-                        viewModel = bookingViewModel,
-                        navController = navController,
-                        spaceId = spaceId,
-                        level = level,
-                        date = date,
-                        timeSlot = timeSlot,
-                        studentId = userId,
-                        campus = campus,
-                        building = building,
+            val spaceId = backStackEntry.arguments?.getString("spaceId") ?: ""
+            val level = backStackEntry.arguments?.getString("level") ?: ""
+            val date = backStackEntry.arguments?.getString("date") ?: ""
+            val timeSlot = backStackEntry.arguments?.getString("timeSlot") ?: ""
+            val campus = backStackEntry.arguments?.getString("campus") ?: ""
+            val building = backStackEntry.arguments?.getString("building") ?: ""
+            val snackbarHostState = remember { SnackbarHostState() }
+            Scaffold(
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Booking Details",
                         isDarkTheme = isDarkTheme,
-                        paddingValues = paddingValues,
-                        snackbarHostState = snackbarHostState
+                        navController = navController,
+                        showBackButton = true,
+                        currentRoute = "booking_details",
+                        currentUserId = userId,
+                        isTeacher = isTeacher
+                    )
+                },
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = "booking_details",
+                        currentUserId = userId,
+                        isTeacher = isTeacher,
+                        onClick = {
+                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                            if (userId != null) {
+                                navController.navigate("dashboard/$userId")
+                            }
+                        }
+                    )
+                },
+                snackbarHost = {
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
-            } else {
-                Text("Access Denied: Booking details are for students.")
+            ) { paddingValues ->
+                BookingDetailsScreen(
+                    viewModel = bookingViewModel,
+                    navController = navController,
+                    spaceId = spaceId,
+                    level = level,
+                    date = date,
+                    timeSlot = timeSlot,
+                    studentId = userId,
+                    campus = campus,
+                    building = building,
+                    isDarkTheme = isDarkTheme,
+                    paddingValues = paddingValues,
+                    snackbarHostState = snackbarHostState
+                )
             }
         }
         composable(
@@ -523,7 +554,13 @@ fun AppContent(
                         calendarViewModel = calendarViewModel,
                         currentRoute = "transport",
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        onClick = {
+                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                            if (userId != null) {
+                                navController.navigate("dashboard/$userId")
+                            }
+                        }
                     )
                 }
             ) { padding ->
@@ -557,7 +594,13 @@ fun AppContent(
                         calendarViewModel = calendarViewModel,
                         currentRoute = currentRoute,
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        onClick = {
+                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                            if (userId != null) {
+                                navController.navigate("dashboard/$userId")
+                            }
+                        }
                     )
                 }
             ) { paddingValues ->
@@ -592,7 +635,13 @@ fun AppContent(
                         calendarViewModel = calendarViewModel,
                         currentRoute = currentRoute,
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        onClick = {
+                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                            if (userId != null) {
+                                navController.navigate("dashboard/$userId")
+                            }
+                        }
                     )
                 }
             ) { paddingValues ->
@@ -614,7 +663,7 @@ fun AppContent(
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
             LaunchedEffect(userId, isTeacher) {
-                if (!isTeacher && userId != 0) {
+                if (userId != 0) {
                     notificationViewModel.initialize(userId)
                 }
             }
@@ -638,7 +687,13 @@ fun AppContent(
                         calendarViewModel = calendarViewModel,
                         currentRoute = "notification",
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        onClick = {
+                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                            if (userId != null) {
+                                navController.navigate("dashboard/$userId")
+                            }
+                        }
                     )
                 },
                 snackbarHost = {

@@ -24,7 +24,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -175,7 +174,8 @@ fun AUTBottomBar(
     calendarViewModel: CalendarViewModel,
     currentRoute: String?,
     currentUserId: Int?,
-    isTeacher: Boolean
+    isTeacher: Boolean,
+    onClick: () -> Unit
 ) {
     val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
     val iconTint = if (isDarkTheme) Color.White else Color.Black
@@ -229,13 +229,11 @@ fun AUTBottomBar(
             selected = currentRoute?.startsWith("bookings") == true,
             onClick = {
                 currentUserId?.let { userId ->
-                    if (!isTeacher && currentRoute?.startsWith("bookings") != true) {
+                    if (currentRoute?.startsWith("bookings") != true) {
                         navController.navigate("bookings/$userId") {
                             popUpTo("dashboard/$userId") { inclusive = false }
                             launchSingleTop = true
                         }
-                    } else if (isTeacher) {
-                        Log.d("AUTBottomBar", "Teacher clicked Bookings, not supported yet.")
                     }
                 }
             }

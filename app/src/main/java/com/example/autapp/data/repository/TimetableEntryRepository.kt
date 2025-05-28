@@ -37,4 +37,7 @@ class TimetableEntryRepository(private val timetableEntryDao: TimetableEntryDao)
         return timetableEntryDao.getTimetableEntriesWithCourseByDay(dayOfWeek)
     }
 
+    suspend fun getTimetableEntriesWithCourseByTeacherDay(teacherId: Int, dayOfWeek: Int): List<TimetableEntryDao.TimetableEntryWithCourse> {
+        return timetableEntryDao.getTimetableEntriesWithCourseByTeacherDay(teacherId, dayOfWeek)
+    }
 }

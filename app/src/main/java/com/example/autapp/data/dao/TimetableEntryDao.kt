@@ -40,6 +40,9 @@ interface TimetableEntryDao {
     @Query("SELECT * FROM timetable_entry_table WHERE dayOfWeek = :dayOfWeek ORDER BY startTime")
     suspend fun getTimetableEntriesWithCourseByDay(dayOfWeek: Int): List<TimetableEntryWithCourse>
 
+    @Query("SELECT T.* FROM timetable_entry_table AS T JOIN course_table AS C ON T.courseId = C.courseId WHERE C.teacherId = CAST(:teacherId AS INTEGER) AND T.dayOfWeek = :dayOfWeek ORDER BY T.startTime")
+    suspend fun getTimetableEntriesWithCourseByTeacherDay(teacherId: Int, dayOfWeek: Int): List<TimetableEntryWithCourse>
+
     @Query("DELETE FROM timetable_entry_table")
     suspend fun deleteAll()
 } 

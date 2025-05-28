@@ -16,5 +16,7 @@ data class Event(
     val details: String?,
     val isToDoList: Boolean, // true for todo list items, false for regular events
     val frequency: String?, // "Does not repeat", "Daily", "Weekly", "Monthly", "Yearly"
-    val studentId: Int // to associate events with specific students
+    val studentId: Int, // the id of the user who created the event
+    val teacherId: Int?, // the id of the user who created the event
+    val isTeacherEvent: Boolean // true if the event is a teacher event, false otherwise
 ) 

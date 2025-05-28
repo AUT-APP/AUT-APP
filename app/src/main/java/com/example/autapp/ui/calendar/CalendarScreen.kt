@@ -54,40 +54,41 @@ fun CalendarScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (showCalendarView) "Calendar View" else "Timetable View",
+                text = if (showCalendarView)
+                    if (uiState.isTeacher) "Teacher Calendar View" else "Calendar View"
+                else
+                    if (uiState.isTeacher) "Teacher Timetable View" else "Timetable View",
                 style = MaterialTheme.typography.titleLarge,
                 fontSize = 20.sp
             )
 
             Row {
-                // IconButton to open the dialog for adding a new event
-                IconButton(onClick = { showAddEventDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Event"
-                    )
+                // Only show booking-related buttons for students
+                if (!uiState.isTeacher) {
+                    IconButton(onClick = { showAddEventDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Event"
+                        )
+                    }
+                    IconButton(onClick = { showAddTodoDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Add Todo"
+                        )
+                    }
+                    IconButton(onClick = {
+                        viewModel.navigateToManageEvents()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Manage Events"
+                        )
+                    }
                 }
-                // IconButton to open the dialog for adding a new to-do item
-                IconButton(onClick = { showAddTodoDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Add Todo"
-                    )
-                }
-                // IconButton to navigate to the manage events screen
-                IconButton(onClick = { 
-                    // Navigate to manage events screen
-                    viewModel.navigateToManageEvents()
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Manage Events"
-                    )
-                }
-                // IconButton to toggle between Calendar and Timetable views
                 IconButton(onClick = {
                     showCalendarView = !showCalendarView
-                    viewModel.toggleView() // Notify ViewModel about the view change
+                    viewModel.toggleView()
                 }) {
                     Icon(
                         imageVector = if (showCalendarView)
@@ -136,50 +137,55 @@ fun CalendarScreen(
         }
     }
 
-    // Dialog for adding a new to-do item
-    if (showAddTodoDialog) {
-        EventDialog(
-            event = null, // Pass null for a new event
-            isToDoList = true, // Specify that this is a to-do item
-            selectedDate = uiState.selectedDate,
-            onDismiss = { showAddTodoDialog = false }, // Close dialog on dismiss
-            onSave = { event ->
-                viewModel.addEvent(event) // Save the new to-do item
-                showAddTodoDialog = false // Close dialog on save
-            }
-        )
-    }
+    // Only show event dialogs for students
+    if (!uiState.isTeacher) {
+        if (showAddTodoDialog) {
+            EventDialog(
+                event = null,
+                isToDoList = true,
+                selectedDate = uiState.selectedDate,
+                userId = uiState.userId,
+                isTeacher = uiState.isTeacher,
+                onDismiss = { showAddTodoDialog = false },
+                onSave = { event ->
+                    viewModel.addEvent(event)
+                    showAddTodoDialog = false
+                }
+            )
+        }
 
-    // Dialog for editing an existing event or to-do item
-    // Shows when 'selectedEvent' is not null
-    selectedEvent?.let { event ->
-        EventDialog(
-            event = event, // Pass the selected event to prefill fields
-            isToDoList = event.isToDoList,
-            selectedDate = uiState.selectedDate,
-            onDismiss = { selectedEvent = null }, // Close dialog and clear selection on dismiss
-            onSave = { updatedEvent ->
-                viewModel.updateEvent(updatedEvent) // Update the event
-                selectedEvent = null // Close dialog and clear selection
-            },
-            onDelete = {
-                viewModel.deleteEvent(event) // Delete the event
-                selectedEvent = null // Close dialog and clear selection
-            }
-        )
-    }
+        selectedEvent?.let { event ->
+            EventDialog(
+                event = event,
+                isToDoList = event.isToDoList,
+                selectedDate = uiState.selectedDate,
+                userId = uiState.userId,
+                isTeacher = uiState.isTeacher,
+                onDismiss = { selectedEvent = null },
+                onSave = { updatedEvent ->
+                    viewModel.updateEvent(updatedEvent)
+                    selectedEvent = null
+                },
+                onDelete = {
+                    viewModel.deleteEvent(event)
+                    selectedEvent = null
+                }
+            )
+        }
 
-    // Dialog for adding a new calendar event
-    if (showAddEventDialog) {
-        EventDialog(
-            event = null, // Pass null for a new event
-            isToDoList = false, // Specify that this is a calendar event, not a to-do
-            selectedDate = uiState.selectedDate,
-            onDismiss = { showAddEventDialog = false }, // Close dialog on dismiss
-            onSave = { event ->
-                viewModel.addEvent(event) // Save the new event
-                showAddEventDialog = false // Close dialog on save
-            }
-        )
+        if (showAddEventDialog) {
+            EventDialog(
+                event = null,
+                isToDoList = false,
+                selectedDate = uiState.selectedDate,
+                onDismiss = { showAddEventDialog = false },
+                onSave = { event ->
+                    viewModel.addEvent(event)
+                    showAddEventDialog = false
+                },
+                isTeacher = uiState.isTeacher,
+                userId = uiState.userId
+            )
+        }
     }
 }
