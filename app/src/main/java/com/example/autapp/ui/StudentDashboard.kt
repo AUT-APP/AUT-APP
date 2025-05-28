@@ -41,6 +41,8 @@ import com.example.autapp.data.models.Grade
 import java.text.SimpleDateFormat
 import java.util.Locale
 import com.example.autapp.data.models.TimetableEntry
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
 
 data class AssignmentGradeDisplay(
     val assignmentName: String,
@@ -208,6 +210,32 @@ fun StudentDashboard(
                 )
             }
         }
+    }
+}
+
+
+@Composable
+private fun NavigationButton(location: String?) {
+    val context = LocalContext.current
+
+    Button(
+        onClick = {
+            val encodedLocation = java.net.URLEncoder.encode(location ?: "", "UTF-8")
+            val mazeMapUrl = "https://use.mazemap.com/#v=1&campusid=103&zlevel=1&center=174.765877,-36.853388&zoom=16&search=$encodedLocation"
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(mazeMapUrl))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        },
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+    ) {
+        Icon(
+            painter = painterResource(id = android.R.drawable.ic_dialog_map),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSecondary
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Navigate to Location", color = MaterialTheme.colorScheme.onSecondary)
     }
 }
 
