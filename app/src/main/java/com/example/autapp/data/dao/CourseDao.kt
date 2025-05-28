@@ -22,8 +22,11 @@ interface CourseDao {
     suspend fun getTeacherCourses(teacherId: Int): List<Course>
 
     @Query("SELECT * FROM timetable_entry_table WHERE courseId = :courseId")
-    fun getTimetableForCourse(courseId: Int): List<TimetableEntry>
+    suspend fun getTimetableForCourse(courseId: Int): List<TimetableEntry>
 
     @Update
     suspend fun updateCourse(course: Course)
+
+    @Delete
+    suspend fun deleteCourses(courses: List<Course>)
 }

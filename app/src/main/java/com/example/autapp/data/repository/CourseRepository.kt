@@ -38,4 +38,7 @@ class CourseRepository(private val courseDao: CourseDao) {
         courseDao.updateCourse(course)
     }
 
+    suspend fun deleteCourses(courses: List<Course>) {
+        courseDao.deleteCourses(courses)
+    }
 }

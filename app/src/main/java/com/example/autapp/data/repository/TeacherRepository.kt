@@ -1,37 +1,43 @@
 package com.example.autapp.data.repository
 
 import android.util.Log
+import androidx.room.Transaction
 import com.example.autapp.data.dao.TeacherDao
 import com.example.autapp.data.dao.UserDao
+import com.example.autapp.data.models.Student
 import com.example.autapp.data.models.Teacher
 import com.example.autapp.data.models.User
-import com.example.autapp.data.models.Student
 
 class TeacherRepository(
     private val teacherDao: TeacherDao,
     private val userDao: UserDao
 ) {
+    @Transaction
     suspend fun insertTeacher(teacher: Teacher) {
         // Check if user already exists
         val existingUser = userDao.getUserByUsername(teacher.username)
+        var userId: Int
         if (existingUser == null) {
-            // Insert user if it doesn't exist
+            // Insert user with isFirstLogin = true
             val user = User(
                 firstName = teacher.firstName,
                 lastName = teacher.lastName,
                 username = teacher.username,
                 password = teacher.password,
-                role = teacher.role
+                role = teacher.role,
+                isFirstLogin = true // Explicitly set to true
             )
-            userDao.insertUser(user)
-            Log.d("TeacherRepository", "Inserted new user: ${teacher.username}")
+            userId = userDao.insertUser(user).toInt()
+            Log.d("TeacherRepository", "Inserted new user: ${teacher.username} with ID: $userId")
         } else {
-            Log.d("TeacherRepository", "User ${teacher.username} already exists, skipping user insertion")
+            userId = existingUser.id
+            Log.d("TeacherRepository", "User ${teacher.username} already exists with ID: $userId")
         }
 
-        // Insert teacher
-        teacherDao.insertTeacher(teacher)
-        Log.d("TeacherRepository", "Inserted teacher: ${teacher.firstName} ${teacher.lastName}")
+        // Set the teacher's ID to match the user's ID
+        val teacherWithUserId = teacher.copy(teacherId = userId)
+        teacherDao.insertTeacher(teacherWithUserId)
+        Log.d("TeacherRepository", "Inserted teacher: ${teacher.firstName} ${teacher.lastName} with ID: $userId")
     }
 
     suspend fun getTeacherByUsername(username: String): Teacher? {
@@ -64,5 +70,17 @@ class TeacherRepository(
 
     suspend fun getStudentsForCourse(teacherId: Int, courseId: Int): List<Student> {
         return teacherDao.getStudentsInCourse(teacherId, courseId)
+    }
+
+    @Transaction
+    suspend fun deleteTeacher(teacher: Teacher) {
+        // Delete teacher
+        teacherDao.deleteTeacher(teacher)
+        // Delete associated user
+        userDao.getUserByUsername(teacher.username)?.let {
+            userDao.deleteUser(it)
+            Log.d("TeacherRepository", "Deleted user: ${teacher.username}")
+        }
+        Log.d("TeacherRepository", "Deleted teacher: ${teacher.firstName} ${teacher.lastName} (ID: ${teacher.teacherId})")
     }
 }

@@ -3,24 +3,12 @@ package com.example.autapp
 import android.app.Application
 import com.example.autapp.data.database.AUTDatabase
 import com.example.autapp.data.models.StudySpace
-import com.example.autapp.data.repository.AssignmentRepository
-import com.example.autapp.data.repository.BookingRepository
-import com.example.autapp.data.repository.CourseRepository
-import com.example.autapp.data.repository.EventRepository
-import com.example.autapp.data.repository.GradeRepository
-import com.example.autapp.data.repository.NotificationRepository
-import com.example.autapp.data.repository.StudentRepository
-import com.example.autapp.data.repository.StudySpaceRepository
-import com.example.autapp.data.repository.TeacherRepository
-import com.example.autapp.data.repository.TimetableEntryRepository
-import com.example.autapp.data.repository.TimetableNotificationPreferenceRepository
-import com.example.autapp.data.repository.UserRepository
-import com.example.autapp.util.NotificationHelper
+import com.example.autapp.data.repository.*
 import com.jakewharton.threetenabp.AndroidThreeTen
+import com.example.autapp.util.NotificationHelper
 
 class AUTApplication : Application() {
-
-    // Initialize Room database
+    // Initialize Room database (version 30 with migrations for Teacher role and ActivityLog)
     val database: AUTDatabase by lazy {
         AUTDatabase.getDatabase(this)
     }
@@ -28,13 +16,18 @@ class AUTApplication : Application() {
     // Initialize repositories
     val userRepository by lazy { UserRepository(database.userDao()) }
     val studentRepository by lazy { StudentRepository(database.studentDao(), database.userDao()) }
+    val teacherRepository by lazy { TeacherRepository(database.teacherDao(), database.userDao()) }
+    val adminRepository by lazy { AdminRepository(database.adminDao(), database.userDao()) }
     val courseRepository by lazy { CourseRepository(database.courseDao()) }
+    val departmentRepository by lazy { DepartmentRepository(database.departmentDao()) }
     val assignmentRepository by lazy { AssignmentRepository(database.assignmentDao()) }
     val gradeRepository by lazy { GradeRepository(database.gradeDao(), assignmentRepository) }
     val timetableEntryRepository by lazy { TimetableEntryRepository(database.timetableEntryDao()) }
     val notificationRepository by lazy {
-        NotificationRepository(database.notificationDao(),
-        database.timetableNotificationPreferenceDao())
+        NotificationRepository(
+            database.notificationDao(),
+            database.timetableNotificationPreferenceDao()
+        )
     }
     val eventRepository by lazy { EventRepository(database.eventDao()) }
     val bookingRepository by lazy {
@@ -46,12 +39,14 @@ class AUTApplication : Application() {
     val timetableNotificationPreferenceRepository by lazy {
         TimetableNotificationPreferenceRepository(database.timetableNotificationPreferenceDao())
     }
-    val teacherRepository by lazy { TeacherRepository(database.teacherDao(), database.userDao()) }
+    val activityLogRepository by lazy { ActivityLogRepositoryImpl(database.activityLogDao()) }
 
     override fun onCreate() {
         super.onCreate()
+        // Initialize ThreeTenABP for date/time handling
         AndroidThreeTen.init(this)
-        // Initialize Notification channels
+        // Create notification channels for the app
         NotificationHelper.createNotificationChannels(this)
+        android.util.Log.d("AUTApplication", "Application initialized")
     }
 }

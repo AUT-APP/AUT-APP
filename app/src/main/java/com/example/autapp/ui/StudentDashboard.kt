@@ -360,6 +360,28 @@ fun CourseDetailsDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Navigation Button
+                NavigationButton(location = course.location)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Action Button
+                Button(
+                    onClick = { /* Navigate to materials */ },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_upload),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("View Materials", color = MaterialTheme.colorScheme.onPrimary)
+                }
+
                 if (timetableEntries.isNotEmpty()) {
                     Text(
                         text = "Schedule:",

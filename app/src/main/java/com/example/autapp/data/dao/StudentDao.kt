@@ -14,8 +14,11 @@ interface StudentDao {
     @Query("SELECT * FROM student_table WHERE username = :username")
     suspend fun getStudentByUsername(username: String): Student?
 
-    @Query("SELECT * FROM student_table WHERE studentId = :studentId")
+    @Query("SELECT * FROM student_table WHERE id = :studentId")
     suspend fun getStudentById(studentId: Int): Student?
+
+    @Query("SELECT * FROM student_table WHERE studentId = :studentId")
+    suspend fun getStudentByStudentId(studentId: Int): Student?
 
     @Query("SELECT * FROM student_table")
     suspend fun getAllStudents(): List<Student>
@@ -38,7 +41,21 @@ interface StudentDao {
     """)
     suspend fun getStudentCoursesWithEnrollmentInfo(studentId: Int): List<CourseWithEnrollmentInfo>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertStudentCourseCrossRef(crossRef: StudentCourseCrossRef)
 
+    @Query("DELETE FROM student_table")
+    suspend fun deleteAll()
+
+    @Query("DELETE FROM student_course_cross_ref")
+    suspend fun deleteAllCrossRefs()
+
+    @Query("DELETE FROM student_course_cross_ref WHERE studentId = :studentId")
+    suspend fun deleteCrossRefsByStudentId(studentId: Int)
+
+    @Query("SELECT * FROM student_course_cross_ref WHERE studentId = :studentId AND courseId = :courseId AND year = :year AND semester = :semester")
+    suspend fun getCrossRef(studentId: Int, courseId: Int, year: Int, semester: Int): StudentCourseCrossRef?
+
+    @Delete
+    suspend fun deleteStudent(student: Student)
 }

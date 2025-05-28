@@ -17,10 +17,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog as AndroidTimePickerDialog
 import androidx.compose.ui.platform.LocalContext
+import com.example.autapp.data.repository.DepartmentRepository
+import kotlinx.coroutines.launch
 
 @Composable
 fun TeacherDashboard(
     viewModel: TeacherDashboardViewModel,
+    departmentRepository: DepartmentRepository, // Added
     modifier: Modifier = Modifier,
     teacherId: Int,
     paddingValues: PaddingValues
@@ -33,6 +36,20 @@ fun TeacherDashboard(
     // When a course is selected, load students
     val selectedCourse by viewModel.selectedCourse.collectAsState()
     val studentsInCourse by viewModel.studentsInSelectedCourse.collectAsState()
+
+    // State for department name
+    var departmentName by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Fetch department name when teacher is loaded
+    viewModel.teacher?.let { teacher ->
+        LaunchedEffect(teacher.departmentId) {
+            coroutineScope.launch {
+                val department = departmentRepository.getDepartmentById(teacher.departmentId)
+                departmentName = department?.name ?: "Unknown"
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -56,7 +73,7 @@ fun TeacherDashboard(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Teacher Info Card (Similar to GPA card in Student Dashboard)
+        // Teacher Info Card
         viewModel.teacher?.let { teacher ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -74,7 +91,7 @@ fun TeacherDashboard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Department: ${teacher.department}",
+                        text = "Department: ${departmentName ?: "Loading..."}", // Updated
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -137,11 +154,11 @@ fun TeacherDashboard(
                     Text("No assignments added yet.", style = MaterialTheme.typography.bodyMedium)
                 } else {
                     viewModel.assignments.take(5).forEach { assignment ->
-                         Text(
-                             text = "${assignment.name} for Course ${viewModel.courses.find { it.courseId == assignment.courseId }?.name ?: "Unknown"}",
-                             style = MaterialTheme.typography.bodyMedium
-                         )
-                         Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${assignment.name} for Course ${viewModel.courses.find { it.courseId == assignment.courseId }?.name ?: "Unknown"}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
 
@@ -153,7 +170,7 @@ fun TeacherDashboard(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                if (viewModel.grades.isEmpty()) {
+                if (viewModel.assignments.isEmpty()) {
                     Text("No grades added yet.", style = MaterialTheme.typography.bodyMedium)
                 } else {
                     val allStudents = viewModel.allStudents
