@@ -55,7 +55,6 @@ import com.example.autapp.ui.teacher.TeacherDashboardViewModel
 import com.example.autapp.data.models.TimetableEntry
 import com.example.autapp.data.models.User
 import com.example.autapp.ui.StudentDashboard
-import com.example.autapp.util.TestDataInitializer
 
 class MainActivity : ComponentActivity() {
     private var currentStudentId by mutableStateOf<Int?>(null)
@@ -78,11 +77,6 @@ class MainActivity : ComponentActivity() {
 
         val settingsDataStore = SettingsDataStore(applicationContext)
         val coroutineScope = CoroutineScope(Dispatchers.Main)
-
-        // Initialize test data
-        coroutineScope.launch(Dispatchers.IO) {
-            TestDataInitializer.insertTestData(applicationContext)
-        }
 
         var isDarkTheme by mutableStateOf(false)
 
