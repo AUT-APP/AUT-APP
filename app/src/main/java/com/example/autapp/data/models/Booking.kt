@@ -1,26 +1,12 @@
 package com.example.autapp.data.models
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
-import java.util.Calendar
-import java.util.Date@Entity(
 
-    tableName = "booking_table",
-    foreignKeys = [
-        ForeignKey(
-            entity = Student::class,
-            parentColumns = ["studentId"],
-            childColumns = ["studentId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index(value = ["studentId"])]
-)
+import java.util.Calendar
+import java.util.Date
+import com.example.autapp.data.firebase.*
+
 data class Booking(
-    @PrimaryKey(autoGenerate = true)
     val bookingId: Int = 0,
-    val studentId: Int,
+    val studentId: String,
     val roomId: String,
     val building: String,
     val campus: String,
@@ -28,7 +14,8 @@ data class Booking(
     val bookingDate: Date,
     val startTime: Date,
     val endTime: Date,
-    val status: String = BookingStatus.ACTIVE
+    val status: String = BookingStatus.ACTIVE,
+    val documentId: String? = null
 ) {
     init {
         val durationMinutes = (endTime.time - startTime.time) / (1000 * 60)
@@ -51,7 +38,7 @@ data class Booking(
         get() = status == BookingStatus.ACTIVE && Date().before(endTime)
 
     val isUpcoming: Boolean
-        get() = status == BookingStatus.ACTIVE && Date().before(startTime)
+        get() = status == BookingStatus.ACTIVE && startTime.after(Date())
 
     val isCompleted: Boolean
         get() = status == BookingStatus.CANCELED || Date().after(endTime)
@@ -59,7 +46,7 @@ data class Booking(
     override fun toString(): String {
         return "Booking(bookingId=$bookingId, studentId=$studentId, roomId='$roomId', building='$building', " +
                 "campus='$campus', level='$level', bookingDate=$bookingDate, startTime=$startTime, endTime=$endTime, " +
-                "status='$status')"
+                "status='$status', documentId='$documentId')"
     }
 
 }
@@ -67,4 +54,3 @@ object BookingStatus {
     const val ACTIVE = "ACTIVE"
     const val CANCELED = "CANCELED"
 }
-
