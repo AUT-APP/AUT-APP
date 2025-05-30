@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    onLoginSuccess: (Int, String) -> Unit,
+    onLoginSuccess: (String, String) -> Unit,
     navController: NavController,
     isDarkTheme: Boolean
 ) {

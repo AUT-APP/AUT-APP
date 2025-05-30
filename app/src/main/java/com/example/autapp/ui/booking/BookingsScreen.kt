@@ -59,20 +59,18 @@ fun BookingsScreen(
                 0 -> BookingScreen(
                     viewModel = viewModel,
                     navController = navController,
-                    studentId = studentId,
+                    studentId = studentId.toString(),
                     isDarkTheme = isDarkTheme,
                     paddingValues = PaddingValues(0.dp)
                 )
                 1 -> MyBookingsScreen(
                     viewModel = viewModel,
                     navController = navController,
-                    studentId = studentId,
+                    studentId = studentId.toString(),
                     isDarkTheme = isDarkTheme,
                     paddingValues = PaddingValues(0.dp)
                 )
             }
         }
     }
-
 }
-

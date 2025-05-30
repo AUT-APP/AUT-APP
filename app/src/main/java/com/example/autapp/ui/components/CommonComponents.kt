@@ -39,7 +39,7 @@ fun AUTTopAppBar(
     title: String,
     showBackButton: Boolean,
     currentRoute: String?,
-    currentUserId: Int?,
+    currentUserId: String?,
     isTeacher: Boolean,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
@@ -171,7 +171,7 @@ fun AUTBottomBar(
     navController: NavController,
     calendarViewModel: CalendarViewModel,
     currentRoute: String?,
-    currentUserId: Int?,
+    currentUserId: String?,
     isTeacher: Boolean,
     onClick: () -> Unit
 ) {

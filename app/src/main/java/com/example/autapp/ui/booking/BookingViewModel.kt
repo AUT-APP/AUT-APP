@@ -12,17 +12,22 @@ import com.example.autapp.data.models.Booking
 import com.example.autapp.data.models.BookingSlot
 import com.example.autapp.data.models.SlotStatus
 import com.example.autapp.data.models.StudySpace
-import com.example.autapp.data.repository.BookingRepository
-import com.example.autapp.data.repository.StudySpaceRepository
+import com.example.autapp.data.firebase.*
+import com.example.autapp.data.firebase.FirebaseBookingRepository
+import com.example.autapp.data.firebase.FirebaseStudySpaceRepository
+import com.example.autapp.data.firebase.QueryCondition
+import com.example.autapp.data.firebase.QueryOperator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.logging.Logger
+import kotlin.math.min
+import java.text.SimpleDateFormat
 
 class BookingViewModel(
-    private val bookingRepository: BookingRepository,
-    private val studySpaceRepository: StudySpaceRepository,
+    private val bookingRepository: FirebaseBookingRepository,
+    private val studySpaceRepository: FirebaseStudySpaceRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -129,53 +134,55 @@ class BookingViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val existingSpaces = studySpaceRepository.getAllStudySpaces()
+                val existingSpaces = studySpaceRepository.getAll()
                 Logger.getLogger("BookingViewModel").info("Existing study spaces: ${existingSpaces.size}")
                 existingSpaces.forEach { Logger.getLogger("BookingViewModel").info("Space: $it") }
 
                 if (forceClear) {
-                    studySpaceRepository.deleteAll()
-                    Logger.getLogger("BookingViewModel").info("Cleared study_space_table")
+                    existingSpaces.forEach { space ->
+                        studySpaceRepository.delete(space.documentId)
+                    }
+                    Logger.getLogger("BookingViewModel").info("Cleared study spaces")
                 }
 
                 if (forceClear || existingSpaces.isEmpty()) {
                     val studySpaces = listOf(
-                        StudySpace("Room 1", "WA", "City", "Level 3", 10, true),
-                        StudySpace("Room 2", "WA", "City", "Level 3", 10, true),
-                        StudySpace("Room 3", "WA", "City", "Level 3", 10, true),
-                        StudySpace("Room 4", "WA", "City", "Level 3", 10, true),
-                        StudySpace("Room 5", "WA", "City", "Level 3", 10, true),
-                        StudySpace("Room 6", "WA", "City", "Level 5", 10, true),
-                        StudySpace("Room 7", "WA", "City", "Level 5", 10, true),
-                        StudySpace("Room 8", "WA", "City", "Level 5", 10, true),
-                        StudySpace("Room 9", "WA", "City", "Level 5", 10, true),
-                        StudySpace("Room 11", "WA", "City", "Level 6", 10, true),
-                        StudySpace("Room 12", "WA", "City", "Level 6", 10, true),
-                        StudySpace("Room 13", "WA", "City", "Level 6", 10, true),
-                        StudySpace("Room 14", "WA", "City", "Level 6", 10, true),
-                        StudySpace("Room 409", "WG", "City", "Level 4", 10, true),
-                        StudySpace("Room 410", "WG", "City", "Level 4", 10, true),
-                        StudySpace("Room 411", "WG", "City", "Level 4", 10, true),
-                        StudySpace("Room 412", "WG", "City", "Level 4", 10, true),
-                        StudySpace("Room N1", "NB1 Study Rooms", "North", "Level 1", 8, true),
-                        StudySpace("Room N2", "NB1 Study Rooms", "North", "Level 1", 8, true),
-                        StudySpace("Room N3", "NB2 Study Rooms", "North", "Level 2", 12, true),
-                        StudySpace("Room N4", "NB2 Study Rooms", "North", "Level 2", 12, true),
-                        StudySpace("Room S1", "SB1 Study Rooms", "South", "Level 1", 6, true),
-                        StudySpace("Room S2", "SB1 Study Rooms", "South", "Level 1", 6, true),
-                        StudySpace("Room S3", "SB2 Study Rooms", "South", "Level 2", 10, true),
-                        StudySpace("Room S4", "SB2 Study Rooms", "South", "Level 2", 10, true)
+                        FirebaseStudySpace("", "Room 1", "WA", "City", "Level 3", 10, true),
+                        FirebaseStudySpace("", "Room 2", "WA", "City", "Level 3", 10, true),
+                        FirebaseStudySpace("", "Room 3", "WA", "City", "Level 3", 10, true),
+                        FirebaseStudySpace("", "Room 4", "WA", "City", "Level 3", 10, true),
+                        FirebaseStudySpace("", "Room 5", "WA", "City", "Level 3", 10, true),
+                        FirebaseStudySpace("", "Room 6", "WA", "City", "Level 5", 10, true),
+                        FirebaseStudySpace("", "Room 7", "WA", "City", "Level 5", 10, true),
+                        FirebaseStudySpace("", "Room 8", "WA", "City", "Level 5", 10, true),
+                        FirebaseStudySpace("", "Room 9", "WA", "City", "Level 5", 10, true),
+                        FirebaseStudySpace("", "Room 11", "WA", "City", "Level 6", 10, true),
+                        FirebaseStudySpace("", "Room 12", "WA", "City", "Level 6", 10, true),
+                        FirebaseStudySpace("", "Room 13", "WA", "City", "Level 6", 10, true),
+                        FirebaseStudySpace("", "Room 14", "WA", "City", "Level 6", 10, true),
+                        FirebaseStudySpace("", "Room 409", "WG", "City", "Level 4", 10, true),
+                        FirebaseStudySpace("", "Room 410", "WG", "City", "Level 4", 10, true),
+                        FirebaseStudySpace("", "Room 411", "WG", "City", "Level 4", 10, true),
+                        FirebaseStudySpace("", "Room 412", "WG", "City", "Level 4", 10, true),
+                        FirebaseStudySpace("", "Room N1", "NB1 Study Rooms", "North", "Level 1", 8, true),
+                        FirebaseStudySpace("", "Room N2", "NB1 Study Rooms", "North", "Level 1", 8, true),
+                        FirebaseStudySpace("", "Room N3", "NB2 Study Rooms", "North", "Level 2", 12, true),
+                        FirebaseStudySpace("", "Room N4", "NB2 Study Rooms", "North", "Level 2", 12, true),
+                        FirebaseStudySpace("", "Room S1", "SB1 Study Rooms", "South", "Level 1", 6, true),
+                        FirebaseStudySpace("", "Room S2", "SB1 Study Rooms", "South", "Level 1", 6, true),
+                        FirebaseStudySpace("", "Room S3", "SB2 Study Rooms", "South", "Level 2", 10, true),
+                        FirebaseStudySpace("", "Room S4", "SB2 Study Rooms", "South", "Level 2", 10, true)
                     )
                     Logger.getLogger("BookingViewModel").info("Attempting to insert ${studySpaces.size} study spaces")
                     studySpaces.forEach { space ->
                         try {
-                            studySpaceRepository.insertStudySpace(space)
+                            studySpaceRepository.create(space)
                             Logger.getLogger("BookingViewModel").info("Inserted: $space")
                         } catch (e: Exception) {
                             Logger.getLogger("BookingViewModel").severe("Failed to insert $space: ${e.message}")
                         }
                     }
-                    val insertedSpaces = studySpaceRepository.getAllStudySpaces()
+                    val insertedSpaces = studySpaceRepository.getAll()
                     Logger.getLogger("BookingViewModel").info("After insertion, study spaces: ${insertedSpaces.size}")
                     insertedSpaces.forEach { Logger.getLogger("BookingViewModel").info("Verified: $it") }
                     if (insertedSpaces.isEmpty()) {
@@ -202,7 +209,8 @@ class BookingViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val campusList = studySpaceRepository.getCampuses()
+                val spaces = studySpaceRepository.getAll()
+                val campusList = spaces.map { it.campus }.distinct()
                 _campuses.value = campusList
                 Logger.getLogger("BookingViewModel").info("Fetched campuses: $campusList")
                 _errorMessage.value = if (campusList.isEmpty()) {
@@ -223,7 +231,8 @@ class BookingViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val buildingList = studySpaceRepository.getBuildingsByCampus(campus)
+                val spaces = studySpaceRepository.queryByField("campus", campus)
+                val buildingList = spaces.map { it.building }.distinct()
                     .filter { it != "None" }
                 _buildings.value = buildingList
                 Logger.getLogger("BookingViewModel").info("Fetched buildings for $campus: $buildingList")
@@ -245,11 +254,15 @@ class BookingViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                var spaces = studySpaceRepository.getStudySpacesByCampusAndBuilding(campus, building)
+                val conditions = mutableListOf(
+                    QueryCondition("campus", QueryOperator.EQUAL_TO, campus),
+                    QueryCondition("building", QueryOperator.EQUAL_TO, building)
+                )
                 if (level != null && level != "All") {
-                    spaces = spaces.filter { it.level == level }
+                    conditions.add(QueryCondition("level", QueryOperator.EQUAL_TO, level))
                 }
-                _studySpaces.value = spaces
+                val spaces = studySpaceRepository.query(conditions)
+                _studySpaces.value = spaces.map { it.toStudySpace() }
                 Logger.getLogger("BookingViewModel").info("Fetched study spaces for $campus/$building${if (level != null) "/$level" else ""}: ${spaces.size}")
                 _errorMessage.value = if (spaces.isEmpty()) {
                     "No study spaces found for $campus/$building${if (level != null) "/$level" else ""}"
@@ -268,7 +281,11 @@ class BookingViewModel(
     fun fetchAllLevels(campus: String, building: String) {
         viewModelScope.launch {
             try {
-                val spaces = studySpaceRepository.getStudySpacesByCampusAndBuilding(campus, building)
+                val conditions = listOf(
+                    QueryCondition("campus", QueryOperator.EQUAL_TO, campus),
+                    QueryCondition("building", QueryOperator.EQUAL_TO, building)
+                )
+                val spaces = studySpaceRepository.query(conditions)
                 val levels = spaces.map { it.level }.distinct()
                 _allLevels.value = levels
                 Logger.getLogger("BookingViewModel").info("Fetched all levels for $campus/$building: $levels")
@@ -285,25 +302,87 @@ class BookingViewModel(
         campus: String,
         level: String?,
         date: Date,
-        studentId: Int
+        studentId: String
     ) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 bookingRepository.deleteCompletedAndCancelledBookings()
-                var spaces = if (spaceId != null) {
+
+                val studySpaces = if (spaceId != null && spaceId != "All") {
                     listOfNotNull(studySpaceRepository.getStudySpaceById(spaceId))
                 } else {
                     studySpaceRepository.getStudySpacesByCampusAndBuilding(campus, building)
                 }
-                if (level != null && level != "All") {
-                    spaces = spaces.filter { it.level == level }
+
+                val filteredStudySpaces = if (level != null && level != "All") {
+                    studySpaces.filter { it.level == level }
+                } else {
+                    studySpaces
                 }
-                val slots = spaces.flatMap { space ->
-                    generateTimeSlots(space.spaceId, space.building, space.campus, space.level, date, studentId)
+
+                val relevantSpaceDocumentIds = filteredStudySpaces.map { it.spaceId }
+                val existingBookings = bookingRepository.getBookingsByDate(date)
+                    .filter { it.roomId in relevantSpaceDocumentIds }
+
+                val slots = mutableListOf<BookingSlot>()
+                val calendar = Calendar.getInstance().apply { time = date }
+                calendar.set(Calendar.HOUR_OF_DAY, 8)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+
+                val now = Date()
+
+                filteredStudySpaces.forEach { studySpace ->
+                    var hour = 8
+                    var minute = 0
+                    while (hour < 21 || (hour == 21 && minute == 0)) {
+                        val timeSlotString = String.format(Locale.US, "%02d:%02d", hour, minute)
+                        calendar.set(Calendar.HOUR_OF_DAY, hour)
+                        calendar.set(Calendar.MINUTE, minute)
+                        val slotStart = calendar.time
+                        calendar.add(Calendar.MINUTE, 30)
+                        val slotEnd = calendar.time
+
+                        val isPast = slotStart.before(now)
+
+                        val conflicts = existingBookings.filter { booking ->
+                            booking.roomId == studySpace.spaceId &&
+                            booking.status == "ACTIVE" &&
+                            booking.startTime.before(slotEnd) &&
+                            booking.endTime.after(slotStart)
+                        }
+
+                        val status = when {
+                            isPast -> SlotStatus.PAST
+                            conflicts.isEmpty() -> SlotStatus.AVAILABLE
+                            conflicts.any { it.studentId == studentId && it.status == "ACTIVE" } -> SlotStatus.MY_BOOKING
+                            conflicts.any { it.startTime <= now && it.endTime >= now && it.status == "ACTIVE" } -> SlotStatus.IN_USE
+                            else -> SlotStatus.BOOKED
+                        }
+
+                        slots.add(
+                            BookingSlot(
+                                roomId = studySpace.spaceId,
+                                building = studySpace.building,
+                                campus = studySpace.campus,
+                                level = studySpace.level,
+                                timeSlot = timeSlotString,
+                                status = status
+                            )
+                        )
+
+                        minute += 30
+                        if (minute >= 60) {
+                            hour += 1
+                            minute = 0
+                        }
+                    }
                 }
-                _availableSlots.value = slots
-                Logger.getLogger("BookingViewModel").info("Fetched ${slots.size} slots for $campus/$building/${spaceId ?: "All"}/${level ?: "All"}")
+
+                _availableSlots.value = slots.sortedWith(compareBy({ it.level }, { it.roomId }, { it.timeSlot }))
+                Logger.getLogger("BookingViewModel").info("Generated ${slots.size} slots for $campus/$building/${spaceId ?: "All"}/${level ?: "All"}")
                 _errorMessage.value = null
             } catch (e: Exception) {
                 _errorMessage.value = "Error fetching slots: ${e.message}"
@@ -342,18 +421,26 @@ class BookingViewModel(
                 val endOfDayTime = endOfDay.time
                 Logger.getLogger("BookingViewModel").info("End of day time=$endOfDayTime")
 
-                val nextBooking = bookingRepository.getNextBooking(spaceId, startTime)
+                val studySpace = studySpaceRepository.getStudySpacesByName(spaceId).firstOrNull()
+                val studySpaceDocumentId = studySpace?.spaceId
+
+                val nextBooking = if (studySpaceDocumentId != null) {
+                    bookingRepository.getNextBooking(studySpaceDocumentId, startTime)
+                } else {
+                    null
+                }
+
                 val maxDurationMinutes = if (nextBooking != null) {
                     val minutesUntilNext = ((nextBooking.startTime.time - startTime.time) / (1000 * 60)).toInt()
                     Logger.getLogger("BookingViewModel").info("Next booking found at ${nextBooking.startTime}, minutes until next=$minutesUntilNext")
-                    minOf(minutesUntilNext, 120)
+                    min(minutesUntilNext, 120)
                 } else {
                     val minutesUntilEndOfDay = ((endOfDayTime.time - startTime.time) / (1000 * 60)).toInt()
                     Logger.getLogger("BookingViewModel").info("No next booking, minutes until end of day=$minutesUntilEndOfDay")
-                    minOf(minutesUntilEndOfDay, 120)
+                    min(minutesUntilEndOfDay, 120)
                 }
 
-                val validMaxDuration = maxOf(0, minOf(maxDurationMinutes, 120))
+                val validMaxDuration = maxOf(0, min(maxDurationMinutes, 120))
                 val durations = listOf(30, 60, 90, 120).filter { it <= validMaxDuration }
                 _availableDurations.value = durations
                 _errorMessage.value = if (durations.isEmpty()) {
@@ -370,61 +457,87 @@ class BookingViewModel(
     }
 
     fun createBooking(
-        studentId: Int,
         spaceId: String,
-        building: String,
-        campus: String,
         level: String,
-        bookingDate: Date,
-        startTime: Date,
-        endTime: Date
+        date: String,
+        timeSlot: String,
+        studentId: String,
+        durationMinutes: Int,
+        campus: String,
+        building: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
     ) {
         viewModelScope.launch {
             try {
-                Logger.getLogger("BookingViewModel").info("Creating booking: studentId=$studentId, spaceId=$spaceId, startTime=$startTime, endTime=$endTime")
+                val studySpace = studySpaceRepository.getStudySpacesByName(spaceId).firstOrNull()
+                val studySpaceDocumentId = studySpace?.spaceId
+
+                if (studySpaceDocumentId == null) {
+                    onFailure("Error creating booking: Study space not found.")
+                    Logger.getLogger("BookingViewModel").severe("Error creating booking: Study space not found for name $spaceId")
+                    return@launch
+                }
+
+                Logger.getLogger("BookingViewModel").info("Creating booking: studentId=$studentId, spaceDocumentId=$studySpaceDocumentId, startTime=$timeSlot, endTime=$timeSlot")
+
+                val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US)
+                val bookingDateParsed = dateFormat.parse(date) ?: Date()
+                val startTimeParsed = dateFormat.parse(timeSlot) ?: Date()
+                val endTimeParsed = Date(startTimeParsed.time + durationMinutes * 60 * 1000)
+
                 val booking = Booking(
                     bookingId = 0,
                     studentId = studentId,
-                    roomId = spaceId,
+                    roomId = studySpaceDocumentId,
                     building = building,
                     campus = campus,
                     level = level,
-                    bookingDate = bookingDate,
-                    startTime = startTime,
-                    endTime = endTime,
+                    bookingDate = bookingDateParsed,
+                    startTime = startTimeParsed,
+                    endTime = endTimeParsed,
                     status = "ACTIVE"
                 )
-                bookingRepository.insertBooking(booking)
+                val firebaseBooking = bookingRepository.fromBooking(booking)
+                bookingRepository.create(firebaseBooking)
                 _errorMessage.value = null
                 _bookingSuccess.value = true
-                Logger.getLogger("BookingViewModel").info("Booking inserted successfully")
+                Logger.getLogger("BookingViewModel").info("Booking inserted successfully with document ID ${firebaseBooking.id}")
                 fetchMyBookings(studentId)
-                fetchAvailableSlots(spaceId, building, campus, level, bookingDate, studentId)
+                fetchAvailableSlots(studySpaceDocumentId, building, campus, level, bookingDateParsed, studentId)
+                onSuccess()
             } catch (e: Exception) {
                 val userFriendlyMessage = when (e.message) {
-                    "Cannot create more than 2 active bookings" -> "You already have 2 active bookings. Please cancel one to book another."
-                    "Study space does not exist" -> "The selected study space is not available."
-                    "Study space is not available" -> "The selected study space is currently unavailable."
-                    "This time slot is already booked" -> "This time slot is already taken. Please choose another."
-                    "Cannot book a time slot in the past" -> "You cannot book a time slot in the past."
-                    "Booking cannot extend past 21:00" -> "Bookings cannot extend beyond 21:00."
-                    "Booking insertion failed not found in database" -> "Failed to create booking. Please try again."
+                    "Booking duration must be at least 30 minutes" -> "Booking duration must be at least 30 minutes"
+                    "Booking duration cannot exceed 2 hours" -> "Booking duration cannot exceed 2 hours"
+                    "Start time must be before end time" -> "Invalid time selection"
+                    "Booking date must match start time date" -> "Invalid date selection"
+                    "Booking cannot be more than 30 days in the future" -> "Cannot book more than 30 days in advance"
                     else -> "Error creating booking: ${e.message}"
                 }
                 _errorMessage.value = userFriendlyMessage
                 Logger.getLogger("BookingViewModel").severe("Error creating booking: ${e.message}")
+                onFailure(userFriendlyMessage)
             }
         }
     }
 
-    fun fetchMyBookings(studentId: Int) {
+    fun fetchMyBookings(studentId: String) {
         viewModelScope.launch {
             try {
                 bookingRepository.deleteCompletedAndCancelledBookings()
                 val bookings = bookingRepository.getBookingsByStudent(studentId)
-                _myBookings.value = bookings.sortedBy { it.startTime }
-                Logger.getLogger("BookingViewModel").info("Fetched ${bookings.size} bookings for studentId=$studentId")
-                bookings.forEach { Logger.getLogger("BookingViewModel").info("Booking: $it") }
+                val myBookingsWithSpaceNames = bookings.mapNotNull { firebaseBooking ->
+                    val studySpace = studySpaceRepository.getStudySpaceById(firebaseBooking.roomId)
+                    studySpace?.let {
+                        firebaseBooking.toBooking().copy(
+                            roomId = it.spaceId
+                        )
+                    }
+                }
+                _myBookings.value = myBookingsWithSpaceNames
+                Logger.getLogger("BookingViewModel").info("Fetched ${myBookingsWithSpaceNames.size} bookings for studentId=$studentId")
+                myBookingsWithSpaceNames.forEach { Logger.getLogger("BookingViewModel").info("Booking: ${it.roomId}") }
                 _errorMessage.value = null
             } catch (e: Exception) {
                 _errorMessage.value = "Error fetching bookings: ${e.message}"
@@ -443,84 +556,37 @@ class BookingViewModel(
     ) {
         viewModelScope.launch {
             try {
-                bookingRepository.deleteBooking(booking)
-                _errorMessage.value = null
-                fetchMyBookings(booking.studentId)
-                fetchAvailableSlots(spaceId, building, campus, level, date, booking.studentId)
+                val studySpace = studySpaceRepository.getStudySpacesByName(spaceId).firstOrNull()
+                val studySpaceDocumentId = studySpace?.spaceId
+
+                if (studySpaceDocumentId == null) {
+                    _errorMessage.value = "Error canceling booking: Study space not found."
+                    Logger.getLogger("BookingViewModel").severe("Error canceling booking: Study space not found for name $spaceId")
+                    return@launch
+                }
+
+                val firebaseBookings = bookingRepository.checkBookingConflict(
+                    studySpaceDocumentId,
+                    booking.startTime,
+                    booking.endTime
+                ).filter { it.studentId == booking.studentId.toString() }
+
+                val firebaseBookingToDelete = firebaseBookings.firstOrNull { it.startTime == booking.startTime && it.endTime == booking.endTime && it.studentId == booking.studentId.toString() }
+
+                if (firebaseBookingToDelete != null) {
+                    bookingRepository.delete(firebaseBookingToDelete.id)
+                    _errorMessage.value = null
+                    fetchMyBookings(booking.studentId)
+                    fetchAvailableSlots(studySpaceDocumentId, building, campus, level, date, booking.studentId)
+                } else {
+                    _errorMessage.value = "Error canceling booking: Booking not found."
+                    Logger.getLogger("BookingViewModel").severe("Error canceling booking: Booking not found for booking: $booking")
+                }
             } catch (e: Exception) {
                 _errorMessage.value = "Error canceling booking: ${e.message}"
                 Logger.getLogger("BookingViewModel").severe("Error canceling booking: ${e.message}")
             }
         }
-    }
-
-    private suspend fun generateTimeSlots(
-        spaceId: String,
-        building: String,
-        campus: String,
-        level: String,
-        date: Date,
-        studentId: Int
-    ): List<BookingSlot> {
-        val slots = mutableListOf<BookingSlot>()
-        val calendar = Calendar.getInstance().apply { time = date }
-        calendar.set(Calendar.HOUR_OF_DAY, 8)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-
-        val timeSlots = mutableListOf<String>()
-        var hour = 8
-        var minute = 0
-        while (hour < 21 || (hour == 21 && minute == 0)) {
-            timeSlots.add(String.format(Locale.US, "%02d:%02d", hour, minute))
-            minute += 30
-            if (minute >= 60) {
-                hour += 1
-                minute = 0
-            }
-        }
-
-        val now = Date()
-        timeSlots.forEach { timeSlot ->
-            val (slotHour, slotMinute) = timeSlot.split(":").map { it.toInt() }
-            calendar.set(Calendar.HOUR_OF_DAY, slotHour)
-            calendar.set(Calendar.MINUTE, slotMinute)
-            val slotStart = calendar.time
-            calendar.add(Calendar.MINUTE, 30)
-            val slotEnd = calendar.time
-
-            val isPast = slotStart.before(now)
-            Logger.getLogger("BookingViewModel").info("Slot $timeSlot: start=$slotStart, end=$slotEnd, isPast=$isPast")
-
-            val conflicts = bookingRepository.checkBookingConflict(spaceId, slotStart, slotEnd)
-            val validConflicts = conflicts.filter { booking ->
-                val bookingCalendar = Calendar.getInstance().apply { time = booking.bookingDate }
-                val slotCalendar = Calendar.getInstance().apply { time = date }
-                bookingCalendar.get(Calendar.YEAR) == slotCalendar.get(Calendar.YEAR) &&
-                        bookingCalendar.get(Calendar.DAY_OF_YEAR) == slotCalendar.get(Calendar.DAY_OF_YEAR)
-            }
-
-            val status = when {
-                isPast -> SlotStatus.PAST
-                validConflicts.isEmpty() -> SlotStatus.AVAILABLE
-                validConflicts.any { it.studentId == studentId && it.status == "ACTIVE" } -> SlotStatus.MY_BOOKING
-                validConflicts.any { it.startTime <= now && it.endTime >= now && it.status == "ACTIVE" } -> SlotStatus.IN_USE
-                else -> SlotStatus.BOOKED
-            }
-
-            slots.add(
-                BookingSlot(
-                    roomId = spaceId,
-                    building = building,
-                    campus = campus,
-                    level = level,
-                    timeSlot = timeSlot,
-                    status = status
-                )
-            )
-        }
-        return slots
     }
 
     companion object {

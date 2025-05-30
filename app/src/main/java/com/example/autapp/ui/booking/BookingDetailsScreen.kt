@@ -33,7 +33,7 @@ fun BookingDetailsScreen(
     level: String,
     date: String,
     timeSlot: String,
-    studentId: Int,
+    studentId: String,
     campus: String,
     building: String,
     isDarkTheme: Boolean,
@@ -50,7 +50,7 @@ fun BookingDetailsScreen(
     var pendingBooking by remember { mutableStateOf<Booking?>(null) }
 
     val isValidInput = spaceId.isNotEmpty() && level.isNotEmpty() && date.isNotEmpty() &&
-            timeSlot.isNotEmpty() && studentId != 0 && durationMinutes > 0 &&
+            timeSlot.isNotEmpty() && studentId.isNotEmpty() && durationMinutes > 0 &&
             campus.isNotEmpty() && building.isNotEmpty()
 
     val parsedDate = try {
@@ -281,14 +281,19 @@ fun BookingDetailsScreen(
                         pendingBooking?.let { booking ->
                             Logger.getLogger("BookingDetailsScreen").info("Confirming booking: $booking")
                             viewModel.createBooking(
-                                studentId = booking.studentId,
                                 spaceId = booking.roomId,
-                                building = booking.building,
-                                campus = booking.campus,
                                 level = booking.level,
-                                bookingDate = booking.bookingDate,
-                                startTime = booking.startTime,
-                                endTime = booking.endTime
+                                date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(booking.bookingDate),
+                                timeSlot = SimpleDateFormat("HH:mm", Locale.US).format(booking.startTime),
+                                studentId = booking.studentId,
+                                durationMinutes = durationMinutes,
+                                campus = booking.campus,
+                                building = booking.building,
+                                onSuccess = { navController.popBackStack() },
+                                onFailure = { errorMessage ->
+                                    // Handle failure if needed, maybe show a snackbar
+                                    // _errorMessage.value = errorMessage
+                                }
                             )
                             pendingBooking = null
                             showConfirmation = false

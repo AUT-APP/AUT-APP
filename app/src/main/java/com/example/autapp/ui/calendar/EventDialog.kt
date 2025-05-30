@@ -26,7 +26,7 @@ fun EventDialog(
     event: Event?,
     isToDoList: Boolean,
     selectedDate: LocalDate,
-    userId: Int,
+    userId: String,
     isTeacher: Boolean,
     onDismiss: () -> Unit,
     onSave: (Event) -> Unit,
@@ -195,7 +195,7 @@ fun EventDialog(
                     Button(
                         onClick = {
                             val newEvent = Event(
-                                eventId = event?.eventId ?: 0,
+                                eventId = event?.eventId ?: "",
                                 title = title,
                                 date = date,
                                 startTime = if (isToDoList) null else startTime,

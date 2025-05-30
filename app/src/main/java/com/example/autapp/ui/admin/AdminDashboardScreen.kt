@@ -7,16 +7,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.autapp.data.models.*
-import com.example.autapp.data.repository.*
 import com.example.autapp.ui.components.AUTTopAppBar
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -24,6 +22,16 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.*
+import androidx.compose.ui.platform.LocalContext
+import com.example.autapp.data.firebase.*
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.mutableStateListOf
 
 // Helper function to parse enrollmentDate (String) to LocalDate for sorting
 fun parseEnrollmentDate(date: String): LocalDate {
@@ -34,13 +42,23 @@ fun parseEnrollmentDate(date: String): LocalDate {
     }
 }
 
+// Define a simple data class for the form's timetable entry state
+data class TimetableEntryFormData(
+    var dayOfWeek: Int = 1, // 1 = Monday, 7 = Sunday
+    var startTime: String = "", // Use String for time input initially
+    var endTime: String = "",   // Use String for time input initially
+    var room: String = "",
+    var type: String = "" // Lecture, Lab, Tutorial
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboardScreen(
-    studentRepository: StudentRepository,
-    teacherRepository: TeacherRepository,
-    courseRepository: CourseRepository,
-    departmentRepository: DepartmentRepository,
+    studentRepository: FirebaseStudentRepository,
+    teacherRepository: FirebaseTeacherRepository,
+    courseRepository: FirebaseCourseRepository,
+    departmentRepository: FirebaseDepartmentRepository,
+    timetableEntryRepository: FirebaseTimetableRepository,
     navController: NavController,
     isDarkTheme: Boolean = false
 ) {
@@ -58,18 +76,19 @@ fun AdminDashboardScreen(
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Students", "Teachers", "Courses", "Departments", "Activity")
     var showCreateStudentDialog by remember { mutableStateOf(false) }
-    var showEditStudentDialog by remember { mutableStateOf<Student?>(null) }
-    var showDeleteStudentDialog by remember { mutableStateOf<List<Student>?>(null) }
+    var showEditStudentDialog by remember { mutableStateOf<FirebaseStudent?>(null) }
+    var showDeleteStudentDialog by remember { mutableStateOf<List<FirebaseStudent>?>(null) }
     var showCreateTeacherDialog by remember { mutableStateOf(false) }
-    var showEditTeacherDialog by remember { mutableStateOf<Teacher?>(null) }
-    var showDeleteTeacherDialog by remember { mutableStateOf<List<Teacher>?>(null) }
+    var showEditTeacherDialog by remember { mutableStateOf<FirebaseTeacher?>(null) }
+    var showDeleteTeacherDialog by remember { mutableStateOf<List<FirebaseTeacher>?>(null) }
     var showCreateCourseDialog by remember { mutableStateOf(false) }
-    var showEditCourseDialog by remember { mutableStateOf<Course?>(null) }
-    var showDeleteCourseDialog by remember { mutableStateOf<List<Course>?>(null) }
+    var showEditCourseDialog by remember { mutableStateOf<FirebaseCourse?>(null) }
+    var showDeleteCourseDialog by remember { mutableStateOf<List<FirebaseCourse>?>(null) }
     var showCreateDepartmentDialog by remember { mutableStateOf(false) }
-    var showEditDepartmentDialog by remember { mutableStateOf<Department?>(null) }
-    var showDeleteDepartmentDialog by remember { mutableStateOf<Department?>(null) }
+    var showEditDepartmentDialog by remember { mutableStateOf<FirebaseDepartment?>(null) }
+    var showDeleteDepartmentDialog by remember { mutableStateOf<FirebaseDepartment?>(null) }
     var showBulkEnrollDialog by remember { mutableStateOf(false) }
+    var showMigrationDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -83,7 +102,15 @@ fun AdminDashboardScreen(
                 showBackButton = false,
                 currentRoute = "admin_dashboard",
                 currentUserId = null,
-                isTeacher = false
+                isTeacher = false,
+                actions = {
+                    IconButton(onClick = { showMigrationDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.CloudUpload,
+                            contentDescription = "Migrate to Firebase"
+                        )
+                    }
+                }
             )
         },
         snackbarHost = {
@@ -134,9 +161,13 @@ fun AdminDashboardScreen(
                 2 -> CoursesTab(
                     courses = courses,
                     teachers = teachers,
+                    departments = departments,
                     onCreateCourse = { showCreateCourseDialog = true },
                     onEditCourse = { showEditCourseDialog = it },
-                    onDeleteCourses = { showDeleteCourseDialog = it }
+                    onDeleteCourses = { showDeleteCourseDialog = it },
+                    studentRepository = studentRepository,
+                    courseRepository = courseRepository,
+                    timetableEntryRepository = timetableEntryRepository
                 )
                 3 -> DepartmentsTab(
                     departments = departments,
@@ -169,11 +200,22 @@ fun AdminDashboardScreen(
                     onDismiss = { showCreateStudentDialog = false },
                     onSave = { firstName, lastName, role, enrollmentDate, majorId, minorId, yearOfStudy, dob, selectedCourses ->
                         viewModel.createStudent(
-                            firstName, lastName, role, enrollmentDate,
-                            majorId, minorId, yearOfStudy, 0.0, dob, selectedCourses, 2025, 1
+                            firstName = firstName,
+                            lastName = lastName,
+                            role = role,
+                            enrollmentDate = enrollmentDate,
+                            majorId = majorId.toString(),
+                            minorId = minorId?.toString(),
+                            yearOfStudy = yearOfStudy,
+                            gpa = 0.0,
+                            dob = dob,
+                            selectedCourses = selectedCourses,
+                            enrollmentYear = 2025,
+                            semester = 1
                         )
                         showCreateStudentDialog = false
-                    }
+                    },
+                    courseRepository = courseRepository
                 )
             }
 
@@ -192,18 +234,19 @@ fun AdminDashboardScreen(
                                 lastName = lastName,
                                 role = role,
                                 enrollmentDate = enrollmentDate,
-                                majorId = majorId,
-                                minorId = minorId,
+                                majorId = majorId.toString(),
+                                minorId = minorId?.toString() ?: "",
                                 yearOfStudy = yearOfStudy,
                                 gpa = student.gpa,
                                 dob = dob
                             ),
-                            selectedCourses,
-                            2025,
-                            1
+                            enrollmentYear = 2025,
+                            semester = 1,
+                            courseEnrollments = selectedCourses
                         )
                         showEditStudentDialog = null
-                    }
+                    },
+                    courseRepository = courseRepository
                 )
             }
 
@@ -237,7 +280,12 @@ fun AdminDashboardScreen(
                     courses = courses,
                     onDismiss = { showBulkEnrollDialog = false },
                     onSave = { studentIds, courseId, year, semester ->
-                        viewModel.bulkEnroll(studentIds, courseId, year, semester)
+                        viewModel.bulkEnroll(
+                            studentIds = studentIds.map { it.toString() },
+                            courseId = courseId.toString(),
+                            year = year,
+                            semester = semester
+                        )
                         showBulkEnrollDialog = false
                     }
                 )
@@ -250,8 +298,16 @@ fun AdminDashboardScreen(
                     onDismiss = { showCreateTeacherDialog = false },
                     onSave = { firstName, lastName, role, departmentId, officeHours, courses, dob ->
                         viewModel.createTeacher(
-                            firstName, lastName, role, departmentId,
-                            officeHours, courses, dob
+                            firstName = firstName,
+                            lastName = lastName,
+                            role = role,
+                            departmentId = departmentId.toString(),
+                            title = "",
+                            officeNumber = officeHours,
+                            email = "",
+                            phoneNumber = "",
+                            dob = dob,
+                            courseAssignments = courses.map { Triple(it, 0, 0) }
                         )
                         showCreateTeacherDialog = false
                     }
@@ -270,9 +326,9 @@ fun AdminDashboardScreen(
                                 firstName = firstName,
                                 lastName = lastName,
                                 role = role,
-                                departmentId = departmentId,
+                                departmentId = departmentId.toString(),
                                 officeHours = officeHours,
-                                courses = courses.toMutableList(),
+                                courses = courses,
                                 dob = dob
                             )
                         )
@@ -308,12 +364,24 @@ fun AdminDashboardScreen(
             if (showCreateCourseDialog) {
                 CourseFormDialog(
                     teachers = teachers,
+                    departments = departments,
                     isEditing = false,
                     onDismiss = { showCreateCourseDialog = false },
-                    onSave = { name, title, description, location, teacherId, objectives ->
-                        viewModel.createCourse(name, title, description, location, teacherId, objectives)
+                    onSave = { name, title, description, location, teacherId, objectives, departmentId, timetableEntries ->
+                        viewModel.createCourse(
+                            name = title,
+                            code = name,
+                            credits = 0,
+                            departmentId = departmentId,
+                            description = description,
+                            prerequisites = emptyList(),
+                            timetableEntries = timetableEntries
+                        )
                         showCreateCourseDialog = false
-                    }
+                    },
+                    studentRepository = studentRepository,
+                    courseRepository = courseRepository,
+                    timetableEntryRepository = timetableEntryRepository
                 )
             }
 
@@ -321,9 +389,10 @@ fun AdminDashboardScreen(
                 CourseFormDialog(
                     course = course,
                     teachers = teachers,
+                    departments = departments,
                     isEditing = true,
                     onDismiss = { showEditCourseDialog = null },
-                    onSave = { name, title, description, location, teacherId, objectives ->
+                    onSave = { name, title, description, location, teacherId, objectives, departmentId, timetableEntries ->
                         viewModel.updateCourse(
                             course.copy(
                                 name = name,
@@ -331,11 +400,16 @@ fun AdminDashboardScreen(
                                 description = description,
                                 location = location,
                                 teacherId = teacherId,
-                                objectives = objectives
-                            )
+                                objectives = objectives,
+                                departmentId = departmentId,
+                            ),
+                            timetableEntries = timetableEntries
                         )
                         showEditCourseDialog = null
-                    }
+                    },
+                    studentRepository = studentRepository,
+                    courseRepository = courseRepository,
+                    timetableEntryRepository = timetableEntryRepository
                 )
             }
 
@@ -367,7 +441,13 @@ fun AdminDashboardScreen(
                 DepartmentFormDialog(
                     onDismiss = { showCreateDepartmentDialog = false },
                     onSave = { name, type, description ->
-                        viewModel.createDepartment(name, type, description)
+                        viewModel.createDepartment(
+                            name = name,
+                            code = "",
+                            type = type,
+                            description = description.toString(),
+                            headTeacherId = null
+                        )
                         showCreateDepartmentDialog = false
                     }
                 )
@@ -379,7 +459,12 @@ fun AdminDashboardScreen(
                     onDismiss = { showEditDepartmentDialog = null },
                     onSave = { name, type, description ->
                         viewModel.updateDepartment(
-                            department.copy(name = name, type = type, description = description)
+                            department.copy(
+                                name = name,
+                                type = type,
+                                description = description,
+                                departmentId = department.departmentId
+                            )
                         )
                         showEditDepartmentDialog = null
                     }
@@ -408,16 +493,20 @@ fun AdminDashboardScreen(
 
 @Composable
 fun CoursesTab(
-    courses: List<Course>,
-    teachers: List<Teacher>,
+    courses: List<FirebaseCourse>,
+    teachers: List<FirebaseTeacher>,
+    departments: List<FirebaseDepartment>,
     onCreateCourse: () -> Unit,
-    onEditCourse: (Course) -> Unit,
-    onDeleteCourses: (List<Course>) -> Unit
+    onEditCourse: (FirebaseCourse) -> Unit,
+    onDeleteCourses: (List<FirebaseCourse>) -> Unit,
+    studentRepository: FirebaseStudentRepository,
+    courseRepository: FirebaseCourseRepository,
+    timetableEntryRepository: FirebaseTimetableRepository
 ) {
     var searchText by remember { mutableStateOf("") }
     var sortBy by remember { mutableStateOf("name") }
     var sortAscending by remember { mutableStateOf(true) }
-    var selectedCourseIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var selectedCourseIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var sortExpanded by remember { mutableStateOf(false) }
 
     val sortedAndFilteredCourses by remember(courses, searchText, sortBy, sortAscending) {
@@ -430,8 +519,8 @@ fun CoursesTab(
                 }
                 .sortedWith(
                     when (sortBy) {
-                        "id" -> compareBy<Course> { it.courseId }
-                        else -> compareBy<Course> { it.name }
+                        "id" -> compareBy<FirebaseCourse> { it.courseId }
+                        else -> compareBy<FirebaseCourse> { it.name }
                     }.let { comparator ->
                         if (sortAscending) comparator else comparator.reversed()
                     }
@@ -532,7 +621,7 @@ fun CoursesTab(
                 ) {
                     Checkbox(
                         checked = selectedCourseIds.contains(course.courseId),
-                        onCheckedChange = { isChecked ->
+                        onCheckedChange = { isChecked: Boolean ->
                             selectedCourseIds = if (isChecked) {
                                 selectedCourseIds + course.courseId
                             } else {
@@ -544,6 +633,7 @@ fun CoursesTab(
                     CourseItem(
                         course = course,
                         teachers = teachers,
+                        departments = departments,
                         onEdit = { onEditCourse(course) },
                         onDelete = { onDeleteCourses(listOf(course)) }
                     )
@@ -555,8 +645,9 @@ fun CoursesTab(
 
 @Composable
 fun CourseItem(
-    course: Course,
-    teachers: List<Teacher>,
+    course: FirebaseCourse,
+    teachers: List<FirebaseTeacher>,
+    departments: List<FirebaseDepartment>,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -605,21 +696,78 @@ fun CourseItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseFormDialog(
-    course: Course? = null,
-    teachers: List<Teacher>,
+    course: FirebaseCourse? = null,
+    teachers: List<FirebaseTeacher>,
+    departments: List<FirebaseDepartment>,
     isEditing: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String?, Int, String) -> Unit
+    onSave: (String, String, String, String?, String, String, String, List<TimetableEntryFormData>) -> Unit,
+    studentRepository: FirebaseStudentRepository,
+    courseRepository: FirebaseCourseRepository,
+    timetableEntryRepository: FirebaseTimetableRepository
 ) {
     var name by remember { mutableStateOf(course?.name ?: "") }
     var title by remember { mutableStateOf(course?.title ?: "") }
     var description by remember { mutableStateOf(course?.description ?: "") }
     var objectives by remember { mutableStateOf(course?.objectives ?: "") }
     var location by remember { mutableStateOf(course?.location ?: "") }
-    var teacherId by remember { mutableStateOf(course?.teacherId ?: 0) }
+    var teacherId by remember { mutableStateOf(course?.teacherId ?: "") }
     var teacherExpanded by remember { mutableStateOf(false) }
+    var departmentId by remember { mutableStateOf(course?.departmentId ?: "") }
+    var departmentExpanded by remember { mutableStateOf(false) }
+
+    // State to hold timetable entries for the form
+    // Initialize with existing entries if editing (requires fetching them first)
+    // For now, start with an empty list for new courses, or an empty list for editing until fetch is implemented
+    var timetableEntries = remember { mutableStateListOf<TimetableEntryFormData>() }
+
+    // State for adding a new timetable entry
+    var newEntryDayOfWeek by remember { mutableStateOf(1) }
+    var newEntryStartTime by remember { mutableStateOf("") }
+    var newEntryEndTime by remember { mutableStateOf("") }
+    var newEntryType by remember { mutableStateOf("") }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current // To show time picker
+
+    // Options for Day of Week dropdown
+    val daysOfWeek = listOf(
+        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+    )
+
+    // Options for Entry Type dropdown
+    val entryTypes = listOf("Lecture", "Lab", "Tutorial", "Other")
+
+    LaunchedEffect(course, isEditing) {
+        if (isEditing && course != null) {
+            try {
+                // Ensure repositories are accessed within the coroutine scope if needed
+                val enrollments = studentRepository.getEnrollmentsByStudent(course.courseId)
+                val enrolledCoursesData = enrollments.mapNotNull { enrollment ->
+                    val course = courseRepository.getCourseByCourseId(enrollment.courseId)
+                    val semesterInt = enrollment.semester.toIntOrNull() ?: return@mapNotNull null
+                    course?.let { Triple(it.courseId, enrollment.year, semesterInt) }
+                }
+                // Clear existing entries and add new ones to the mutable state list
+                timetableEntries.clear()
+                enrolledCoursesData.map { (courseId, year, semester) ->
+                    TimetableEntryFormData(
+                        dayOfWeek = 1, // Default to Monday
+                        startTime = "",
+                        endTime = "",
+                        room = "",
+                        type = "" // Lecture, Lab, Tutorial
+                    )
+                }.forEach { entry -> timetableEntries.add(entry) }
+
+            } catch (e: Exception) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Failed to load timetable entries: ${e.message}")
+                }
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -660,7 +808,7 @@ fun CourseFormDialog(
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    label = { Text("Location (Optional)") },
+                    label = { Text("Default Room") }, // Changed label to reflect its use as default
                     modifier = Modifier.fillMaxWidth()
                 )
                 Box {
@@ -689,6 +837,176 @@ fun CourseFormDialog(
                         }
                     }
                 }
+                Box {
+                    OutlinedTextField(
+                        value = departments.find { it.departmentId == departmentId }?.name ?: "Select Department *",
+                        onValueChange = {},
+                        label = { Text("Department") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { departmentExpanded = true },
+                        readOnly = true
+                    )
+                    DropdownMenu(
+                        expanded = departmentExpanded,
+                        onDismissRequest = { departmentExpanded = false }
+                    ) {
+                        departments.forEach { department ->
+                            DropdownMenuItem(
+                                text = { Text(department.name) },
+                                onClick = {
+                                    departmentId = department.departmentId
+                                    departmentExpanded = false
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
+
+                Divider(modifier = Modifier.padding(vertical = 16.dp))
+
+                // Timetable Entries Section
+                Text("Timetable Entries", style = MaterialTheme.typography.titleMedium)
+
+                // Display existing timetable entries
+                timetableEntries.forEachIndexed { index, entry ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("${daysOfWeek[entry.dayOfWeek - 1]} ${entry.startTime}-${entry.endTime}")
+                            Text("${entry.type} in ${entry.room}")
+                        }
+                        IconButton(onClick = { timetableEntries.removeAt(index) }) {
+                            Icon(Icons.Default.Delete, "Remove Entry")
+                        }
+                    }
+                    if (index < timetableEntries.lastIndex) {
+                        Divider()
+                    }
+                }
+
+                // Add new timetable entry form
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Add New Entry", style = MaterialTheme.typography.titleSmall)
+                    // Day of Week Dropdown
+                    var dayOfWeekExpanded by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedTextField(
+                            value = daysOfWeek[newEntryDayOfWeek - 1],
+                            onValueChange = { },
+                            label = { Text("Day") },
+                            readOnly = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { dayOfWeekExpanded = true },
+                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, "Select Day") }
+                        )
+                        DropdownMenu(
+                            expanded = dayOfWeekExpanded,
+                            onDismissRequest = { dayOfWeekExpanded = false }
+                        ) {
+                            daysOfWeek.forEachIndexed { index, day ->
+                                DropdownMenuItem(
+                                    text = { Text(day) },
+                                    onClick = {
+                                        newEntryDayOfWeek = index + 1
+                                        dayOfWeekExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Time Pickers Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Start Time Picker
+                        OutlinedTextField(
+                            value = newEntryStartTime,
+                            onValueChange = { newEntryStartTime = it },
+                            label = { Text("Start Time (HH:mm)") },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("e.g., 09:00") }
+                            // Consider adding a visual transformation or input filter for time format
+                        )
+                        // End Time Picker
+                        OutlinedTextField(
+                            value = newEntryEndTime,
+                            onValueChange = { newEntryEndTime = it },
+                            label = { Text("End Time (HH:mm)") },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("e.g., 10:00") }
+                            // Consider adding a visual transformation or input filter for time format
+                        )
+                    }
+
+                    // Room and Type Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                         OutlinedTextField(
+                            value = newEntryType, // Use newEntryType state
+                            onValueChange = { newEntryType = it },
+                            label = { Text("Type") },
+                            modifier = Modifier.weight(1f),
+                             placeholder = { Text("e.g., Lecture") }
+                            // Consider adding a dropdown for Type
+                        )
+                        OutlinedTextField(
+                            value = location.ifEmpty { "Enter Room" }, // Use the main location field as default/source
+                            onValueChange = { location = it }, // Allow editing the main location field here too? Or make this a separate field? Let's make it a separate field for the entry.
+                             label = { Text("Room") }, // Changed label to reflect room for entry
+                             modifier = Modifier.weight(1f),
+                             placeholder = { Text("e.g., Room 101") }
+                         )
+                    }
+
+                    // Button to add entry
+                    Button(
+                        onClick = {
+                            if (newEntryStartTime.isNotBlank() && newEntryEndTime.isNotBlank() && newEntryType.isNotBlank() && location.isNotBlank()) { // Use main location for room for now
+                                // Basic time format validation (HH:mm)
+                                val timeFormat = SimpleDateFormat("HH:mm", Locale.US)
+                                try {
+                                    timeFormat.parse(newEntryStartTime)
+                                    timeFormat.parse(newEntryEndTime)
+                                    timetableEntries.add(
+                                        TimetableEntryFormData(
+                                            dayOfWeek = newEntryDayOfWeek,
+                                            startTime = newEntryStartTime,
+                                            endTime = newEntryEndTime,
+                                            room = location, // Use the main location field for room
+                                            type = newEntryType
+                                        )
+                                    )
+                                    // Clear new entry fields
+                                    newEntryDayOfWeek = 1
+                                    newEntryStartTime = ""
+                                    newEntryEndTime = ""
+                                    newEntryType = ""
+                                    // Keep location as is, or clear it? Let's keep it.
+                                } catch (e: Exception) {
+                                    coroutineScope.launch { snackbarHostState.showSnackbar("Invalid time format (use HH:mm)") }
+                                }
+                            } else {
+                                coroutineScope.launch { snackbarHostState.showSnackbar("Please fill all new entry fields") }
+                            }
+                        },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Add Entry")
+                    }
+                }
+
                 Text(
                     "* indicates required field",
                     style = MaterialTheme.typography.bodySmall,
@@ -704,10 +1022,11 @@ fun CourseFormDialog(
             TextButton(
                 onClick = {
                     try {
-                        if (name.isBlank() || title.isBlank() || description.isBlank() || teacherId == 0) {
+                        if (name.isBlank() || title.isBlank() || description.isBlank() || teacherId.isBlank() || departmentId.isBlank()) {
                             throw IllegalArgumentException("Please fill all required fields")
                         }
-                        onSave(name, title, description, location.takeIf { it.isNotBlank() }, teacherId, objectives)
+                        // Pass the list of timetable entries to onSave
+                        onSave(name, title, description, location.takeIf { it.isNotBlank() }, teacherId, objectives, departmentId, timetableEntries.toList())
                     } catch (e: Exception) {
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(e.message ?: "Invalid input")
@@ -725,18 +1044,18 @@ fun CourseFormDialog(
 
 @Composable
 fun StudentsTab(
-    students: List<Student>,
-    courses: List<Course>,
-    departments: List<Department>,
+    students: List<FirebaseStudent>,
+    courses: List<FirebaseCourse>,
+    departments: List<FirebaseDepartment>,
     onCreateStudent: () -> Unit,
-    onEditClickStudent: (Student) -> Unit,
-    onDeleteStudents: (List<Student>) -> Unit,
+    onEditClickStudent: (FirebaseStudent) -> Unit,
+    onDeleteStudents: (List<FirebaseStudent>) -> Unit,
     onBulkEnroll: () -> Unit
 ) {
     var searchText by remember { mutableStateOf("") }
     var sortBy by remember { mutableStateOf("name") }
     var sortAscending by remember { mutableStateOf(true) }
-    var selectedStudentIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var selectedStudentIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var sortExpanded by remember { mutableStateOf(false) }
 
     val sortedAndFilteredStudents by remember(students, searchText, sortBy, sortAscending) {
@@ -749,9 +1068,9 @@ fun StudentsTab(
                 }
                 .sortedWith(
                     when (sortBy) {
-                        "id" -> compareBy<Student> { it.studentId }
-                        "enrollment" -> compareBy<Student> { parseEnrollmentDate(it.enrollmentDate) }
-                        else -> compareBy<Student> { "${it.firstName} ${it.lastName}" }
+                        "id" -> compareBy<FirebaseStudent> { it.studentId }
+                        "enrollment" -> compareBy<FirebaseStudent> { parseEnrollmentDate(it.enrollmentDate) }
+                        else -> compareBy<FirebaseStudent> { "${it.firstName} ${it.lastName}" }
                     }.let { comparator ->
                         if (sortAscending) comparator else comparator.reversed()
                     }
@@ -866,7 +1185,7 @@ fun StudentsTab(
                 ) {
                     Checkbox(
                         checked = selectedStudentIds.contains(student.studentId),
-                        onCheckedChange = { isChecked ->
+                        onCheckedChange = { isChecked: Boolean ->
                             selectedStudentIds = if (isChecked) {
                                 selectedStudentIds + student.studentId
                             } else {
@@ -890,16 +1209,16 @@ fun StudentsTab(
 
 @Composable
 fun TeachersTab(
-    teachers: List<Teacher>,
-    departments: List<Department>,
+    teachers: List<FirebaseTeacher>,
+    departments: List<FirebaseDepartment>,
     onCreateTeacher: () -> Unit,
-    onEditTeacher: (Teacher) -> Unit,
-    onDeleteTeachers: (List<Teacher>) -> Unit
+    onEditTeacher: (FirebaseTeacher) -> Unit,
+    onDeleteTeachers: (List<FirebaseTeacher>) -> Unit
 ) {
     var searchText by remember { mutableStateOf("") }
     var sortBy by remember { mutableStateOf("name") }
     var sortAscending by remember { mutableStateOf(true) }
-    var selectedTeacherIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var selectedTeacherIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var sortExpanded by remember { mutableStateOf(false) }
 
     val sortedAndFilteredTeachers by remember(teachers, searchText, sortBy, sortAscending) {
@@ -912,8 +1231,8 @@ fun TeachersTab(
                 }
                 .sortedWith(
                     when (sortBy) {
-                        "id" -> compareBy<Teacher> { it.teacherId }
-                        else -> compareBy<Teacher> { "${it.firstName} ${it.lastName}" }
+                        "id" -> compareBy<FirebaseTeacher> { it.teacherId }
+                        else -> compareBy<FirebaseTeacher> { "${it.firstName} ${it.lastName}" }
                     }.let { comparator ->
                         if (sortAscending) comparator else comparator.reversed()
                     }
@@ -1014,7 +1333,7 @@ fun TeachersTab(
                 ) {
                     Checkbox(
                         checked = selectedTeacherIds.contains(teacher.teacherId),
-                        onCheckedChange = { isChecked ->
+                        onCheckedChange = { isChecked: Boolean ->
                             selectedTeacherIds = if (isChecked) {
                                 selectedTeacherIds + teacher.teacherId
                             } else {
@@ -1037,10 +1356,10 @@ fun TeachersTab(
 
 @Composable
 fun DepartmentsTab(
-    departments: List<Department>,
+    departments: List<FirebaseDepartment>,
     onCreateDepartment: () -> Unit,
-    onEditDepartment: (Department) -> Unit,
-    onDeleteDepartment: (Department) -> Unit
+    onEditDepartment: (FirebaseDepartment) -> Unit,
+    onDeleteDepartment: (FirebaseDepartment) -> Unit
 ) {
     Column {
         Button(
@@ -1065,7 +1384,7 @@ fun DepartmentsTab(
 
 @Composable
 fun ActivityTab(
-    activities: List<ActivityLog>
+    activities: List<FirebaseActivityLog>
 ) {
     LazyColumn(
         modifier = Modifier
@@ -1100,9 +1419,9 @@ fun ActivityTab(
 
 @Composable
 fun StudentItem(
-    student: Student,
-    courses: List<Course>,
-    departments: List<Department>,
+    student: FirebaseStudent,
+    courses: List<FirebaseCourse>,
+    departments: List<FirebaseDepartment>,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -1156,8 +1475,8 @@ fun StudentItem(
 
 @Composable
 fun TeacherItem(
-    teacher: Teacher,
-    departments: List<Department>,
+    teacher: FirebaseTeacher,
+    departments: List<FirebaseDepartment>,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -1206,7 +1525,7 @@ fun TeacherItem(
 
 @Composable
 fun DepartmentItem(
-    department: Department,
+    department: FirebaseDepartment,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -1238,34 +1557,40 @@ fun DepartmentItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentFormDialog(
-    student: Student? = null,
-    studentRepository: StudentRepository,
-    courses: List<Course>,
-    departments: List<Department>,
+    student: FirebaseStudent? = null,
+    studentRepository: FirebaseStudentRepository,
+    courses: List<FirebaseCourse>,
+    departments: List<FirebaseDepartment>,
     isEditing: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String, Int, Int?, Int, String, List<Triple<Int, Int, Int>>) -> Unit
+    onSave: (String, String, String, String, String, String?, Int, String, List<Triple<String, Int, Int>>) -> Unit,
+    courseRepository: FirebaseCourseRepository
 ) {
     var firstName by remember { mutableStateOf(student?.firstName ?: "") }
     var lastName by remember { mutableStateOf(student?.lastName ?: "") }
     var role by remember { mutableStateOf(student?.role ?: "Student") }
     var enrollmentDate by remember { mutableStateOf(student?.enrollmentDate ?: SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())) }
-    var majorId by remember { mutableStateOf(student?.majorId ?: 0) }
+    var majorId by remember { mutableStateOf(student?.majorId ?: "") }
     var minorId by remember { mutableStateOf(student?.minorId) }
     var yearOfStudy by remember { mutableStateOf(student?.yearOfStudy?.toString() ?: "") }
     var dob by remember { mutableStateOf(student?.dob ?: "") }
-    var selectedCourses by remember { mutableStateOf<List<Triple<Int, Int, Int>>>(emptyList()) }
+    var selectedCourses by remember { mutableStateOf<List<Triple<String, Int, Int>>>(emptyList()) }
     var majorExpanded by remember { mutableStateOf(false) }
     var minorExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    // Initialize selectedCourses when student data is available
     LaunchedEffect(student, isEditing) {
         if (isEditing && student != null) {
             try {
-                val enrolledCourses = studentRepository.getStudentCoursesWithEnrollmentInfo(student.studentId)
-                selectedCourses = enrolledCourses.map { Triple(it.course.courseId, it.year, it.semester) }
+                val enrollments = studentRepository.getEnrollmentsByStudent(student.studentId)
+                selectedCourses = enrollments.mapNotNull { enrollment ->
+                    val course = courseRepository.getCourseByCourseId(enrollment.courseId)
+                    val semesterInt = enrollment.semester.toIntOrNull() ?: return@mapNotNull null
+                    course?.let { Triple(it.courseId, enrollment.year, semesterInt) }
+                }
             } catch (e: Exception) {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar("Failed to load courses: ${e.message}")
@@ -1422,9 +1747,9 @@ fun StudentFormDialog(
                 )
                 courses.forEach { course ->
                     val courseState = selectedCourses.find { it.first == course.courseId }
-                    var isChecked by remember { mutableStateOf(courseState != null) }
-                    var year by remember { mutableStateOf(courseState?.second?.toString() ?: "2025") }
-                    var semester by remember { mutableStateOf(courseState?.third?.toString() ?: "1") }
+                    var isChecked by remember(courseState) { mutableStateOf(courseState != null) }
+                    var year by remember(courseState) { mutableStateOf(courseState?.second?.toString() ?: "2025") }
+                    var semester by remember(courseState) { mutableStateOf(courseState?.third?.toString() ?: "1") }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1432,7 +1757,7 @@ fun StudentFormDialog(
                     ) {
                         Checkbox(
                             checked = isChecked,
-                            onCheckedChange = { checked ->
+                            onCheckedChange = { checked: Boolean ->
                                 isChecked = checked
                                 selectedCourses = if (checked) {
                                     selectedCourses + Triple(course.courseId, year.toIntOrNull() ?: 2025, semester.toIntOrNull() ?: 1)
@@ -1447,9 +1772,12 @@ fun StudentFormDialog(
                                 value = year,
                                 onValueChange = { newYear ->
                                     year = newYear
-                                    selectedCourses = selectedCourses.map {
-                                        if (it.first == course.courseId) Triple(it.first, newYear.toIntOrNull() ?: it.second, it.third)
-                                        else it
+                                    selectedCourses = selectedCourses.map { courseEnrollment ->
+                                        if (courseEnrollment.first == course.courseId) {
+                                            Triple(courseEnrollment.first, newYear.toIntOrNull() ?: courseEnrollment.second, courseEnrollment.third)
+                                        } else {
+                                            courseEnrollment
+                                        }
                                     }
                                 },
                                 label = { Text("Year") },
@@ -1460,9 +1788,12 @@ fun StudentFormDialog(
                                 value = semester,
                                 onValueChange = { newSemester ->
                                     semester = newSemester
-                                    selectedCourses = selectedCourses.map {
-                                        if (it.first == course.courseId) Triple(it.first, it.second, newSemester.toIntOrNull() ?: it.third)
-                                        else it
+                                    selectedCourses = selectedCourses.map { courseEnrollment ->
+                                        if (courseEnrollment.first == course.courseId) {
+                                            Triple(courseEnrollment.first, courseEnrollment.second, newSemester.toIntOrNull() ?: courseEnrollment.third)
+                                        } else {
+                                            courseEnrollment
+                                        }
                                     }
                                 },
                                 label = { Text("Sem") },
@@ -1487,10 +1818,11 @@ fun StudentFormDialog(
                 onClick = {
                     try {
                         if (firstName.isBlank() || lastName.isBlank() || enrollmentDate.isBlank() ||
-                            majorId == 0 || yearOfStudy.isBlank() || dob.isBlank()
+                            majorId.isBlank() || yearOfStudy.isBlank() || dob.isBlank()
                         ) {
                             throw IllegalArgumentException("Please fill all required fields")
                         }
+
                         if (selectedCourses.any { it.second <= 0 || it.third <= 0 }) {
                             throw IllegalArgumentException("Year and semester must be positive")
                         }
@@ -1523,17 +1855,17 @@ fun StudentFormDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BulkEnrollDialog(
-    students: List<Student>,
-    courses: List<Course>,
+    students: List<FirebaseStudent>,
+    courses: List<FirebaseCourse>,
     onDismiss: () -> Unit,
-    onSave: (List<Int>, Int, Int, Int) -> Unit
+    onSave: (List<String>, String, Int, Int) -> Unit
 ) {
-    var selectedStudentIds by remember { mutableStateOf<List<Int>>(emptyList()) }
-    var courseId by remember { mutableStateOf(0) }
+    var selectedStudentIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var courseId by remember { mutableStateOf("") }
     var year by remember { mutableStateOf("2025") }
     var semester by remember { mutableStateOf("1") }
     var courseExpanded by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
+    var snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     AlertDialog(
@@ -1600,7 +1932,7 @@ fun BulkEnrollDialog(
                         ) {
                             Checkbox(
                                 checked = isChecked,
-                                onCheckedChange = { checked ->
+                                onCheckedChange = { checked: Boolean ->
                                     isChecked = checked
                                     selectedStudentIds = if (checked) {
                                         selectedStudentIds + student.studentId
@@ -1628,7 +1960,7 @@ fun BulkEnrollDialog(
             TextButton(
                 onClick = {
                     try {
-                        if (selectedStudentIds.isEmpty() || courseId == 0 || year.isBlank() || semester.isBlank()) {
+                        if (selectedStudentIds.isEmpty() || courseId.isBlank() || year.isBlank() || semester.isBlank()) {
                             throw IllegalArgumentException("Please select at least one student, a course, and specify year and semester")
                         }
                         val yearInt = year.toIntOrNull() ?: throw IllegalArgumentException("Invalid year")
@@ -1655,22 +1987,22 @@ fun BulkEnrollDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TeacherFormDialog(
-    teacher: Teacher? = null,
-    departments: List<Department>,
+    teacher: FirebaseTeacher? = null,
+    departments: List<FirebaseDepartment>,
     isEditing: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, String, String, Int, String, List<String>, String) -> Unit
+    onSave: (String, String, String, String, String, List<String>, String) -> Unit
 ) {
     var firstName by remember { mutableStateOf(teacher?.firstName ?: "") }
     var lastName by remember { mutableStateOf(teacher?.lastName ?: "") }
     var role by remember { mutableStateOf(teacher?.role ?: "Teacher") }
-    var departmentId by remember { mutableStateOf(teacher?.departmentId ?: 0) }
+    var departmentId by remember { mutableStateOf(teacher?.departmentId ?: "") }
     var officeHours by remember { mutableStateOf(teacher?.officeHours ?: "") }
     var courses by remember { mutableStateOf(teacher?.courses?.joinToString(", ") ?: "") }
     var dob by remember { mutableStateOf(teacher?.dob ?: "") }
     var expanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
+    var snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     if (showDatePicker) {
@@ -1738,7 +2070,7 @@ fun TeacherFormDialog(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        departments.filter { it.type == "Department" }.forEach { department ->
+                        departments.forEach { department ->
                             DropdownMenuItem(
                                 text = { Text(department.name) },
                                 onClick = {
@@ -1786,7 +2118,7 @@ fun TeacherFormDialog(
             TextButton(
                 onClick = {
                     try {
-                        if (firstName.isBlank() || lastName.isBlank() || departmentId == 0 ||
+                        if (firstName.isBlank() || lastName.isBlank() || departmentId.isBlank() ||
                             officeHours.isBlank() || dob.isBlank()
                         ) {
                             throw IllegalArgumentException("Please fill all required fields")
@@ -1818,7 +2150,7 @@ fun TeacherFormDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DepartmentFormDialog(
-    department: Department? = null,
+    department: FirebaseDepartment? = null,
     onDismiss: () -> Unit,
     onSave: (String, String, String?) -> Unit
 ) {

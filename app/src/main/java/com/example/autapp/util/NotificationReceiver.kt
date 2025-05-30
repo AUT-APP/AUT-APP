@@ -51,7 +51,7 @@ class NotificationReceiver : BroadcastReceiver() {
                 try {
                     val app = context.applicationContext as AUTApplication
                     val notificationRepository = app.notificationRepository
-                    notificationRepository.insertNotification(notification)
+                    notificationRepository.create(notification.toFirebaseNotification())
                     Log.d(TAG, "Logged notification ID: ${notification.notificationId}")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to log notification: ${e.message}", e)

@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.autapp.data.database.BusDatabase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -28,19 +27,27 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
-import android.view.ViewGroup
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
+import com.example.autapp.data.firebase.FirebaseBusSchedule
+import com.example.autapp.data.firebase.FirebaseBusScheduleRepository
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.autapp.AUTApplication
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.util.Date // Import Date
+import java.util.Calendar // Import Calendar for Date conversion
+import androidx.lifecycle.ViewModelStoreOwner
 
-class TransportViewModel(application: Application) : AndroidViewModel(application) {
-    private val database = BusDatabase.getDatabase(application)
-    private val busScheduleDao = database.busScheduleDao()
-
-    val departures: Flow<List<BusSchedule>> = busScheduleDao.getAllSchedules()
+class TransportViewModel(application: Application, private val busScheduleRepository: FirebaseBusScheduleRepository) : AndroidViewModel(application) {
+    private val _departures = MutableStateFlow<List<FirebaseBusSchedule>>(emptyList())
+    val departures: StateFlow<List<FirebaseBusSchedule>> = _departures.asStateFlow()
 
     // Define the coordinates for both campuses
     val cityCampus = GeoPoint(-36.8519, 174.7681) // AUT City Campus
@@ -57,56 +64,76 @@ class TransportViewModel(application: Application) : AndroidViewModel(applicatio
         Configuration.getInstance().userAgentValue = application.packageName
 
         viewModelScope.launch {
-            val schedules = listOf(
-                // Morning departures
-                BusSchedule(departureTime = LocalTime.of(7, 0), arrivalTime = LocalTime.of(7, 45)),
-                BusSchedule(departureTime = LocalTime.of(8, 15), arrivalTime = LocalTime.of(9, 0)),
-                BusSchedule(departureTime = LocalTime.of(9, 0), arrivalTime = LocalTime.of(9, 30)),
-                BusSchedule(departureTime = LocalTime.of(9, 30), arrivalTime = LocalTime.of(10, 0)),
-                BusSchedule(
-                    departureTime = LocalTime.of(10, 30),
-                    arrivalTime = LocalTime.of(11, 0)
-                ),
-                BusSchedule(
-                    departureTime = LocalTime.of(11, 30),
-                    arrivalTime = LocalTime.of(12, 0)
-                ),
-                // Afternoon departures
-                BusSchedule(
-                    departureTime = LocalTime.of(12, 30),
-                    arrivalTime = LocalTime.of(13, 0)
-                ),
-                BusSchedule(
-                    departureTime = LocalTime.of(13, 30),
-                    arrivalTime = LocalTime.of(14, 0)
-                ),
-                BusSchedule(
-                    departureTime = LocalTime.of(14, 30),
-                    arrivalTime = LocalTime.of(15, 0)
-                ),
-                BusSchedule(
-                    departureTime = LocalTime.of(15, 15),
-                    arrivalTime = LocalTime.of(15, 45)
-                ),
-                BusSchedule(
-                    departureTime = LocalTime.of(16, 30),
-                    arrivalTime = LocalTime.of(17, 15)
-                ),
-                BusSchedule(
-                    departureTime = LocalTime.of(17, 15),
-                    arrivalTime = LocalTime.of(18, 0)
-                ),
-                BusSchedule(departureTime = LocalTime.of(18, 30), arrivalTime = LocalTime.of(19, 0))
-            )
-            busScheduleDao.deleteAll()
-            busScheduleDao.insertAll(schedules)
+            // Check if schedules exist in Firebase, if not, insert the hardcoded data
+            val existingSchedules = busScheduleRepository.getAllSchedules()
+            if (existingSchedules.isEmpty()) {
+                val schedulesToInsert = listOf(
+                    // Morning departures
+                    FirebaseBusSchedule(departureTime = LocalTime.of(7, 0).toDate(), arrivalTime = LocalTime.of(7, 45).toDate()),
+                    FirebaseBusSchedule(departureTime = LocalTime.of(8, 15).toDate(), arrivalTime = LocalTime.of(9, 0).toDate()),
+                    FirebaseBusSchedule(departureTime = LocalTime.of(9, 0).toDate(), arrivalTime = LocalTime.of(9, 30).toDate()),
+                    FirebaseBusSchedule(departureTime = LocalTime.of(9, 30).toDate(), arrivalTime = LocalTime.of(10, 0).toDate()),
+                    FirebaseBusSchedule(
+                        departureTime = LocalTime.of(10, 30).toDate(),
+                        arrivalTime = LocalTime.of(11, 0).toDate()
+                    ),
+                    FirebaseBusSchedule(
+                        departureTime = LocalTime.of(11, 30).toDate(),
+                        arrivalTime = LocalTime.of(12, 0).toDate()
+                    ),
+                    // Afternoon departures
+                    FirebaseBusSchedule(
+                        departureTime = LocalTime.of(12, 30).toDate(),
+                        arrivalTime = LocalTime.of(13, 0).toDate()
+                    ),
+                    FirebaseBusSchedule(
+                        departureTime = LocalTime.of(13, 30).toDate(),
+                        arrivalTime = LocalTime.of(14, 0).toDate()
+                    ),
+                    FirebaseBusSchedule(
+                        departureTime = LocalTime.of(14, 30).toDate(),
+                        arrivalTime = LocalTime.of(15, 0).toDate()
+                    ),
+                    FirebaseBusSchedule(
+                        departureTime = LocalTime.of(15, 15).toDate(),
+                        arrivalTime = LocalTime.of(15, 45).toDate()
+                    ),
+                    FirebaseBusSchedule(
+                        departureTime = LocalTime.of(16, 30).toDate(),
+                        arrivalTime = LocalTime.of(17, 15).toDate()
+                    ),
+                    FirebaseBusSchedule(
+                        departureTime = LocalTime.of(17, 15).toDate(),
+                        arrivalTime = LocalTime.of(18, 0).toDate()
+                    ),
+                    FirebaseBusSchedule(departureTime = LocalTime.of(18, 30).toDate(), arrivalTime = LocalTime.of(19, 0).toDate())
+                )
+                busScheduleRepository.insertAll(schedulesToInsert)
+            }
+
+            _departures.value = busScheduleRepository.getAllSchedules()
+        }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = this[APPLICATION_KEY] as AUTApplication
+                TransportViewModel(
+                    application = application,
+                    busScheduleRepository = application.busScheduleRepository
+                )
+            }
         }
     }
 }
 
 @Composable
 fun TransportScreen(
-    viewModel: TransportViewModel = viewModel(),
+    viewModel: TransportViewModel = viewModel(
+        viewModelStoreOwner = LocalLifecycleOwner.current as ViewModelStoreOwner,
+        factory = TransportViewModel.Factory
+    ),
     paddingValues: PaddingValues
 ) {
     val now = remember { mutableStateOf(LocalTime.now()) }
@@ -183,7 +210,7 @@ fun TransportScreen(
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             items(schedules) { schedule ->
-                val isPast = now.value.isAfter(schedule.departureTime)
+                val isPast = now.value.isAfter(schedule.departureTime.toLocalTime()) // Convert Date to LocalTime
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -216,7 +243,7 @@ fun TransportScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = schedule.departureTime.format(formatter),
+                                    text = schedule.departureTime.toLocalTime().format(formatter), // Convert Date to LocalTime
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         color = if (isPast) Color.Gray else MaterialTheme.colorScheme.onSurface,
                                         fontWeight = if (isPast) FontWeight.Normal else FontWeight.Bold
@@ -240,7 +267,7 @@ fun TransportScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = schedule.arrivalTime.format(formatter),
+                                    text = schedule.arrivalTime.toLocalTime().format(formatter), // Convert Date to LocalTime
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         color = if (isPast) Color.Gray else MaterialTheme.colorScheme.onSurface,
                                         fontWeight = if (isPast) FontWeight.Normal else FontWeight.Bold
@@ -253,4 +280,21 @@ fun TransportScreen(
             }
         }
     }
+}
+
+private fun Date.toLocalTime(): LocalTime { // Add extension function to convert Date to LocalTime
+    return LocalTime.of(hours, minutes)
+}
+
+private fun LocalTime.toDate(): Date { // Add extension function to convert LocalTime to Date
+    val calendar = Calendar.getInstance()
+    calendar.set(Calendar.HOUR_OF_DAY, hour)
+    calendar.set(Calendar.MINUTE, minute)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    // Set date to a fixed date, e.g., start of epoch, as only time is relevant for bus schedules
+    calendar.set(Calendar.YEAR, 1970)
+    calendar.set(Calendar.MONTH, Calendar.JANUARY)
+    calendar.set(Calendar.DAY_OF_MONTH, 1)
+    return calendar.time
 }

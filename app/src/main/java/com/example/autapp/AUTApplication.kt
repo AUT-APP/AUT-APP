@@ -1,45 +1,28 @@
 package com.example.autapp
 
 import android.app.Application
-import com.example.autapp.data.database.AUTDatabase
-import com.example.autapp.data.models.StudySpace
-import com.example.autapp.data.repository.*
 import com.jakewharton.threetenabp.AndroidThreeTen
 import com.example.autapp.util.NotificationHelper
+import com.example.autapp.data.firebase.FirebaseBusScheduleRepository
 
 class AUTApplication : Application() {
-    // Initialize Room database (version 30 with migrations for Teacher role and ActivityLog)
-    val database: AUTDatabase by lazy {
-        AUTDatabase.getDatabase(this)
-    }
-
-    // Initialize repositories
-    val userRepository by lazy { UserRepository(database.userDao()) }
-    val studentRepository by lazy { StudentRepository(database.studentDao(), database.userDao()) }
-    val teacherRepository by lazy { TeacherRepository(database.teacherDao(), database.userDao()) }
-    val adminRepository by lazy { AdminRepository(database.adminDao(), database.userDao()) }
-    val courseRepository by lazy { CourseRepository(database.courseDao()) }
-    val departmentRepository by lazy { DepartmentRepository(database.departmentDao()) }
-    val assignmentRepository by lazy { AssignmentRepository(database.assignmentDao()) }
-    val gradeRepository by lazy { GradeRepository(database.gradeDao(), assignmentRepository) }
-    val timetableEntryRepository by lazy { TimetableEntryRepository(database.timetableEntryDao()) }
-    val notificationRepository by lazy {
-        NotificationRepository(
-            database.notificationDao(),
-            database.timetableNotificationPreferenceDao()
-        )
-    }
-    val eventRepository by lazy { EventRepository(database.eventDao()) }
-    val bookingRepository by lazy {
-        BookingRepository(database.bookingDao(), database.studySpaceDao())
-    }
-    val studySpaceRepository by lazy {
-        StudySpaceRepository(database.studySpaceDao())
-    }
-    val timetableNotificationPreferenceRepository by lazy {
-        TimetableNotificationPreferenceRepository(database.timetableNotificationPreferenceDao())
-    }
-    val activityLogRepository by lazy { ActivityLogRepositoryImpl(database.activityLogDao()) }
+    // Initialize Firebase repositories
+    val userRepository by lazy { com.example.autapp.data.firebase.FirebaseUserRepository() }
+    val teacherRepository by lazy { com.example.autapp.data.firebase.FirebaseTeacherRepository() }
+    val courseRepository by lazy { com.example.autapp.data.firebase.FirebaseCourseRepository(teacherRepository) }
+    val studentRepository by lazy { com.example.autapp.data.firebase.FirebaseStudentRepository(courseRepository) }
+    val adminRepository by lazy { com.example.autapp.data.firebase.FirebaseAdminRepository() }
+    val departmentRepository by lazy { com.example.autapp.data.firebase.FirebaseDepartmentRepository() }
+    val assignmentRepository by lazy { com.example.autapp.data.firebase.FirebaseAssignmentRepository() }
+    val gradeRepository by lazy { com.example.autapp.data.firebase.FirebaseGradeRepository() }
+    val timetableEntryRepository by lazy { com.example.autapp.data.firebase.FirebaseTimetableRepository() }
+    val studySpaceRepository by lazy { com.example.autapp.data.firebase.FirebaseStudySpaceRepository() }
+    val bookingRepository by lazy { com.example.autapp.data.firebase.FirebaseBookingRepository() }
+    val notificationRepository by lazy { com.example.autapp.data.firebase.FirebaseNotificationRepository() }
+    val activityLogRepository by lazy { com.example.autapp.data.firebase.FirebaseActivityLogRepository() }
+    val eventRepository by lazy { com.example.autapp.data.firebase.FirebaseEventRepository() }
+    val timetableNotificationPreference by lazy { com.example.autapp.data.firebase.FirebaseTimetableNotificationPreference() }
+    val busScheduleRepository by lazy { FirebaseBusScheduleRepository(com.google.firebase.firestore.FirebaseFirestore.getInstance()) }
 
     override fun onCreate() {
         super.onCreate()

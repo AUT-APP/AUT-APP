@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autapp.data.firebase.FirebaseEvent
 import com.example.autapp.data.models.Event
 
 @Composable
@@ -30,7 +31,7 @@ fun CalendarScreen(
     // State to control the visibility of the add to-do dialog
     var showAddTodoDialog by remember { mutableStateOf(false) }
     // State to hold the currently selected event for editing or viewing details
-    var selectedEvent by remember { mutableStateOf<Event?>(null) }
+    var selectedEvent by remember { mutableStateOf<FirebaseEvent?>(null) }
 
     // LaunchedEffect observes navigateToManageEvents. When true, it triggers navigation
     // and then calls a ViewModel function to reset the navigation trigger.
@@ -38,6 +39,16 @@ fun CalendarScreen(
         if (navigateToManageEvents) {
             onNavigateToManageEvents()
             viewModel.onManageEventsNavigated()
+        }
+    }
+
+    // LaunchedEffect to fetch data when the view changes or the screen is recomposed
+    LaunchedEffect(uiState.isCalendarView) {
+        if (uiState.isCalendarView) {
+            viewModel.fetchTimetableData() // Fetch data for the selected date in Calendar View
+            viewModel.fetchEventsForDate() // Fetch events for the selected date
+        } else {
+            viewModel.fetchNextTwoWeeksData() // Fetch data for the next two weeks in Timetable View
         }
     }
 
@@ -148,7 +159,7 @@ fun CalendarScreen(
                 isTeacher = uiState.isTeacher,
                 onDismiss = { showAddTodoDialog = false },
                 onSave = { event ->
-                    viewModel.addEvent(event)
+                    viewModel.addEvent(FirebaseEvent(event.toString()))
                     showAddTodoDialog = false
                 }
             )
@@ -156,14 +167,14 @@ fun CalendarScreen(
 
         selectedEvent?.let { event ->
             EventDialog(
-                event = event,
+                event = event.toEvent(),
                 isToDoList = event.isToDoList,
                 selectedDate = uiState.selectedDate,
                 userId = uiState.userId,
                 isTeacher = uiState.isTeacher,
                 onDismiss = { selectedEvent = null },
                 onSave = { updatedEvent ->
-                    viewModel.updateEvent(updatedEvent)
+                    viewModel.updateEvent(FirebaseEvent(updatedEvent.toString()))
                     selectedEvent = null
                 },
                 onDelete = {
@@ -180,7 +191,7 @@ fun CalendarScreen(
                 selectedDate = uiState.selectedDate,
                 onDismiss = { showAddEventDialog = false },
                 onSave = { event ->
-                    viewModel.addEvent(event)
+                    viewModel.addEvent(FirebaseEvent(event.toString()))
                     showAddEventDialog = false
                 },
                 isTeacher = uiState.isTeacher,

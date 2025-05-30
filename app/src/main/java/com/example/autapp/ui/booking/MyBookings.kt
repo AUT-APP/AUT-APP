@@ -27,7 +27,7 @@ enum class DateRange { ALL, TODAY, THIS_WEEK, THIS_MONTH }@OptIn(ExperimentalMat
 fun MyBookingsScreen(
     viewModel: BookingViewModel,
     navController: NavController,
-    studentId: Int,
+    studentId: String,
     isDarkTheme: Boolean,
     paddingValues: PaddingValues
 ) {

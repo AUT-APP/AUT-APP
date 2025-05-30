@@ -36,7 +36,7 @@ import java.util.*
 fun BookingScreen(
     viewModel: BookingViewModel,
     navController: NavController,
-    studentId: Int,
+    studentId: String,
     isDarkTheme: Boolean,
     paddingValues: PaddingValues
 ) {
@@ -172,7 +172,9 @@ fun BookingScreen(
                 navController = navController,
                 selectedDate = selectedDate,
                 studentId = studentId,
-                isDarkTheme = isDarkTheme
+                isDarkTheme = isDarkTheme,
+                studySpaces = studySpaces,
+                selectedLevel = selectedLevel
             )
         }
 
@@ -224,8 +226,10 @@ fun RoomBookingContent(
     bookingSlots: List<BookingSlot>,
     navController: NavController,
     selectedDate: Date,
-    studentId: Int,
-    isDarkTheme: Boolean
+    studentId: String,
+    isDarkTheme: Boolean,
+    studySpaces: List<StudySpace>,
+    selectedLevel: String
 ) {
     val expandedLevels = remember { mutableStateMapOf<String, Boolean>().apply { levels.forEach { put(it, true) } } }
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
@@ -247,7 +251,8 @@ fun RoomBookingContent(
                         navController = navController,
                         selectedDate = selectedDate,
                         studentId = studentId,
-                        isDarkTheme = isDarkTheme
+                        isDarkTheme = isDarkTheme,
+                        studySpaces = studySpaces.filter { it.level == level },
                     )
                 }
             }
@@ -281,8 +286,9 @@ fun BookingTable(
     bookingSlots: List<BookingSlot>,
     navController: NavController,
     selectedDate: Date,
-    studentId: Int,
-    isDarkTheme: Boolean
+    studentId: String,
+    isDarkTheme: Boolean,
+    studySpaces: List<StudySpace>
 ) {
     val timeSlots = listOf(
         "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -290,7 +296,7 @@ fun BookingTable(
         "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
         "20:00", "20:30"
     )
-    val spaces = bookingSlots.map { it.roomId }.distinct()
+    val spacesToDisplay = studySpaces.map { it.spaceId }.sorted()
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
     val scrollState = rememberScrollState()
 
@@ -361,7 +367,7 @@ fun BookingTable(
             LazyColumn(
                 modifier = Modifier.heightIn(max = 300.dp)
             ) {
-                items(spaces) { spaceId ->
+                items(spacesToDisplay) { spaceId ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -376,7 +382,7 @@ fun BookingTable(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                spaceId,
+                                text = studySpaces.find { it.spaceId == spaceId }?.spaceId ?: spaceId,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
                                 color = textColor,
@@ -791,7 +797,12 @@ fun FilterBar(
                             DropdownMenuItem(
                                 text = { Text(space, color = textColor, fontSize = 14.sp) },
                                 onClick = {
-                                    onSpaceSelected(space)
+                                    val spaceIdToSelect = if (space == "All") {
+                                        "All"
+                                    } else {
+                                        space
+                                    }
+                                    onSpaceSelected(spaceIdToSelect)
                                     spaceExpanded = false
                                 },
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
