@@ -68,7 +68,7 @@ dependencies {
     implementation("androidx.compose.material:material:1.6.7")
     implementation ("androidx.work:work-runtime-ktx:2.8.1")
     implementation ("com.google.accompanist:accompanist-pager:0.25.1")
-    implementation ("androidx.compose.material3:material3:1.2.1")
+    implementation ("androidx.compose.material3:material3:1.4.0-alpha15")
     implementation ("androidx.compose.material:material-icons-extended:1.6.8")
 
 // Gson and Coroutines

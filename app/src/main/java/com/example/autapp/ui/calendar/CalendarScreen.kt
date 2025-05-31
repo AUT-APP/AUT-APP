@@ -159,7 +159,20 @@ fun CalendarScreen(
                 isTeacher = uiState.isTeacher,
                 onDismiss = { showAddTodoDialog = false },
                 onSave = { event ->
-                    viewModel.addEvent(FirebaseEvent(event.toString()))
+                    viewModel.addEvent(FirebaseEvent(
+                        eventId = event.eventId,
+                        title = event.title,
+                        date = event.date,
+                        startTime = event.startTime,
+                        endTime = event.endTime,
+                        location = event.location,
+                        details = event.details,
+                        isToDoList = event.isToDoList,
+                        frequency = event.frequency,
+                        studentId = event.studentId,
+                        teacherId = event.teacherId,
+                        isTeacherEvent = event.isTeacherEvent
+                    ))
                     showAddTodoDialog = false
                 }
             )
@@ -174,7 +187,20 @@ fun CalendarScreen(
                 isTeacher = uiState.isTeacher,
                 onDismiss = { selectedEvent = null },
                 onSave = { updatedEvent ->
-                    viewModel.updateEvent(FirebaseEvent(updatedEvent.toString()))
+                    viewModel.updateEvent(FirebaseEvent(
+                        eventId = updatedEvent.eventId,
+                        title = updatedEvent.title,
+                        date = updatedEvent.date,
+                        startTime = updatedEvent.startTime,
+                        endTime = updatedEvent.endTime,
+                        location = updatedEvent.location,
+                        details = updatedEvent.details,
+                        isToDoList = updatedEvent.isToDoList,
+                        frequency = updatedEvent.frequency,
+                        studentId = updatedEvent.studentId,
+                        teacherId = updatedEvent.teacherId,
+                        isTeacherEvent = updatedEvent.isTeacherEvent
+                    ))
                     selectedEvent = null
                 },
                 onDelete = {
@@ -191,7 +217,20 @@ fun CalendarScreen(
                 selectedDate = uiState.selectedDate,
                 onDismiss = { showAddEventDialog = false },
                 onSave = { event ->
-                    viewModel.addEvent(FirebaseEvent(event.toString()))
+                    viewModel.addEvent(FirebaseEvent(
+                        eventId = event.eventId,
+                        title = event.title,
+                        date = event.date,
+                        startTime = event.startTime,
+                        endTime = event.endTime,
+                        location = event.location,
+                        details = event.details,
+                        isToDoList = event.isToDoList,
+                        frequency = event.frequency,
+                        studentId = event.studentId,
+                        teacherId = event.teacherId,
+                        isTeacherEvent = event.isTeacherEvent
+                    ))
                     showAddEventDialog = false
                 },
                 isTeacher = uiState.isTeacher,

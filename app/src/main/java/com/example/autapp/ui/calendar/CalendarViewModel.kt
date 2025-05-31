@@ -5,14 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.autapp.AUTApplication
-import com.example.autapp.data.models.Event
-import com.example.autapp.data.models.Booking
 import com.example.autapp.data.firebase.*
-import com.example.autapp.ui.DashboardViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,7 +26,7 @@ import com.example.autapp.data.firebase.FirebaseCourseRepository
 import com.example.autapp.data.firebase.QueryCondition
 import com.example.autapp.data.firebase.QueryOperator
 import java.util.*
-import java.text.SimpleDateFormat
+import com.google.firebase.firestore.Source
 
 /**
  * Data class representing the UI state for the Calendar screen.
@@ -100,6 +96,7 @@ class CalendarViewModel(
         _userId = userId
         _isTeacher = isTeacher
         _uiState.value = _uiState.value.copy(isTeacher = isTeacher, userId = userId)
+        Log.d("CalendarViewModel", "initialize called with userId: $_userId and isTeacher: $_isTeacher")
 
         CoroutineScope(Dispatchers.Main + Job()).launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -135,11 +132,6 @@ class CalendarViewModel(
                     }.sortedBy { it.startTime }
                 }
 
-                val events = eventRepository.queryByField("userId", userId)
-                val filteredEvents = withContext(Dispatchers.Default) {
-                    events.filter { event: FirebaseEvent -> event.date.toLocalDate() == _uiState.value.selectedDate }
-                }
-
                 val bookings = if (!isTeacher) {
                     bookingRepository.getBookingsByStudent(userId).filter { booking: FirebaseBooking -> booking.status == "ACTIVE" }
                 } else {
@@ -155,11 +147,11 @@ class CalendarViewModel(
                     courseRepository.getCourseByCourseId(courseId as String) // Assuming courseId is a String
                 }
 
+                fetchEvents()
+
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     timetableEntries = filteredEntries,
-                    events = events,
-                    filteredEvents = filteredEvents,
                     bookings = bookings,
                     filteredBookings = filteredBookings,
                     courses = courses, // Include courses in the uiState
@@ -167,6 +159,7 @@ class CalendarViewModel(
                 )
                 fetchNextTwoWeeksData() // Also fetch next two weeks data during initialization
             } catch (e: Exception) {
+                Log.e("CalendarViewModel", "Error initializing data: ${e.message}", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     errorMessage = e.message ?: "Unknown error occurred"
@@ -283,6 +276,7 @@ class CalendarViewModel(
     internal fun fetchNextTwoWeeksData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
+            Log.d("CalendarViewModel", "Fetching data for next two weeks...")
             try {
                 val courseIds = if (_isTeacher) {
                     courseRepository.queryByField("teacherId", _userId).map { it.courseId }
@@ -355,6 +349,7 @@ class CalendarViewModel(
                 } else {
                     emptyList()
                 }
+                Log.d("CalendarViewModel", "Fetched ${bookings.size} active bookings for next two weeks.")
 
                 // Collect all unique course IDs from the fetched timetable entries
                 val uniqueCourseIds = sortedEntries.map { it.courseId.toString() }.toSet().toList()
@@ -408,10 +403,15 @@ class CalendarViewModel(
     // Updates the selectedDate in the UI state and fetches relevant data if in CalendarView.
     fun updateSelectedDate(date: LocalDate) {
         _uiState.value = _uiState.value.copy(selectedDate = date)
+        Log.d("CalendarViewModel", "Selected date updated to: $date")
         // If in calendar view, refresh timetable and events for the newly selected date.
         if (_uiState.value.isCalendarView) {
             fetchTimetableData()
             fetchEventsForDate()
+            // Filter bookings for the newly selected date
+            val filteredBookings = _uiState.value.bookings.filter { booking: FirebaseBooking -> booking.bookingDate.toLocalDate() == date }
+            _uiState.update { it.copy(filteredBookings = filteredBookings) }
+            Log.d("CalendarViewModel", "Filtered ${filteredBookings.size} bookings for date: $date in Calendar View")
         }
     }
 
@@ -448,13 +448,20 @@ class CalendarViewModel(
                     event.copy(studentId = _userId, teacherId = null, isTeacherEvent = false)
                 }
                 eventRepository.create(eventToInsert)
-                // Fetch all events again to update both lists
-                val updatedEvents = eventRepository.queryByField("userId", _userId)
-                _uiState.value = _uiState.value.copy(
-                    events = updatedEvents,
-                    filteredEvents = updatedEvents.filter { event: FirebaseEvent -> event.date.toLocalDate() == _uiState.value.selectedDate },
-                    errorMessage = null
-                )
+                // Add the new event to the existing lists and update UI state
+                _uiState.update { currentState ->
+                    val updatedEvents = currentState.events + eventToInsert
+                    val updatedFilteredEvents = if (eventToInsert.date.toLocalDate() == currentState.selectedDate) {
+                        currentState.filteredEvents + eventToInsert
+                    } else {
+                        currentState.filteredEvents
+                    }
+                    currentState.copy(
+                        events = updatedEvents,
+                        filteredEvents = updatedFilteredEvents.sortedBy { it.startTime }, // Sort filtered events by start time
+                        errorMessage = null
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(errorMessage = "Failed to add event: ${e.message}")
             }
@@ -470,12 +477,16 @@ class CalendarViewModel(
     fun updateEvent(event: FirebaseEvent) {
         viewModelScope.launch {
             try {
+                Log.d("CalendarViewModel", "Attempting to update event with ID: ${event.eventId}")
+                Log.d("CalendarViewModel", "Updated event data: $event")
                 // Use event ID to update the specific event
                 eventRepository.update(event.eventId, event)
+                Log.d("CalendarViewModel", "Event updated successfully. Refreshing events.")
 
                 // Fetch and update the UI state
                 fetchEvents()
             } catch (e: Exception) {
+                Log.e("CalendarViewModel", "Error updating event with ID: ${event.eventId}: ${e.message}", e)
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
         }
@@ -517,7 +528,12 @@ class CalendarViewModel(
     fun deleteEvent(event: FirebaseEvent) {
         viewModelScope.launch {
             try {
+                Log.d("CalendarViewModel", "Attempting to delete event with ID: ${event.eventId}")
+                eventRepository.delete(event.eventId)
+                Log.d("CalendarViewModel", "Event deleted successfully. Refreshing events.")
+                fetchEvents(fromServer = true)
             } catch (e: Exception) {
+                Log.e("CalendarViewModel", "Error deleting event with ID: ${event.eventId}: ${e.message}", e)
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
         }
@@ -528,10 +544,17 @@ class CalendarViewModel(
      * and updates both the raw 'events' list and the 'filteredEvents' list in the UI state
      */
 
-    private fun fetchEvents() {
+    private fun fetchEvents(fromServer: Boolean = false) {
         viewModelScope.launch {
             try {
-                val events = eventRepository.queryByField("userId", _userId)
+                Log.d("CalendarViewModel", "fetchEvents called for userId: $_userId")
+                val source = if (fromServer) Source.SERVER else Source.CACHE
+                val events = if (_isTeacher) {
+                    eventRepository.queryByField("userId", _userId, source)
+                } else {
+                    eventRepository.queryByField("studentId", _userId, source)
+                }
+                Log.d("CalendarViewModel", "Fetched ${events.size} events in fetchEvents. Event IDs: ${events.map { it.eventId }}")
                 _uiState.value = _uiState.value.copy(
                     events = events,
                     filteredEvents = events.filter { event: FirebaseEvent -> event.date.toLocalDate() == _uiState.value.selectedDate },

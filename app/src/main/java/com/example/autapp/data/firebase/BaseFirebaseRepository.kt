@@ -4,6 +4,7 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.cancellation.CancellationException
 import android.util.Log
@@ -120,9 +121,9 @@ abstract class BaseFirebaseRepository<T>(
     /**
      * Query documents with a specific field value
      */
-    suspend fun queryByField(field: String, value: Any): List<T> {
+    suspend fun queryByField(field: String, value: Any, source: Source = Source.CACHE): List<T> {
         return try {
-            val snapshot = collection.whereEqualTo(field, value).get().await()
+            val snapshot = collection.whereEqualTo(field, value).get(source).await()
             snapshot.documents.mapNotNull { doc ->
                 doc.data?.let { documentToObject(doc.id, it) }
             }

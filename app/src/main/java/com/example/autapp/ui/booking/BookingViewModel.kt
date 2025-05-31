@@ -481,10 +481,23 @@ class BookingViewModel(
 
                 Logger.getLogger("BookingViewModel").info("Creating booking: studentId=$studentId, spaceDocumentId=$studySpaceDocumentId, startTime=$timeSlot, endTime=$timeSlot")
 
-                val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US)
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
                 val bookingDateParsed = dateFormat.parse(date) ?: Date()
-                val startTimeParsed = dateFormat.parse(timeSlot) ?: Date()
-                val endTimeParsed = Date(startTimeParsed.time + durationMinutes * 60 * 1000)
+
+                val timeFormat = SimpleDateFormat("HH:mm", Locale.US)
+                val startTimeParsedTimeOnly = timeFormat.parse(timeSlot) ?: Date()
+
+                // Combine date and time
+                val calendar = Calendar.getInstance()
+                calendar.time = bookingDateParsed
+                val timeCalendar = Calendar.getInstance().apply { time = startTimeParsedTimeOnly }
+                calendar.set(Calendar.HOUR_OF_DAY, timeCalendar.get(Calendar.HOUR_OF_DAY))
+                calendar.set(Calendar.MINUTE, timeCalendar.get(Calendar.MINUTE))
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+
+                val finalStartTime = calendar.time
+                val endTimeParsed = Date(finalStartTime.time + durationMinutes * 60 * 1000)
 
                 val booking = Booking(
                     bookingId = 0,
@@ -494,7 +507,7 @@ class BookingViewModel(
                     campus = campus,
                     level = level,
                     bookingDate = bookingDateParsed,
-                    startTime = startTimeParsed,
+                    startTime = finalStartTime,
                     endTime = endTimeParsed,
                     status = "ACTIVE"
                 )

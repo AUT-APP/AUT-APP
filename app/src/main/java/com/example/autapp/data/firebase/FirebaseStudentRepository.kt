@@ -158,7 +158,7 @@ class FirebaseStudentRepository(
      */
     suspend fun getStudentWithCourses(studentId: String): Pair<FirebaseStudent, List<FirebaseCourse>> {
         return try {
-            val student = getById(studentId) ?: throw FirebaseException("Student not found")
+            val student = getStudentByStudentId(studentId) ?: throw FirebaseException("Student not found")
             val enrollments = getEnrollmentsByStudent(studentId)
             val courseIds = enrollments.map { it.courseId }
             val courses = courseRepository.getCoursesByIds(courseIds)

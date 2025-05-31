@@ -91,11 +91,24 @@ fun ManageEventsScreen(
             selectedDate = event.date.toLocalDate(),
             onDismiss = { selectedEvent = null },
             onSave = { updatedEvent ->
-                viewModel.updateEvent(FirebaseEvent(updatedEvent.toString()))
+                viewModel.updateEvent(FirebaseEvent(
+                    eventId = updatedEvent.eventId,
+                    title = updatedEvent.title,
+                    date = updatedEvent.date,
+                    startTime = updatedEvent.startTime,
+                    endTime = updatedEvent.endTime,
+                    location = updatedEvent.location,
+                    details = updatedEvent.details,
+                    isToDoList = updatedEvent.isToDoList,
+                    frequency = updatedEvent.frequency,
+                    studentId = updatedEvent.studentId,
+                    teacherId = updatedEvent.teacherId,
+                    isTeacherEvent = updatedEvent.isTeacherEvent
+                ))
                 selectedEvent = null
             },
             onDelete = {
-                viewModel.deleteEvent(FirebaseEvent(event.toString()))
+                viewModel.deleteEvent(FirebaseEvent(eventId = event.eventId))
                 selectedEvent = null
             },
             isTeacher = uiState.isTeacher,
@@ -112,7 +125,7 @@ fun ManageEventsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteEvent(FirebaseEvent(event.toString()))
+                        viewModel.deleteEvent(FirebaseEvent(eventId = event.eventId))
                         showDeleteDialog = null
                     }
                 ) {

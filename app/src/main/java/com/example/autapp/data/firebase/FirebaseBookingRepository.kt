@@ -6,6 +6,7 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 import com.google.firebase.Timestamp
+import android.util.Log
 
 class FirebaseBookingRepository : BaseFirebaseRepository<FirebaseBooking>("bookings") {
     private val firestore = FirebaseFirestore.getInstance()
@@ -47,8 +48,14 @@ class FirebaseBookingRepository : BaseFirebaseRepository<FirebaseBooking>("booki
                 .orderBy("startTime", Query.Direction.ASCENDING)
                 .get()
                 .await()
-            snapshot.documents.mapNotNull { document -> document.data?.let { documentToObject(document.id, it) } }
+            Log.d("FirebaseBookingRepository", "Fetched \${snapshot.documents.size} documents for studentId: $studentId")
+            snapshot.documents.mapNotNull { document ->
+                val booking = document.data?.let { data -> documentToObject(document.id, data as Map<String, Any?>) }
+                Log.d("FirebaseBookingRepository", "Converted document to booking: $booking")
+                booking
+            }
         } catch (e: Exception) {
+            Log.e("FirebaseBookingRepository", "Error fetching bookings for studentId $studentId: ${e.message}")
             emptyList()
         }
     }
