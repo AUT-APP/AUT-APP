@@ -79,12 +79,14 @@ class FirebaseGradeRepository : BaseFirebaseRepository<FirebaseGrade>("grades") 
         }
     }
 
-    suspend fun calculateAverageGrade(studentId: Int): Double {
-        val grades = getGradesByStudent(studentId.toString())
+    suspend fun calculateAverageGrade(studentId: String): Double {
+        val grades = getGradesByStudent(studentId)
         if (grades.isEmpty()) return 0.0
-        
-        val totalNumericValue = grades.sumOf { it.getNumericValue() }
-        return totalNumericValue.toDouble() / grades.size
+
+        // Calculate weighted average based on grade numeric values and paper points (assuming 15 points per paper)
+        val totalGradePoints = grades.sumOf { it.getNumericValue() * 15 }
+        val totalPaperPoints = grades.size * 15
+        return if (totalPaperPoints > 0) totalGradePoints.toDouble() / totalPaperPoints else 0.0
     }
 
     suspend fun getGradeDistribution(assignmentId: Int): Map<String, Int> {

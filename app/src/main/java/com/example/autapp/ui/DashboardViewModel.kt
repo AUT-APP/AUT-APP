@@ -99,9 +99,10 @@ class DashboardViewModel(
                 Log.d("DashboardViewModel", "Combined grades for display: ${grades.size}")
                 grades.forEach { Log.d("DashboardViewModel", "Display Grade: ${it.assignmentName}, Grade: ${it.grade}, Score: ${it.score}, CourseId: ${it.courseId}") }
 
-                // Calculate GPA manually from fetched grades
-                val numericScores = allGrades.map { it.score }
-                studentGpa = if (numericScores.isNotEmpty()) numericScores.average() else 0.0
+                // Calculate GPA using weighted average based on grade numeric values and paper points (assuming 15 points per paper)
+                val totalGradePoints = allGrades.sumOf { it.getNumericValue() * 15 }
+                val totalPaperPoints = allGrades.size * 15
+                studentGpa = if (totalPaperPoints > 0) totalGradePoints.toDouble() / totalPaperPoints else 0.0
 
                 // Fetch upcoming assignments for the student's courses
                 val currentDate = Date()

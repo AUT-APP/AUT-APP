@@ -202,12 +202,13 @@ class TeacherDashboardViewModel(
                         studentIdsForCourse.add(studentId as String)
                     }
                 }
+                Log.d(TAG, "Retrieved ${studentIdsForCourse.size} student IDs from studentCourses for course ${course.courseId}: ${studentIdsForCourse.toList()}")
                 // Fetch student details for the collected IDs
                 val students = studentIdsForCourse.mapNotNull { studentId ->
-                    studentRepository.getById(studentId)
+                    studentRepository.getStudentByStudentId(studentId)
                 }
                 _studentsInSelectedCourse.value = students
-                Log.d(TAG, "Fetched ${students.size} students for course ${course.courseId}")
+                Log.d(TAG, "Fetched ${students.size} students for course ${course.courseId}. Student IDs: ${students.map { it.studentId }}")
             } catch (e: Exception) {
                 errorMessage = "Error loading students for course: ${e.message}"
                 Log.e(TAG, "Error loading students for course: ${e.message}", e)
@@ -217,7 +218,11 @@ class TeacherDashboardViewModel(
 
     fun loadGradesForAssignment(assignmentId: String) {
         viewModelScope.launch {
-            _gradesForAssignment.value = gradeRepository.getGradesByAssignment(assignmentId)
+            Log.d(TAG, "Attempting to fetch grades for assignment ID: ${assignmentId}")
+            val fetchedGrades = gradeRepository.getGradesByAssignment(assignmentId)
+            _gradesForAssignment.value = fetchedGrades
+            Log.d(TAG, "Fetched ${fetchedGrades.size} grades for assignment ${assignmentId}.")
+            fetchedGrades.forEach { Log.d(TAG, "Grade - ID: ${it.gradeId}, Student ID: ${it.studentId}, Assignment ID: ${it.assignmentId}, Score: ${it.score}") }
         }
     }
 

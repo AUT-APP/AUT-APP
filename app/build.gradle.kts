@@ -52,6 +52,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
+    // Add Google Play Services
+    implementation("com.google.android.gms:play-services-base:18.3.0")
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+
     // Add AppCompat dependency
     implementation("androidx.appcompat:appcompat:1.6.1") // Use a specific version
 
@@ -109,6 +113,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-database")
     implementation("com.google.firebase:firebase-storage")
