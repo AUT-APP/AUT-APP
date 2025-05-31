@@ -111,7 +111,7 @@ class TransportViewModel(application: Application, private val busScheduleReposi
                 busScheduleRepository.insertAll(schedulesToInsert)
             }
 
-            _departures.value = busScheduleRepository.getAllSchedules()
+            _departures.value = busScheduleRepository.getAllSchedules().sortedBy { it.departureTime }
         }
     }
 

@@ -180,6 +180,14 @@ fun AppContent(
                                     popUpTo("login") { inclusive = true }
                                 }
                             }
+                            "Teacher" -> {
+                                onIsTeacherChange(true)
+                                onStudentIdChange(null)
+                                onTeacherIdChange(userId)
+                                navController.navigate("teacherDashboard") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            }
                             "Student" -> {
                                 val student = application.studentRepository.getById(userId)
                                 if (student != null) {
@@ -197,11 +205,10 @@ fun AppContent(
                                     // Handle case where student document is not found (e.g., show error message)
                                 }
                             }
-                            "Teacher" -> {
-                                onTeacherIdChange(userId.toString())
-                                onIsTeacherChange(true)
-                                onStudentIdChange(null)
-                                teacherDashboardViewModel.initialize(userId.toString())
+                            else -> {
+                                onIsTeacherChange(false)
+                                onStudentIdChange(userId)
+                                onTeacherIdChange(null)
                                 navController.navigate("dashboard/$userId") {
                                     popUpTo("login") { inclusive = true }
                                 }
@@ -223,6 +230,51 @@ fun AppContent(
                 isDarkTheme = isDarkTheme,
                 timetableEntryRepository = application.timetableEntryRepository
             )
+        }
+        composable("teacherDashboard") {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            val userId = currentTeacherId
+
+            if (userId != null && userId.isNotBlank()) {
+                Scaffold(
+                    topBar = {
+                        AUTTopAppBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            title = "Teacher Dashboard",
+                            showBackButton = false,
+                            currentRoute = currentRoute,
+                            currentUserId = userId,
+                            isTeacher = true
+                        )
+                    },
+                    bottomBar = {
+                        AUTBottomBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            calendarViewModel = calendarViewModel,
+                            currentRoute = currentRoute,
+                            currentUserId = userId,
+                            isTeacher = true,
+                            onClick = { /* Handle click if needed */ }
+                        )
+                    }
+                ) { paddingValues ->
+                    TeacherDashboard(
+                        viewModel = teacherDashboardViewModel,
+                        departmentRepository = application.departmentRepository,
+                        teacherId = userId,
+                        paddingValues = paddingValues
+                    )
+                }
+            } else {
+                LaunchedEffect(Unit) {
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
+                }
+            }
         }
         composable(
             route = "dashboard/{userId}",
