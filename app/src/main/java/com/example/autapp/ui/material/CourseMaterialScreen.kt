@@ -22,11 +22,13 @@ fun CourseMaterialScreen(
     viewModel: CourseMaterialViewModel,
     paddingValues: PaddingValues
 ) {
+    // Collect the list of course materials from the ViewModel
     val materialList by viewModel.materials.collectAsState()
 
     val context = LocalContext.current
 
 
+    // Load materials whenever the courseId changes
     LaunchedEffect(courseId) {
         viewModel.loadMaterialsForCourse(courseId)
     }
@@ -37,6 +39,7 @@ fun CourseMaterialScreen(
             .padding(paddingValues)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
+        // Screen title
         Text(
             text = "Course Materials",
             style = MaterialTheme.typography.headlineMedium
@@ -44,6 +47,7 @@ fun CourseMaterialScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // List of materials in a scrollable list
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(materialList) { material ->
                 Card(
@@ -53,20 +57,24 @@ fun CourseMaterialScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        // Material title
                         Text(
                             text = material.title,
                             style = MaterialTheme.typography.titleMedium
                         )
+                        // Material type (e.g., PDF, Video)
                         Text(
                             text = "Type: ${material.type}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
+                        // Material description
                         Text(
                             text = material.description,
                             style = MaterialTheme.typography.bodyMedium
                         )
+                        // If a content URL exists, display a clickable "Open Resource" text
                         if (!material.contentUrl.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
@@ -86,6 +94,7 @@ fun CourseMaterialScreen(
             }
         }
 
+        // Message for empty material list
         if (materialList.isEmpty()) {
             Spacer(modifier = Modifier.height(24.dp))
             Text(
