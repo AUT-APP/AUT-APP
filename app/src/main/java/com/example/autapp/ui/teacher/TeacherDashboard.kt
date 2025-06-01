@@ -643,14 +643,17 @@ fun AddMaterialDialog(
     onDismiss: () -> Unit,
     onConfirm: (title: String, description: String, type: String, contentUrl: String) -> Unit
 ) {
+    // input fields
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("PDF") }
     var contentUrl by remember { mutableStateOf("") }
 
-    val typeOptions = listOf("PDF", "Link", "Video", "Document")
+    // Options for the type dropdown
+    val typeOptions = listOf("PDF", "Link", "Video", "Slides")
     var expanded by remember { mutableStateOf(false) }
 
+    // Material input dialog
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Course Material") },
@@ -659,6 +662,7 @@ fun AddMaterialDialog(
                 Text("Course ID: $courseId", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Title input
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -667,6 +671,7 @@ fun AddMaterialDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Description input
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
@@ -675,6 +680,7 @@ fun AddMaterialDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Dropdown menu for material type
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded }
@@ -705,6 +711,7 @@ fun AddMaterialDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Content URL input
                 OutlinedTextField(
                     value = contentUrl,
                     onValueChange = { contentUrl = it },
@@ -713,6 +720,7 @@ fun AddMaterialDialog(
                 )
             }
         },
+        // Confirm button triggers onConfirm with entered values
         confirmButton = {
             Button(
                 onClick = {
@@ -723,6 +731,7 @@ fun AddMaterialDialog(
                 Text("Add")
             }
         },
+        // Cancel button to close the dialog
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")

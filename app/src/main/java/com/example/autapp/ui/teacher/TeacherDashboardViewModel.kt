@@ -162,7 +162,6 @@ class TeacherDashboardViewModel(
     fun addMaterial(material: CourseMaterial) {
         viewModelScope.launch {
             try {
-                // You’ll need a repository injected for this!
                 courseMaterialRepository.insertMaterial(material)
                 fetchTeacherData() // refresh view
             } catch (e: Exception) {

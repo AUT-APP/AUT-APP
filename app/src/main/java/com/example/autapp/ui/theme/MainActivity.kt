@@ -789,14 +789,17 @@ fun AppContent(
         ) { backStackEntry ->
             val courseId = backStackEntry.arguments?.getInt("courseId") ?: 0
 
+            // Initialize the ViewModel using its factory
             val viewModel: CourseMaterialViewModel = viewModel(factory = CourseMaterialViewModel.Factory)
 
+            // Load materials for the given course ID
             LaunchedEffect(courseId) {
                 viewModel.loadMaterialsForCourse(courseId)
             }
-
+            // Main UI layout structure
             Scaffold(
                 topBar = {
+                    // Custom top app bar with back button and route context
                     AUTTopAppBar(
                         title = "Course Materials",
                         isDarkTheme = isDarkTheme,
@@ -808,6 +811,7 @@ fun AppContent(
                     )
                 },
                 bottomBar = {
+                    // Custom bottom navigation bar
                     AUTBottomBar(
                         isDarkTheme = isDarkTheme,
                         navController = navController,
@@ -824,6 +828,7 @@ fun AppContent(
                     )
                 }
             ) { padding ->
+                // Content area displaying the list of course materials
                 CourseMaterialScreen(
                     viewModel = viewModel,
                     paddingValues = padding,
