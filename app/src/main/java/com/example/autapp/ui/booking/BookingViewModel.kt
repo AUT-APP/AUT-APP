@@ -544,13 +544,14 @@ class BookingViewModel(
                     val studySpace = studySpaceRepository.getStudySpaceById(firebaseBooking.roomId)
                     studySpace?.let {
                         firebaseBooking.toBooking().copy(
-                            roomId = it.spaceId
+                            roomId = it.spaceId,
+                            documentId = firebaseBooking.id
                         )
                     }
                 }
                 _myBookings.value = myBookingsWithSpaceNames
                 Logger.getLogger("BookingViewModel").info("Fetched ${myBookingsWithSpaceNames.size} bookings for studentId=$studentId")
-                myBookingsWithSpaceNames.forEach { Logger.getLogger("BookingViewModel").info("Booking: ${it.roomId}") }
+                myBookingsWithSpaceNames.forEach { Logger.getLogger("BookingViewModel").info("Booking: ${it.roomId}, Doc ID: ${it.documentId}") }
                 _errorMessage.value = null
             } catch (e: Exception) {
                 _errorMessage.value = "Error fetching bookings: ${e.message}"
@@ -569,32 +570,20 @@ class BookingViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val studySpace = studySpaceRepository.getStudySpacesByName(spaceId).firstOrNull()
-                val studySpaceDocumentId = studySpace?.spaceId
+                val bookingDocumentId = booking.documentId
 
-                if (studySpaceDocumentId == null) {
-                    _errorMessage.value = "Error canceling booking: Study space not found."
-                    Logger.getLogger("BookingViewModel").severe("Error canceling booking: Study space not found for name $spaceId")
+                if (bookingDocumentId == null) {
+                    _errorMessage.value = "Error canceling booking: Booking ID not found."
+                    Logger.getLogger("BookingViewModel").severe("Error canceling booking: Booking ID not found for booking: $booking")
                     return@launch
                 }
 
-                val firebaseBookings = bookingRepository.checkBookingConflict(
-                    studySpaceDocumentId,
-                    booking.startTime,
-                    booking.endTime
-                ).filter { it.studentId == booking.studentId.toString() }
+                bookingRepository.delete(bookingDocumentId)
+                _errorMessage.value = null
+                fetchMyBookings(booking.studentId)
+                // Optionally, refresh available slots if necessary, though it might not be strictly needed here
+                // fetchAvailableSlots(spaceId, building, campus, level, date, booking.studentId)
 
-                val firebaseBookingToDelete = firebaseBookings.firstOrNull { it.startTime == booking.startTime && it.endTime == booking.endTime && it.studentId == booking.studentId.toString() }
-
-                if (firebaseBookingToDelete != null) {
-                    bookingRepository.delete(firebaseBookingToDelete.id)
-                    _errorMessage.value = null
-                    fetchMyBookings(booking.studentId)
-                    fetchAvailableSlots(studySpaceDocumentId, building, campus, level, date, booking.studentId)
-                } else {
-                    _errorMessage.value = "Error canceling booking: Booking not found."
-                    Logger.getLogger("BookingViewModel").severe("Error canceling booking: Booking not found for booking: $booking")
-                }
             } catch (e: Exception) {
                 _errorMessage.value = "Error canceling booking: ${e.message}"
                 Logger.getLogger("BookingViewModel").severe("Error canceling booking: ${e.message}")

@@ -19,7 +19,7 @@ import androidx.navigation.navArgument
 import com.example.autapp.AUTApplication
 import com.example.autapp.ui.admin.AdminDashboardScreen
 import com.example.autapp.ui.booking.BookingDetailsScreen
-import com.example.autapp.ui.booking.BookingScreen
+import com.example.autapp.ui.booking.BookingsScreen
 import com.example.autapp.ui.booking.BookingViewModel
 import com.example.autapp.ui.calendar.CalendarScreen
 import com.example.autapp.ui.calendar.CalendarViewModel
@@ -484,7 +484,7 @@ fun AppContent(
                         )
                     }
                 ) { paddingValues ->
-                    BookingScreen(
+                    BookingsScreen(
                         viewModel = bookingViewModel,
                         navController = navController,
                         studentId = userId,

@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 fun BookingsScreen(
     viewModel: BookingViewModel,
     navController: NavController,
-    studentId: Int,
+    studentId: String,
     isDarkTheme: Boolean,
     paddingValues: PaddingValues
 ) {
@@ -59,18 +59,20 @@ fun BookingsScreen(
                 0 -> BookingScreen(
                     viewModel = viewModel,
                     navController = navController,
-                    studentId = studentId.toString(),
+                    studentId = studentId,
                     isDarkTheme = isDarkTheme,
                     paddingValues = PaddingValues(0.dp)
                 )
                 1 -> MyBookingsScreen(
                     viewModel = viewModel,
                     navController = navController,
-                    studentId = studentId.toString(),
+                    studentId = studentId,
                     isDarkTheme = isDarkTheme,
                     paddingValues = PaddingValues(0.dp)
                 )
             }
         }
     }
+
 }
+
