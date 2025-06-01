@@ -45,6 +45,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.dialog
 import com.example.autapp.data.datastores.SettingsDataStore
 import com.example.autapp.ui.login.LoginScreen
 import com.example.autapp.ui.login.LoginViewModel
@@ -55,6 +57,8 @@ import com.example.autapp.ui.teacher.TeacherDashboardViewModel
 import com.example.autapp.data.models.TimetableEntry
 import com.example.autapp.data.models.User
 import com.example.autapp.ui.StudentDashboard
+import com.example.autapp.ui.material.CourseMaterialScreen
+import com.example.autapp.ui.material.CourseMaterialViewModel
 
 class MainActivity : ComponentActivity() {
     private var currentStudentId by mutableStateOf<Int?>(null)
@@ -278,7 +282,8 @@ fun AppContent(
                         viewModel = dashboardViewModel,
                         paddingValues = paddingValues,
                         isDarkTheme = isDarkTheme,
-                        timetableEntries = studentTimetableEntries
+                        timetableEntries = studentTimetableEntries,
+                        navController = navController
                     )
                 }
             }
@@ -777,6 +782,54 @@ fun AppContent(
                     }
                 }
             )
+        }
+        composable(
+            route = "materials/{courseId}",
+            arguments = listOf(navArgument("courseId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getInt("courseId") ?: 0
+
+            val viewModel: CourseMaterialViewModel = viewModel(factory = CourseMaterialViewModel.Factory)
+
+            LaunchedEffect(courseId) {
+                viewModel.loadMaterialsForCourse(courseId)
+            }
+
+            Scaffold(
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Course Materials",
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        showBackButton = true,
+                        currentRoute = "materials",
+                        currentUserId = if (isTeacher) currentTeacherId else currentStudentId,
+                        isTeacher = isTeacher,
+                    )
+                },
+                bottomBar = {
+                    AUTBottomBar(
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        calendarViewModel = calendarViewModel,
+                        currentRoute = "materials",
+                        currentUserId = if (isTeacher) currentTeacherId else currentStudentId,
+                        isTeacher = isTeacher,
+                        onClick = {
+                            val userId = if (isTeacher) currentTeacherId else currentStudentId
+                            if (userId != null) {
+                                navController.navigate("dashboard/$userId")
+                            }
+                        }
+                    )
+                }
+            ) { padding ->
+                CourseMaterialScreen(
+                    viewModel = viewModel,
+                    paddingValues = padding,
+                    courseId = courseId
+                )
+            }
         }
     }
 }

@@ -19,6 +19,8 @@ import android.app.TimePickerDialog as AndroidTimePickerDialog
 import androidx.compose.ui.platform.LocalContext
 import com.example.autapp.data.repository.DepartmentRepository
 import kotlinx.coroutines.launch
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 
 @Composable
 fun TeacherDashboard(
@@ -29,6 +31,8 @@ fun TeacherDashboard(
     paddingValues: PaddingValues
 ) {
     var showAddAssignmentDialog by remember { mutableStateOf(false) }
+    var showAddMaterialDialog by remember { mutableStateOf(false) }
+    var selectedCourseForMaterial by remember { mutableStateOf<Course?>(null) }
     var showAddGradeDialog by remember { mutableStateOf(false) }
     var selectedCourseForAssignment by remember { mutableStateOf<Course?>(null) }
     var selectedAssignmentForGrade by remember { mutableStateOf<Assignment?>(null) }
@@ -121,6 +125,10 @@ fun TeacherDashboard(
                     onAddAssignment = {
                         selectedCourseForAssignment = course
                         showAddAssignmentDialog = true
+                    },
+                    onAddMaterial = {
+                        selectedCourseForMaterial = course
+                        showAddMaterialDialog = true
                     },
                     onClick = { viewModel.selectCourse(course) }
                 )
@@ -253,6 +261,27 @@ fun TeacherDashboard(
             }
         )
     }
+
+    // Material Dialogue
+    if (showAddMaterialDialog && selectedCourseForMaterial != null) {
+        AddMaterialDialog(
+            courseId = selectedCourseForMaterial!!.courseId,
+            onDismiss = { showAddMaterialDialog = false },
+            onConfirm = { title, description, type, contentUrl ->
+
+                viewModel.addMaterial(
+                    CourseMaterial(
+                        courseId = selectedCourseForMaterial!!.courseId,
+                        title = title,
+                        description = description,
+                        type = type,
+                        contentUrl = contentUrl
+                    )
+                )
+                showAddMaterialDialog = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -260,6 +289,7 @@ fun TeacherCourseCard(
     viewModel: TeacherDashboardViewModel,
     course: Course,
     onAddAssignment: () -> Unit,
+    onAddMaterial: () -> Unit,
     onClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -353,9 +383,17 @@ fun TeacherCourseCard(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Button(onClick = onAddAssignment) {
-                    Text("Add Assignment")
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onAddAssignment) {
+                        Text("Add Assignment")
+                    }
+                    Button(onClick = onAddMaterial) {
+                        Text("Add Material")
+                    }
                 }
+
+
             }
         }
     }
@@ -586,6 +624,101 @@ fun AddAssignmentDialog(
                     onConfirm(name, location, dueDate, weightValue, maxScoreValue, type)
                 },
                 enabled = name.isNotBlank() && location.isNotBlank() && weight.isNotBlank() && maxScore.isNotBlank() && type.isNotBlank()
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddMaterialDialog(
+    courseId: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (title: String, description: String, type: String, contentUrl: String) -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf("PDF") }
+    var contentUrl by remember { mutableStateOf("") }
+
+    val typeOptions = listOf("PDF", "Link", "Video", "Document")
+    var expanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Course Material") },
+        text = {
+            Column {
+                Text("Course ID: $courseId", style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = type,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Material Type") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        typeOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    type = option
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = contentUrl,
+                    onValueChange = { contentUrl = it },
+                    label = { Text("Content URL") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm(title, description, type, contentUrl)
+                },
+                enabled = title.isNotBlank() && description.isNotBlank() && contentUrl.isNotBlank()
             ) {
                 Text("Add")
             }

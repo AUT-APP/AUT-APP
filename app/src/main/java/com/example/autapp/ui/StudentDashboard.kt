@@ -43,6 +43,7 @@ import java.util.Locale
 import com.example.autapp.data.models.TimetableEntry
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
 
 data class AssignmentGradeDisplay(
     val assignmentName: String,
@@ -58,7 +59,8 @@ fun StudentDashboard(
     viewModel: DashboardViewModel,
     paddingValues: PaddingValues,
     isDarkTheme: Boolean,
-    timetableEntries: List<TimetableEntry>
+    timetableEntries: List<TimetableEntry>,
+    navController: NavController
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
@@ -91,6 +93,7 @@ fun StudentDashboard(
                     ClassCard(
                         course = course,
                         timetableEntries = timetableEntries,
+                        navController = navController,
                         modifier = Modifier
                             .weight(1f)
                             .height(180.dp)
@@ -187,6 +190,7 @@ fun StudentDashboard(
                             ClassCard(
                                 course = course,
                                 timetableEntries = timetableEntries,
+                                navController = navController,
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(120.dp)
@@ -243,7 +247,8 @@ private fun NavigationButton(location: String?) {
 fun ClassCard(
     course: Course,
     timetableEntries: List<TimetableEntry>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navController: NavController,
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
@@ -312,7 +317,8 @@ fun ClassCard(
         CourseDetailsDialog(
             course = course,
             timetableEntries = timetableEntries.filter { it.courseId == course.courseId },
-            onDismiss = { showDialog = false }
+            onDismiss = { showDialog = false },
+            navController = navController
         )
     }
 }
@@ -321,7 +327,8 @@ fun ClassCard(
 fun CourseDetailsDialog(
     course: Course,
     timetableEntries: List<TimetableEntry>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    navController: NavController
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -369,7 +376,9 @@ fun CourseDetailsDialog(
 
                 // Action Button
                 Button(
-                    onClick = { /* Navigate to materials */ },
+                    onClick = {
+                        onDismiss()
+                        navController.navigate("materials/${course.courseId}") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {

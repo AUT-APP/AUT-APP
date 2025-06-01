@@ -22,6 +22,7 @@ class AUTApplication : Application() {
     val departmentRepository by lazy { DepartmentRepository(database.departmentDao()) }
     val assignmentRepository by lazy { AssignmentRepository(database.assignmentDao()) }
     val gradeRepository by lazy { GradeRepository(database.gradeDao(), assignmentRepository) }
+    val courseMaterialRepository by lazy { CourseMaterialRepository(database.courseMaterialDao()) }
     val timetableEntryRepository by lazy { TimetableEntryRepository(database.timetableEntryDao()) }
     val notificationRepository by lazy {
         NotificationRepository(

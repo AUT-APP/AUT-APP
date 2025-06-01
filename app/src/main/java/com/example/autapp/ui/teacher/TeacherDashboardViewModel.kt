@@ -22,6 +22,7 @@ class TeacherDashboardViewModel(
     private val teacherRepository: TeacherRepository,
     private val courseRepository: CourseRepository,
     private val assignmentRepository: AssignmentRepository,
+    private val courseMaterialRepository: CourseMaterialRepository,
     private val gradeRepository: GradeRepository
 ) : ViewModel() {
 
@@ -158,6 +159,19 @@ class TeacherDashboardViewModel(
         }
     }
 
+    fun addMaterial(material: CourseMaterial) {
+        viewModelScope.launch {
+            try {
+                // You’ll need a repository injected for this!
+                courseMaterialRepository.insertMaterial(material)
+                fetchTeacherData() // refresh view
+            } catch (e: Exception) {
+                errorMessage = "Error adding material: ${e.message}"
+            }
+        }
+    }
+
+
     // Add dummy update functions to satisfy ViewModel dependencies if needed by the UI/other parts
     fun updateAssignment(assignment: Assignment) { /* TODO: Implement update logic */ }
     fun updateGrade(grade: Grade) { /* TODO: Implement update logic */ }
@@ -203,6 +217,7 @@ class TeacherDashboardViewModel(
                     application.teacherRepository,
                     application.courseRepository,
                     application.assignmentRepository,
+                    application.courseMaterialRepository,
                     application.gradeRepository
                 )
             }

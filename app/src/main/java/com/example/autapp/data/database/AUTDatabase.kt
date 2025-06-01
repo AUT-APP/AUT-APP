@@ -31,9 +31,12 @@ import kotlinx.coroutines.launch
         Notification::class,
         Admin::class,
         Department::class,
-        ActivityLog::class
+        ActivityLog::class,
+        CourseMaterial::class
+
+
     ],
-    version = 20,
+    version = 22,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -53,6 +56,8 @@ abstract class AUTDatabase : RoomDatabase() {
     abstract fun adminDao(): AdminDao
     abstract fun departmentDao(): DepartmentDao
     abstract fun activityLogDao(): ActivityLogDao
+    abstract fun courseMaterialDao(): CourseMaterialDao
+
 
     companion object {
         @Volatile
