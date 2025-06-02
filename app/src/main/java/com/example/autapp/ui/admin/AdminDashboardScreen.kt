@@ -103,14 +103,7 @@ fun AdminDashboardScreen(
                 currentRoute = "admin_dashboard",
                 currentUserId = null,
                 isTeacher = false,
-                actions = {
-                    IconButton(onClick = { showMigrationDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.CloudUpload,
-                            contentDescription = "Migrate to Firebase"
-                        )
-                    }
-                }
+                currentUserRole = null
             )
         },
         snackbarHost = {

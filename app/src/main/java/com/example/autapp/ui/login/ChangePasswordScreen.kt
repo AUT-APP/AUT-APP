@@ -48,7 +48,8 @@ fun ChangePasswordScreen(
                 showBackButton = true,
                 currentRoute = "change_password/$username/$role/$userId",
                 currentUserId = userId,
-                isTeacher = role == "Teacher"
+                isTeacher = role == "Teacher",
+                currentUserRole = role
             )
         }
     ) { paddingValues ->

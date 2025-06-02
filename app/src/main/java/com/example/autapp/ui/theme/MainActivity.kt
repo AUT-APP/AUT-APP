@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
     private var currentStudentId by mutableStateOf<String?>(null)
     private var currentTeacherId by mutableStateOf<String?>(null)
     private var isTeacher by mutableStateOf(false)
+    private var currentUserRole by mutableStateOf<String?>(null)
 
     private val loginViewModel: LoginViewModel by viewModels { LoginViewModel.Factory }
     private val dashboardViewModel: DashboardViewModel by viewModels { DashboardViewModel.Factory }
@@ -108,7 +109,9 @@ class MainActivity : ComponentActivity() {
                     onTeacherIdChange = { currentTeacherId = it },
                     isTeacher = isTeacher,
                     onIsTeacherChange = { isTeacher = it },
-                    application = application as AUTApplication
+                    application = application as AUTApplication,
+                    currentUserRole = currentUserRole,
+                    onRoleChange = { role -> currentUserRole = role }
                 )
             }
         }
@@ -134,7 +137,9 @@ fun AppContent(
     onTeacherIdChange: (String?) -> Unit,
     isTeacher: Boolean,
     onIsTeacherChange: (Boolean) -> Unit,
-    application: AUTApplication
+    application: AUTApplication,
+    currentUserRole: String?,
+    onRoleChange: (String?) -> Unit
 ) {
     val currentUserState: State<FirebaseUser?> = loginViewModel.currentUser.collectAsState(initial = null)
     val currentUser: FirebaseUser? = currentUserState.value
@@ -151,6 +156,7 @@ fun AppContent(
                 onTeacherIdChange(null)
                 // dashboardViewModel initialization happens in the dashboard composable
             }
+            onRoleChange(currentUser.role)
         } else {
             Log.d("AppContent", "No current user")
             onIsTeacherChange(false)
@@ -173,6 +179,7 @@ fun AppContent(
                     coroutineScope.launch {
                         when (role) {
                             "Admin" -> {
+                                onRoleChange("Admin")
                                 onIsTeacherChange(false)
                                 onStudentIdChange(null)
                                 onTeacherIdChange(null)
@@ -246,7 +253,8 @@ fun AppContent(
                             showBackButton = false,
                             currentRoute = currentRoute,
                             currentUserId = userId,
-                            isTeacher = true
+                            isTeacher = true,
+                            currentUserRole = currentUserRole
                         )
                     },
                     bottomBar = {
@@ -257,7 +265,8 @@ fun AppContent(
                             currentRoute = currentRoute,
                             currentUserId = userId,
                             isTeacher = true,
-                            onClick = { /* Handle click if needed */ }
+                            onClick = { /* Handle click if needed */ },
+                            currentUserRole = currentUserRole
                         )
                     }
                 ) { paddingValues ->
@@ -307,7 +316,8 @@ fun AppContent(
                             showBackButton = false,
                             currentRoute = "dashboard",
                             currentUserId = userId,
-                            isTeacher = isTeacher
+                            isTeacher = isTeacher,
+                            currentUserRole = currentUserRole
                         )
                     },
                     bottomBar = {
@@ -323,7 +333,8 @@ fun AppContent(
                                 if (userId.isNotBlank()) {
                                     navController.navigate("dashboard/$userId")
                                 }
-                            }
+                            },
+                            currentUserRole = currentUserRole
                         )
                     }
                 ) { paddingValues ->
@@ -372,7 +383,8 @@ fun AppContent(
                         showBackButton = true,
                         currentRoute = "calendar",
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        currentUserRole = currentUserRole
                     )
                 },
                 bottomBar = {
@@ -388,7 +400,8 @@ fun AppContent(
                             if (userId.isNotBlank()) {
                                 navController.navigate("dashboard/$userId")
                             }
-                        }
+                        },
+                        currentUserRole = currentUserRole
                     )
                 }
             ) { paddingValues ->
@@ -420,7 +433,8 @@ fun AppContent(
                         showBackButton = true,
                         currentRoute = "manage_events",
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        currentUserRole = currentUserRole
                     )
                 },
                 bottomBar = {
@@ -436,7 +450,8 @@ fun AppContent(
                             if (userId.isNotBlank()) {
                                 navController.navigate("dashboard/$userId")
                             }
-                        }
+                        },
+                        currentUserRole = currentUserRole
                     )
                 }
             ) { paddingValues ->
@@ -464,7 +479,8 @@ fun AppContent(
                             showBackButton = true,
                             currentRoute = "bookings",
                             currentUserId = userId,
-                            isTeacher = isTeacher
+                            isTeacher = isTeacher,
+                            currentUserRole = currentUserRole
                         )
                     },
                     bottomBar = {
@@ -480,7 +496,8 @@ fun AppContent(
                                 if (userId.isNotBlank()) {
                                     navController.navigate("dashboard/$userId")
                                 }
-                            }
+                            },
+                            currentUserRole = currentUserRole
                         )
                     }
                 ) { paddingValues ->
@@ -533,7 +550,8 @@ fun AppContent(
                             showBackButton = true,
                             currentRoute = "booking_details",
                             currentUserId = userId,
-                            isTeacher = isTeacher
+                            isTeacher = isTeacher,
+                            currentUserRole = currentUserRole
                         )
                     },
                     bottomBar = {
@@ -549,7 +567,8 @@ fun AppContent(
                                 if (userId.isNotBlank()) {
                                     navController.navigate("dashboard/$userId")
                                 }
-                            }
+                            },
+                            currentUserRole = currentUserRole
                         )
                     },
                     snackbarHost = {
@@ -603,7 +622,8 @@ fun AppContent(
                             showBackButton = true,
                             currentRoute = "transport",
                             currentUserId = userId,
-                            isTeacher = isTeacher
+                            isTeacher = isTeacher,
+                            currentUserRole = currentUserRole
                         )
                     },
                     bottomBar = {
@@ -619,7 +639,8 @@ fun AppContent(
                                 if (userId.isNotBlank()) {
                                     navController.navigate("dashboard/$userId")
                                 }
-                            }
+                            },
+                            currentUserRole = currentUserRole
                         )
                     }
                 ) { padding ->
@@ -645,13 +666,14 @@ fun AppContent(
                 Scaffold(
                     topBar = {
                         AUTTopAppBar(
-                            title = "Chatbot",
+                            title = "AI Chat",
                             isDarkTheme = isDarkTheme,
                             navController = navController,
                             showBackButton = true,
                             currentRoute = currentRoute,
                             currentUserId = userId,
-                            isTeacher = isTeacher
+                            isTeacher = isTeacher,
+                            currentUserRole = currentUserRole
                         )
                     },
                     bottomBar = {
@@ -667,7 +689,8 @@ fun AppContent(
                                 if (userId.isNotBlank()) {
                                     navController.navigate("dashboard/$userId")
                                 }
-                            }
+                            },
+                            currentUserRole = currentUserRole
                         )
                     }
                 ) { paddingValues ->
@@ -690,20 +713,21 @@ fun AppContent(
             val currentRoute = navBackStackEntry?.destination?.route
             val userId = if (isTeacher) currentTeacherId else currentStudentId
 
-            if (userId != null && userId.isNotBlank()) {
-                Scaffold(
-                    topBar = {
-                        AUTTopAppBar(
-                            title = "Settings",
-                            isDarkTheme = isDarkTheme,
-                            navController = navController,
-                            showBackButton = true,
-                            currentRoute = currentRoute,
-                            currentUserId = userId,
-                            isTeacher = isTeacher
-                        )
-                    },
-                    bottomBar = {
+            Scaffold(
+                topBar = {
+                    AUTTopAppBar(
+                        title = "Settings",
+                        isDarkTheme = isDarkTheme,
+                        navController = navController,
+                        showBackButton = true,
+                        currentRoute = currentRoute,
+                        currentUserId = userId,
+                        isTeacher = isTeacher,
+                        currentUserRole = currentUserRole
+                    )
+                },
+                bottomBar = {
+                    if (currentUserRole != "Admin") {
                         AUTBottomBar(
                             isDarkTheme = isDarkTheme,
                             navController = navController,
@@ -713,30 +737,25 @@ fun AppContent(
                             isTeacher = isTeacher,
                             onClick = {
                                 Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
-                                if (userId.isNotBlank()) {
+                                if (userId?.isNotBlank() == true) {
                                     navController.navigate("dashboard/$userId")
                                 }
-                            }
+                            },
+                            currentUserRole = currentUserRole
                         )
                     }
-                ) { paddingValues ->
-                    SettingsScreen(
-                        viewModel = settingsViewModel,
-                        isDarkTheme = isDarkTheme,
-                        isNotificationsEnabled = settingsViewModel.isNotificationsEnabled.collectAsState(initial = true).value,
-                        onToggleNotifications = { settingsViewModel.setNotificationsEnabled(it) },
-                        isClassRemindersEnabled = settingsViewModel.isClassRemindersEnabled.collectAsState(initial = true).value,
-                        onToggleClassReminders = { settingsViewModel.setClassRemindersEnabled(it) },
-                        onToggleTheme = onToggleTheme,
-                        paddingValues = paddingValues
-                    )
                 }
-            } else {
-                LaunchedEffect(Unit) {
-                    navController.navigate("login") {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                    }
-                }
+            ) { paddingValues ->
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    isDarkTheme = isDarkTheme,
+                    onToggleTheme = onToggleTheme,
+                    isNotificationsEnabled = settingsViewModel.isNotificationsEnabled.collectAsState(initial = true).value,
+                    onToggleNotifications = { settingsViewModel.setNotificationsEnabled(it) },
+                    isClassRemindersEnabled = settingsViewModel.isClassRemindersEnabled.collectAsState(initial = true).value,
+                    onToggleClassReminders = { settingsViewModel.setClassRemindersEnabled(it) },
+                    paddingValues = paddingValues
+                )
             }
         }
         composable(
@@ -759,7 +778,8 @@ fun AppContent(
                         showBackButton = true,
                         currentRoute = "notification",
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        currentUserRole = currentUserRole
                     )
                 },
                 bottomBar = {
@@ -775,7 +795,8 @@ fun AppContent(
                             if (userId.isNotBlank()) {
                                 navController.navigate("dashboard/$userId")
                             }
-                        }
+                        },
+                        currentUserRole = currentUserRole
                     )
                 },
                 snackbarHost = {

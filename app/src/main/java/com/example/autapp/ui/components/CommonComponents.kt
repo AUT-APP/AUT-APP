@@ -41,6 +41,7 @@ fun AUTTopAppBar(
     currentRoute: String?,
     currentUserId: String?,
     isTeacher: Boolean,
+    currentUserRole: String?,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val containerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFF2F7A78)
@@ -56,6 +57,7 @@ fun AUTTopAppBar(
 
     val expanded = remember { mutableStateOf(false) }
     val isAdminRoute = currentRoute?.startsWith("admin_dashboard") == true
+    val isAdminUser = currentUserRole == "Admin"
 
     TopAppBar(
         title = {
@@ -88,7 +90,7 @@ fun AUTTopAppBar(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                if (!isAdminRoute) {
+                if (!isAdminRoute && !isAdminUser) {
                     Icon(
                         painter = painterResource(id = R.drawable.chatbot_assistant_icon),
                         contentDescription = "AI Chat",
@@ -112,45 +114,47 @@ fun AUTTopAppBar(
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                 }
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(profileBackground)
-                        .clickable { expanded.value = true }
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Person,
-                        contentDescription = "Profile",
-                        tint = profileIconColor,
+                if (!isAdminUser || currentRoute == "settings") {
+                    Box(
                         modifier = Modifier
-                            .size(24.dp)
-                            .align(Alignment.Center)
-                    )
-                    DropdownMenu(
-                        expanded = expanded.value,
-                        onDismissRequest = { expanded.value = false },
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.surface)
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(profileBackground)
+                            .clickable { expanded.value = true }
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Settings") },
-                            onClick = {
-                                expanded.value = false
-                                if (currentRoute?.startsWith("settings") != true) {
-                                    navController.navigate("settings")
-                                }
-                            }
+                        Icon(
+                            imageVector = Icons.Outlined.Person,
+                            contentDescription = "Profile",
+                            tint = profileIconColor,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .align(Alignment.Center)
                         )
-                        DropdownMenuItem(
-                            text = { Text("Logout") },
-                            onClick = {
-                                expanded.value = false
-                                if (currentRoute?.startsWith("login") != true) {
-                                    navController.navigate("login")
+                        DropdownMenu(
+                            expanded = expanded.value,
+                            onDismissRequest = { expanded.value = false },
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Settings") },
+                                onClick = {
+                                    expanded.value = false
+                                    if (currentRoute?.startsWith("settings") != true) {
+                                        navController.navigate("settings")
+                                    }
                                 }
-                            }
-                        )
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Logout") },
+                                onClick = {
+                                    expanded.value = false
+                                    if (currentRoute?.startsWith("login") != true) {
+                                        navController.navigate("login")
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -173,15 +177,17 @@ fun AUTBottomBar(
     currentRoute: String?,
     currentUserId: String?,
     isTeacher: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    currentUserRole: String?
 ) {
     val backgroundColor = if (isDarkTheme) Color(0xFF121212) else Color.White
     val iconTint = if (isDarkTheme) Color.White else Color.Black
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentRoute ?: navBackStackEntry?.destination?.route
     val isAdminRoute = currentRoute?.startsWith("admin_dashboard") == true
+    val isAdminUser = currentUserRole == "Admin"
 
-    if (!isAdminRoute) {
+    if (!isAdminUser) {
         NavigationBar(
             containerColor = backgroundColor,
             contentColor = iconTint
@@ -277,97 +283,5 @@ fun AUTBottomBar(
                 }
             )
         }
-    NavigationBar(
-        containerColor = backgroundColor,
-        contentColor = iconTint
-    ) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Home, contentDescription = "Home", tint = iconTint) },
-            label = { Text("Home") },
-            selected = currentRoute?.startsWith("dashboard") == true || currentRoute?.startsWith("teacherDashboard") == true,
-            onClick = {
-                currentUserId?.let { userId ->
-                    val destinationRoute = if (isTeacher) "teacherDashboard" else "dashboard/$userId"
-                    if (currentRoute != destinationRoute) {
-                        navController.navigate(destinationRoute) {
-                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.DateRange, contentDescription = "Calendar", tint = iconTint) },
-            label = { Text("Calendar") },
-            selected = currentRoute?.startsWith("calendar") == true,
-            onClick = {
-                currentUserId?.let { userId ->
-                    Log.d("MainActivity", "Calendar icon clicked")
-                    if (currentRoute?.startsWith("calendar") != true) {
-                        Log.d("MainActivity", "Navigating to calendar with user ID: $userId")
-                        navController.navigate("calendar/$userId") {
-                            if (isTeacher) {
-                                popUpTo("teacherDashboard") { inclusive = false }
-                            } else {
-                                popUpTo("dashboard/$userId") { inclusive = false }
-                            }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Event, contentDescription = "Bookings", tint = iconTint) },
-            label = { Text("Bookings") },
-            selected = currentRoute?.startsWith("bookings") == true,
-            onClick = {
-                currentUserId?.let { userId ->
-                    if (currentRoute?.startsWith("bookings") != true) {
-                        navController.navigate("bookings/$userId") {
-                            popUpTo("dashboard/$userId") { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            }
-        )
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    painter = painterResource(id = android.R.drawable.ic_menu_directions),
-                    contentDescription = "Transport",
-                    tint = iconTint
-                )
-            },
-            label = { Text("Transport") },
-            selected = currentRoute?.startsWith("transport") == true,
-            onClick = {
-                currentUserId?.let { userId ->
-                    if (currentRoute?.startsWith("transport") != true) {
-                        navController.navigate("transport/$userId") {
-                            if (isTeacher) {
-                                popUpTo("teacherDashboard") { inclusive = false }
-                            } else {
-                                popUpTo("dashboard/$userId") { inclusive = false }
-                            }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            }
-        )
-
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Menu, contentDescription = "More", tint = iconTint) },
-            label = { Text("More") },
-            selected = currentRoute == "settings",
-            onClick = {
-                if (currentRoute?.startsWith("settings") != true) {
-                    navController.navigate("settings")
-                }
-            }
-        )
     }
-}}
+}
