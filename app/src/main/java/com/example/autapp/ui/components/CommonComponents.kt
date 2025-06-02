@@ -236,13 +236,11 @@ fun AUTBottomBar(
                 selected = currentRoute?.startsWith("bookings") == true,
                 onClick = {
                     currentUserId?.let { userId ->
-                        if (!isTeacher && currentRoute?.startsWith("bookings") != true) {
+                        if (currentRoute?.startsWith("bookings") != true) {
                             navController.navigate("bookings/$userId") {
                                 popUpTo("dashboard/$userId") { inclusive = false }
                                 launchSingleTop = true
                             }
-                        } else if (isTeacher) {
-                            Log.d("AUTBottomBar", "Teacher clicked Bookings, not supported yet.")
                         }
                     }
                 }
