@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.autapp.data.firebase.FirebaseEvent
 import com.example.autapp.data.models.Event
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -55,7 +56,23 @@ fun ManageEventsScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(uiState.events.sortedBy { it.date }) { event: Event ->
+                val sortedEvents = uiState.events.map { firebaseEvent ->
+                    Event(
+                        eventId = firebaseEvent.eventId,
+                        title = firebaseEvent.title,
+                        date = firebaseEvent.date,
+                        startTime = firebaseEvent.startTime,
+                        endTime = firebaseEvent.endTime,
+                        location = firebaseEvent.location,
+                        frequency = firebaseEvent.frequency,
+                        isToDoList = firebaseEvent.isToDoList,
+                        details = firebaseEvent.details,
+                        studentId = firebaseEvent.studentId,
+                        teacherId = firebaseEvent.teacherId,
+                        isTeacherEvent = firebaseEvent.isTeacherEvent
+                    )
+                }.sortedBy { it.date }
+                items(sortedEvents) { event: Event ->
                     ManageEventCard(
                         event = event,
                         onEdit = { selectedEvent = it },
@@ -74,13 +91,28 @@ fun ManageEventsScreen(
             selectedDate = event.date.toLocalDate(),
             onDismiss = { selectedEvent = null },
             onSave = { updatedEvent ->
-                viewModel.updateEvent(updatedEvent)
+                viewModel.updateEvent(FirebaseEvent(
+                    eventId = updatedEvent.eventId,
+                    title = updatedEvent.title,
+                    date = updatedEvent.date,
+                    startTime = updatedEvent.startTime,
+                    endTime = updatedEvent.endTime,
+                    location = updatedEvent.location,
+                    details = updatedEvent.details,
+                    isToDoList = updatedEvent.isToDoList,
+                    frequency = updatedEvent.frequency,
+                    studentId = updatedEvent.studentId,
+                    teacherId = updatedEvent.teacherId,
+                    isTeacherEvent = updatedEvent.isTeacherEvent
+                ))
                 selectedEvent = null
             },
             onDelete = {
-                viewModel.deleteEvent(event)
+                viewModel.deleteEvent(FirebaseEvent(eventId = event.eventId))
                 selectedEvent = null
-            }
+            },
+            isTeacher = uiState.isTeacher,
+            userId = uiState.userId
         )
     }
 
@@ -93,7 +125,7 @@ fun ManageEventsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteEvent(event)
+                        viewModel.deleteEvent(FirebaseEvent(eventId = event.eventId))
                         showDeleteDialog = null
                     }
                 ) {

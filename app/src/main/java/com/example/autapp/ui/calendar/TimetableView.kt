@@ -1,7 +1,9 @@
 package com.example.autapp.ui.calendar
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -11,19 +13,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
-import com.example.autapp.data.dao.TimetableEntryDao
-import com.example.autapp.data.models.Event
-import com.example.autapp.data.models.Booking
+import com.example.autapp.data.firebase.FirebaseEvent
+import com.example.autapp.data.firebase.FirebaseBooking
+import com.example.autapp.data.firebase.FirebaseTimetableEntry
 import org.threeten.bp.LocalDate
 import org.threeten.bp.format.DateTimeFormatter
 import java.util.Date
-import java.text.SimpleDateFormat
 import java.util.Locale
+
 
 @Composable
 fun TimetableView(
     uiState: CalendarUiState,
-    onEventClick: (Event) -> Unit,
+    onEventClick: (FirebaseEvent) -> Unit,
     onSetReminder: (Any, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -44,11 +46,45 @@ fun TimetableView(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        val nextTwoWeeksEntries = uiState.timetableEntries
-        val nextTwoWeeksEvents = uiState.events
-        val nextTwoWeeksBookings = uiState.bookings
+        val allEntries = mutableListOf<Pair<LocalDate, Any>>()
 
-        if (nextTwoWeeksEntries.isEmpty() && nextTwoWeeksEvents.isEmpty() && nextTwoWeeksBookings.isEmpty()) {
+        // Combine and group timetable entries, events, and bookings by date
+        for (dayOffset in 0..13) {
+            val date = today.plusDays(dayOffset.toLong())
+
+            val timetableEntriesForDay = uiState.timetableEntries
+                .filter { it.dayOfWeek == date.dayOfWeek.value }
+
+            Log.d("TimetableView", "Processing entries for day ${date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))}: ${timetableEntriesForDay.size} entries")
+            timetableEntriesForDay.forEach { entry ->
+                 Log.d("TimetableView", "Timetable Entry for Day: CourseId=${entry.courseId}, StartTime=${entry.startTime}, EndTime=${entry.endTime}, DayOfWeek=${entry.dayOfWeek}")
+            }
+
+            val eventsForDay = uiState.events.filter { event ->
+                event.date?.toLocalDate() == date
+            }
+
+            val bookingsForDay = uiState.bookings.filter { booking ->
+                booking.bookingDate?.toLocalDate() == date
+            }
+
+            val entriesForThisDate = (timetableEntriesForDay + eventsForDay + bookingsForDay).sortedWith(compareBy { entry ->
+                when (entry) {
+                    is FirebaseTimetableEntry -> entry.startTime
+                    is FirebaseEvent -> entry.startTime ?: Date(0)
+                    is FirebaseBooking -> entry.startTime
+                    else -> Date(0)
+                }
+            })
+
+            entriesForThisDate.forEach { entry ->
+                allEntries.add(date to entry)
+            }
+        }
+
+        val sortedEntriesByDate = allEntries.groupBy { it.first }.toSortedMap()
+
+        if (sortedEntriesByDate.isEmpty()) {
             item {
                 Box(
                     modifier = Modifier
@@ -64,33 +100,7 @@ fun TimetableView(
                 }
             }
         } else {
-            val entriesByDate = mutableMapOf<LocalDate, List<Any>>()
-            for (dayOffset in 0..13) {
-                val date = today.plusDays(dayOffset.toLong())
-                val timetableEntriesForDay = nextTwoWeeksEntries
-                    .filter { it.entry.dayOfWeek == date.dayOfWeek.value }
-                    .distinctBy { entry ->
-                        "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
-                    }
-                val eventsForDay = nextTwoWeeksEvents.filter { event ->
-                    event.date.toLocalDate() == date
-                }
-                val bookingsForDay = nextTwoWeeksBookings.filter { booking ->
-                    booking.bookingDate.toLocalDate() == date
-                }
-                val allEntries = (timetableEntriesForDay + eventsForDay + bookingsForDay).sortedWith(compareBy { entry ->
-                    when (entry) {
-                        is TimetableEntryDao.TimetableEntryWithCourse -> entry.entry.startTime
-                        is Event -> entry.startTime ?: Date(0)
-                        is Booking -> entry.startTime
-                        else -> Date(0)
-                    }
-                })
-                if (allEntries.isNotEmpty()) {
-                    entriesByDate[date] = allEntries
-                }
-            }
-            entriesByDate.toSortedMap().forEach { (date, entries) ->
+            sortedEntriesByDate.forEach { (date, entries) ->
                 item {
                     val headerText = when (date) {
                         today -> "Today"
@@ -104,34 +114,16 @@ fun TimetableView(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
-                    entries.forEach { entry ->
-                        when (entry) {
-                            is TimetableEntryDao.TimetableEntryWithCourse -> {
+                }
+                items(entries) { (date, entry) ->
+                    when (entry) {
+                        is FirebaseTimetableEntry -> {
+                            val timetableEntry = entry as FirebaseTimetableEntry
+                            val course = uiState.courses.find { it.courseId == timetableEntry.courseId.toString() }
+                            if (course != null) {
                                 TimetableEntryCard(
-                                    entry = entry,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    onReminderClick = {
-                                        selectedEntryForReminder = entry
-                                    }
-                                )
-                            }
-                            is Event -> {
-                                EventCard(
-                                    event = entry,
-                                    onClick = { onEventClick(entry) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    onReminderClick = {
-                                        selectedEntryForReminder = entry
-                                    }
-                                )
-                            }
-                            is Booking -> {
-                                BookingCard(
-                                    booking = entry,
+                                    timetableEntry = timetableEntry,
+                                    course = course,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp),
@@ -141,11 +133,34 @@ fun TimetableView(
                                 )
                             }
                         }
+                        is FirebaseEvent -> {
+                            val event = entry as FirebaseEvent
+                            EventCard(
+                                event = event.toEvent(),
+                                onClick = { onEventClick(event) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                onReminderClick = {
+                                    selectedEntryForReminder = entry
+                                }
+                            )
+                        }
+                        is FirebaseBooking -> {
+                            val booking = entry as FirebaseBooking
+                            BookingCard(
+                                booking = booking.toBooking(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                onReminderClick = {
+                                    selectedEntryForReminder = entry
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
-fun Date.format(pattern: String): String = SimpleDateFormat(pattern, Locale.getDefault()).format(this) 

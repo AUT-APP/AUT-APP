@@ -12,6 +12,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import com.example.autapp.data.models.Event
 import java.util.Locale
+import java.util.Date
+import java.text.SimpleDateFormat
+import org.threeten.bp.Instant
+import org.threeten.bp.ZoneId
+import org.threeten.bp.LocalDate
 
 @Composable
 fun EventCard(
@@ -45,6 +50,14 @@ fun EventCard(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
+            if (event.isToDoList) {
+                Text(
+                    text = "Due: ${SimpleDateFormat("EEE, d MMM yyyy", Locale.getDefault()).format(event.date)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             // Display event time (start - end) if it's not a to-do list and time is available.
             if (!event.isToDoList && (event.startTime != null || event.endTime != null)) {
                 Row(
@@ -60,11 +73,11 @@ fun EventCard(
                     Text(
                         text = buildString {
                             // Append start time if available.
-                            event.startTime?.let { append(it.format()) }
+                            event.startTime?.let { append(SimpleDateFormat("h:mm a", Locale.getDefault()).format(it)) }
                             // Append separator if both start and end times are available.
                             if (event.startTime != null && event.endTime != null) append(" - ")
                             // Append end time if available.
-                            event.endTime?.let { append(it.format()) }
+                            event.endTime?.let { append(SimpleDateFormat("h:mm a", Locale.getDefault()).format(it)) }
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

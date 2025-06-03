@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autapp.data.firebase.FirebaseEvent
 import com.example.autapp.data.dao.TimetableEntryDao
 import com.example.autapp.data.models.Booking
 import com.example.autapp.data.models.Event
@@ -39,7 +40,7 @@ fun CalendarScreen(
     // State to control the visibility of the add to-do dialog
     var showAddTodoDialog by remember { mutableStateOf(false) }
     // State to hold the currently selected event for editing or viewing details
-    var selectedEvent by remember { mutableStateOf<Event?>(null) }
+    var selectedEvent by remember { mutableStateOf<FirebaseEvent?>(null) }
 
     val notificationsEnabled: Boolean by viewModel.notificationsEnabled.collectAsState(initial = true)
     val classRemindersEnabled: Boolean by viewModel.classRemindersEnabled.collectAsState(initial = true)
@@ -51,6 +52,16 @@ fun CalendarScreen(
         if (navigateToManageEvents) {
             onNavigateToManageEvents()
             viewModel.onManageEventsNavigated()
+        }
+    }
+
+    // LaunchedEffect to fetch data when the view changes or the screen is recomposed
+    LaunchedEffect(uiState.isCalendarView) {
+        if (uiState.isCalendarView) {
+            viewModel.fetchTimetableData() // Fetch data for the selected date in Calendar View
+            viewModel.fetchEventsForDate() // Fetch events for the selected date
+        } else {
+            viewModel.fetchNextTwoWeeksData() // Fetch data for the next two weeks in Timetable View
         }
     }
 
@@ -67,40 +78,41 @@ fun CalendarScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (showCalendarView) "Calendar View" else "Timetable View",
+                text = if (showCalendarView)
+                    if (uiState.isTeacher) "Teacher Calendar View" else "Calendar View"
+                else
+                    if (uiState.isTeacher) "Teacher Timetable View" else "Timetable View",
                 style = MaterialTheme.typography.titleLarge,
                 fontSize = 20.sp
             )
 
             Row {
-                // IconButton to open the dialog for adding a new event
-                IconButton(onClick = { showAddEventDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Event"
-                    )
+                // Only show booking-related buttons for students
+                if (!uiState.isTeacher) {
+                    IconButton(onClick = { showAddEventDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Event"
+                        )
+                    }
+                    IconButton(onClick = { showAddTodoDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Add Todo"
+                        )
+                    }
+                    IconButton(onClick = {
+                        viewModel.navigateToManageEvents()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Manage Events"
+                        )
+                    }
                 }
-                // IconButton to open the dialog for adding a new to-do item
-                IconButton(onClick = { showAddTodoDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Add Todo"
-                    )
-                }
-                // IconButton to navigate to the manage events screen
-                IconButton(onClick = { 
-                    // Navigate to manage events screen
-                    viewModel.navigateToManageEvents()
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Manage Events"
-                    )
-                }
-                // IconButton to toggle between Calendar and Timetable views
                 IconButton(onClick = {
                     showCalendarView = !showCalendarView
-                    viewModel.toggleView() // Notify ViewModel about the view change
+                    viewModel.toggleView()
                 }) {
                     Icon(
                         imageVector = if (showCalendarView)
@@ -202,50 +214,94 @@ fun CalendarScreen(
         }
     }
 
-    // Dialog for adding a new to-do item
-    if (showAddTodoDialog) {
-        EventDialog(
-            event = null, // Pass null for a new event
-            isToDoList = true, // Specify that this is a to-do item
-            selectedDate = uiState.selectedDate,
-            onDismiss = { showAddTodoDialog = false }, // Close dialog on dismiss
-            onSave = { event ->
-                viewModel.addEvent(event) // Save the new to-do item
-                showAddTodoDialog = false // Close dialog on save
-            }
-        )
-    }
+    // Only show event dialogs for students
+    if (!uiState.isTeacher) {
+        if (showAddTodoDialog) {
+            EventDialog(
+                event = null,
+                isToDoList = true,
+                selectedDate = uiState.selectedDate,
+                userId = uiState.userId,
+                isTeacher = uiState.isTeacher,
+                onDismiss = { showAddTodoDialog = false },
+                onSave = { event ->
+                    viewModel.addEvent(FirebaseEvent(
+                        eventId = event.eventId,
+                        title = event.title,
+                        date = event.date,
+                        startTime = event.startTime,
+                        endTime = event.endTime,
+                        location = event.location,
+                        details = event.details,
+                        isToDoList = event.isToDoList,
+                        frequency = event.frequency,
+                        studentId = event.studentId,
+                        teacherId = event.teacherId,
+                        isTeacherEvent = event.isTeacherEvent
+                    ))
+                    showAddTodoDialog = false
+                }
+            )
+        }
 
-    // Dialog for editing an existing event or to-do item
-    // Shows when 'selectedEvent' is not null
-    selectedEvent?.let { event ->
-        EventDialog(
-            event = event, // Pass the selected event to prefill fields
-            isToDoList = event.isToDoList,
-            selectedDate = uiState.selectedDate,
-            onDismiss = { selectedEvent = null }, // Close dialog and clear selection on dismiss
-            onSave = { updatedEvent ->
-                viewModel.updateEvent(updatedEvent) // Update the event
-                selectedEvent = null // Close dialog and clear selection
-            },
-            onDelete = {
-                viewModel.deleteEvent(event) // Delete the event
-                selectedEvent = null // Close dialog and clear selection
-            }
-        )
-    }
+        selectedEvent?.let { event ->
+            EventDialog(
+                event = event.toEvent(),
+                isToDoList = event.isToDoList,
+                selectedDate = uiState.selectedDate,
+                userId = uiState.userId,
+                isTeacher = uiState.isTeacher,
+                onDismiss = { selectedEvent = null },
+                onSave = { updatedEvent ->
+                    viewModel.updateEvent(FirebaseEvent(
+                        eventId = updatedEvent.eventId,
+                        title = updatedEvent.title,
+                        date = updatedEvent.date,
+                        startTime = updatedEvent.startTime,
+                        endTime = updatedEvent.endTime,
+                        location = updatedEvent.location,
+                        details = updatedEvent.details,
+                        isToDoList = updatedEvent.isToDoList,
+                        frequency = updatedEvent.frequency,
+                        studentId = updatedEvent.studentId,
+                        teacherId = updatedEvent.teacherId,
+                        isTeacherEvent = updatedEvent.isTeacherEvent
+                    ))
+                    selectedEvent = null
+                },
+                onDelete = {
+                    viewModel.deleteEvent(event)
+                    selectedEvent = null
+                }
+            )
+        }
 
-    // Dialog for adding a new calendar event
-    if (showAddEventDialog) {
-        EventDialog(
-            event = null, // Pass null for a new event
-            isToDoList = false, // Specify that this is a calendar event, not a to-do
-            selectedDate = uiState.selectedDate,
-            onDismiss = { showAddEventDialog = false }, // Close dialog on dismiss
-            onSave = { event ->
-                viewModel.addEvent(event) // Save the new event
-                showAddEventDialog = false // Close dialog on save
-            }
-        )
+        if (showAddEventDialog) {
+            EventDialog(
+                event = null,
+                isToDoList = false,
+                selectedDate = uiState.selectedDate,
+                onDismiss = { showAddEventDialog = false },
+                onSave = { event ->
+                    viewModel.addEvent(FirebaseEvent(
+                        eventId = event.eventId,
+                        title = event.title,
+                        date = event.date,
+                        startTime = event.startTime,
+                        endTime = event.endTime,
+                        location = event.location,
+                        details = event.details,
+                        isToDoList = event.isToDoList,
+                        frequency = event.frequency,
+                        studentId = event.studentId,
+                        teacherId = event.teacherId,
+                        isTeacherEvent = event.isTeacherEvent
+                    ))
+                    showAddEventDialog = false
+                },
+                isTeacher = uiState.isTeacher,
+                userId = uiState.userId
+            )
+        }
     }
 }

@@ -1,24 +1,16 @@
-package com.example.autapp.ui.theme
+package com.example.autapp.ui
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -26,11 +18,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.autapp.data.dao.GradeDao
-import com.example.autapp.data.models.Assignment
-import com.example.autapp.data.models.Course
 import java.util.*
-import com.example.autapp.ui.DashboardViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
 import androidx.compose.ui.window.Dialog
@@ -39,158 +27,183 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import java.text.SimpleDateFormat
 import java.util.Locale
-import com.example.autapp.data.models.TimetableEntry
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
+import com.example.autapp.data.firebase.*
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
-
+data class AssignmentGradeDisplay(
+    val assignmentName: String,
+    val grade: String,
+    val score: Double,
+    val maxScore: Double,
+    val due: Date,
+    val feedback: String?,
+    val courseId: String
+)
 
 @Composable
 fun StudentDashboard(
     viewModel: DashboardViewModel,
     paddingValues: PaddingValues,
     isDarkTheme: Boolean,
-    timetableEntries: List<TimetableEntry>
+    timetableEntries: List<FirebaseTimetableEntry>
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
 
-    Surface(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues),
-        color = backgroundColor
+    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = viewModel.isRefreshing)
+
+    SwipeRefresh(
+        state = swipeRefreshState,
+        onRefresh = { viewModel.fetchDashboardData() }
     ) {
-        Column(
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(paddingValues),
+            color = backgroundColor
         ) {
-            Text(
-                text = "Upcoming...",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = textColor,
-                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                viewModel.courses.take(2).forEach { course ->
-                    ClassCard(
-                        course = course,
-                        timetableEntries = viewModel.timetableEntries,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(180.dp)
-                    )
-                }
-                if (viewModel.courses.size < 2) {
-                    repeat(2 - viewModel.courses.size) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
-            }
+                Text(
+                    text = "Upcoming...",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                )
 
-            Text(
-                text = "Grades",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = textColor,
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-            )
-
-
-            GPASummaryCard(gpa = viewModel.studentGpa)
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            viewModel.grades.chunked(2).forEach { gradePair ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    gradePair.forEach { gradeWithAssignment ->
-                        val courseName = viewModel.courses.find {it.courseId == gradeWithAssignment.assignment.courseId}?.name ?: "Unknown"
-                        val courseTitle = viewModel.courses.find { it.courseId == gradeWithAssignment.assignment.courseId }?.title ?: "Untitled"
-                        GradeCard(
-                            gradeWithAssignment = gradeWithAssignment,
-                            courseName = courseName,
-                            courseTitle = courseTitle,
-                            modifier = Modifier.weight(1f)
+                    viewModel.courses.take(2).forEach { course ->
+                        ClassCard(
+                            course = course,
+                            timetableEntries = timetableEntries,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(180.dp)
                         )
                     }
-                    if (gradePair.size < 2) {
-                        Spacer(modifier = Modifier.weight(1f))
+                    if (viewModel.courses.size < 2) {
+                        repeat(2 - viewModel.courses.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
 
-            Text(
-                text = "Upcoming Assignments",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = textColor,
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-            )
-
-            viewModel.assignments.forEach { assignment ->
-                val courseName = viewModel.courses.find { it.courseId == assignment.courseId }?.name ?: "Unknown"
-                val courseTitle = viewModel.courses.find { it.courseId == assignment.courseId }?.title ?: "Untitled"
-                AssignmentCard(
-
-                assignment = assignment,
-                courseName = courseName,
-                courseTitle = courseTitle,
-                formatDate = viewModel::formatDate,
-                formatTime = viewModel::formatTime
-            )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            if (viewModel.courses.size > 2) {
                 Text(
-                    text = "All Courses",
+                    text = "Grades",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor,
                     modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
                 )
 
-                viewModel.courses.drop(2).chunked(2).forEach { coursePair ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        coursePair.forEach { course ->
-                            ClassCard(
-                                course = course,
-                                timetableEntries = viewModel.timetableEntries,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(120.dp)
-                            )
-                        }
-                        if (coursePair.size < 2) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
+                GPASummaryCard(gpa = viewModel.studentGpa)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Group grades by course
+                val gradesByCourse = viewModel.grades.groupBy { it.courseId }
+                val assignmentsByCourse = viewModel.courses.associateWith { course ->
+                    viewModel.grades.filter { it.courseId == course.courseId }
                 }
-            }
+                assignmentsByCourse.forEach { (course, gradeList) ->
+                    if (gradeList.isNotEmpty()) {
+                        // Calculate overall grade (weighted average)
+                        val totalWeight = gradeList.sumOf { it.maxScore }
+                        val weightedScore = gradeList.sumOf { it.score }
+                        val overallScore = if (totalWeight > 0) weightedScore / totalWeight else 0.0
+                        val overallGrade = if (overallScore >= 0.9) "A" else if (overallScore >= 0.8) "B" else if (overallScore >= 0.7) "C" else if (overallScore >= 0.6) "D" else "F"
+                        CourseGradeCard(
+                            courseName = course.title,
+                            overallGrade = overallGrade,
+                            assignments = gradeList.map {
+                                AssignmentGradeDisplay(
+                                    assignmentName = it.assignmentName,
+                                    grade = it.grade,
+                                    score = it.score,
+                                    maxScore = it.maxScore,
+                                    due = it.due,
+                                    feedback = it.feedback,
+                                    courseId = it.courseId
+                                )
+                            }
+                        )
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            viewModel.errorMessage?.let {
                 Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp)
+                    text = "Upcoming Assignments",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor,
+                    modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
                 )
+
+                val today = Calendar.getInstance().time
+                val upcomingAssignments = viewModel.assignments.filter { it.due.after(today) }
+                upcomingAssignments.forEach { assignment ->
+                    val courseName = viewModel.courses.find { it.courseId == assignment.courseId }?.name ?: "Unknown"
+                    val courseTitle = viewModel.courses.find { it.courseId == assignment.courseId }?.title ?: "Untitled"
+                    AssignmentCard(
+                        assignment = assignment,
+                        courseName = courseName,
+                        courseTitle = courseTitle,
+                        formatDate = viewModel::formatDate,
+                        formatTime = viewModel::formatTime
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (viewModel.courses.size > 2) {
+                    Text(
+                        text = "All Courses",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                    )
+
+                    viewModel.courses.drop(2).chunked(2).forEach { coursePair ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            coursePair.forEach { course ->
+                                ClassCard(
+                                    course = course,
+                                    timetableEntries = timetableEntries,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(120.dp)
+                                )
+                            }
+                            if (coursePair.size < 2) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                viewModel.errorMessage?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
             }
         }
     }
@@ -200,7 +213,7 @@ fun StudentDashboard(
 @Composable
 private fun NavigationButton(location: String?) {
     val context = LocalContext.current
-    
+
     Button(
         onClick = {
             val encodedLocation = java.net.URLEncoder.encode(location ?: "", "UTF-8")
@@ -224,17 +237,15 @@ private fun NavigationButton(location: String?) {
 
 @Composable
 fun ClassCard(
-    course: Course,
-    timetableEntries: List<TimetableEntry>,
+    course: FirebaseCourse,
+    timetableEntries: List<FirebaseTimetableEntry>,
     modifier: Modifier = Modifier
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
     val rawToday = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
     val today = if (rawToday == Calendar.SUNDAY) 7 else rawToday - 1
-    val hasScheduleToday = timetableEntries.any {
-        it.courseId == course.courseId && it.dayOfWeek == today
-    }
+    val hasScheduleToday = timetableEntries.any { it.courseId == course.courseId && it.dayOfWeek == today }
 
     Card(
         modifier = modifier
@@ -275,173 +286,173 @@ fun ClassCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(if (hasScheduleToday) MaterialTheme.colorScheme.primary else Color.Transparent)
                     .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    painter = painterResource(id = android.R.drawable.ic_dialog_map),
-                    contentDescription = "Location",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = course.location ?: "TBD",
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (hasScheduleToday) {
+                    Text(
+                        text = "Class Today",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
-    if (showDialog) {
-        Dialog(onDismissRequest = { showDialog = false }) {
-            Surface(
-                shape = RoundedCornerShape(20.dp), // Rounded corners
-                tonalElevation = 8.dp,  // Shadow elevation
-                modifier = Modifier
-                    .fillMaxWidth(0.98f)    // adjusted width
-                    .fillMaxHeight(0.85f)   // adjusted width
-            ) {
-                Box {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(20.dp)
-                            .verticalScroll(rememberScrollState())  // vertical scrolling
-                    ) {
-                        // Header with Close Button
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = course.name,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            IconButton(onClick = { showDialog = false }) {
-                                Icon(
-                                    painter = painterResource(id = android.R.drawable.ic_menu_close_clear_cancel),
-                                    contentDescription = "Close",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
 
-                        // Course Subtitle
+    if (showDialog) {
+        CourseDetailsDialog(
+            course = course,
+            timetableEntries = timetableEntries.filter { it.courseId == course.courseId },
+            onDismiss = { showDialog = false }
+        )
+    }
+}
+
+@Composable
+fun CourseDetailsDialog(
+    course: FirebaseCourse,
+    timetableEntries: List<FirebaseTimetableEntry>,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = "${course.name} - ${course.title}",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                course.description?.let {
+                    Text(
+                        text = it,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                course.location?.let {
+                    Text(
+                        text = "Location: $it",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Navigation Button
+                NavigationButton(location = course.location)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Action Button
+                Button(
+                    onClick = { /* Navigate to materials */ },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_upload),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("View Materials", color = MaterialTheme.colorScheme.onPrimary)
+                }
+
+                if (timetableEntries.isNotEmpty()) {
+                    Text(
+                        text = "Schedule:",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    timetableEntries.sortedBy { it.dayOfWeek }.forEach { entry ->
                         Text(
-                            text = course.title,
-                            style = MaterialTheme.typography.titleMedium,
+                            text = "${getDayOfWeek(entry.dayOfWeek)}: ${formatTime(entry.startTime)} - ${formatTime(entry.endTime)} (${entry.room}, ${entry.type})",
+                            fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        if (!hasScheduleToday) {
-                            Text(
-                                text = "No course scheduled for today.",
-                                color = MaterialTheme.colorScheme.error,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-
-                        // Description Section
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(id = android.R.drawable.ic_menu_info_details),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Course Description",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 16.sp
-                            )
-                        }
-
-                        // Course description text
-                        val descriptionText = course.description.takeIf { !it.isNullOrBlank() } ?: "No course description available. You can ask the instructor to add more information."
-
-                        Text(
-                            text = descriptionText,
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-
-                        // Location Section
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(id = android.R.drawable.ic_dialog_map),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Location: ${course.location ?: "TBD"}",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Navigation Button
-                        NavigationButton(location = course.location)
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Action Button
-                        Button(
-                            onClick = { /* Navigate to materials */ },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = android.R.drawable.ic_menu_upload),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("View Materials", color = MaterialTheme.colorScheme.onPrimary)
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Close")
                 }
             }
         }
     }
 }
 
-
-
+@Composable
+fun GPASummaryCard(gpa: Double?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Current GPA",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = if (gpa != null) String.format("%.2f", gpa) else "N/A",
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
 
 @Composable
-fun GradeCard(
-    gradeWithAssignment: GradeDao.GradeWithAssignment,
+fun CourseGradeCard(
     courseName: String,
-    courseTitle: String,
+    overallGrade: String,
+    assignments: List<AssignmentGradeDisplay>,
     modifier: Modifier = Modifier
 ) {
-    val grade = gradeWithAssignment.grade
-    val assignment = gradeWithAssignment.assignment
     var expanded by remember { mutableStateOf(false) }
-
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .animateContentSize()
-            .clickable { expanded = !expanded },
+            .padding(vertical = 4.dp)
+            .animateContentSize(),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -449,49 +460,51 @@ fun GradeCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = courseTitle,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        fontSize = 16.sp,
-                        overflow = TextOverflow.Ellipsis
+                        text = courseName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
-
+                    Text(
+                        text = "Overall Grade: $overallGrade",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = "Toggle",
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (expanded) "Collapse" else "Expand"
+                    )
+                }
             }
 
             if (expanded) {
                 Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = grade.grade,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 28.sp,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-                Text(
-                    text = "Score: ${grade.score} / ${assignment.maxScore}",
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-                Text(
-                    text = "Due: ${SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(assignment.due)}",
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-                grade.feedback?.let {
-                    if (it.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                assignments.forEach { assignmentGrade ->
+                    Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
                         Text(
-                            text = "Feedback: $it",
-                            color = MaterialTheme.colorScheme.onPrimary
+                            text = assignmentGrade.assignmentName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Score: ${assignmentGrade.score}/${assignmentGrade.maxScore}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "Grade: ${assignmentGrade.grade}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        assignmentGrade.feedback?.let { feedback ->
+                            Text(
+                                text = "Feedback: $feedback",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Text(
+                            text = "Due: ${SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(assignmentGrade.due)}",
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
@@ -500,54 +513,10 @@ fun GradeCard(
     }
 }
 
-
-
-
-@Composable
-fun GPASummaryCard(gpa: Double?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "Current GPA",
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = "Semester 1, 2025",
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                    fontSize = 14.sp
-                )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = if (gpa != null) String.format("%.3f / 9.0", gpa) else "N/A",
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-
-
-
 @SuppressLint("WeekBasedYear")
 @Composable
 fun AssignmentCard(
-    assignment: Assignment,
+    assignment: FirebaseAssignment,
     courseName: String,
     courseTitle: String,
     formatDate: (Date) -> String,
@@ -660,6 +629,32 @@ fun AssignmentCard(
                 }
             }
         }
+    }
+}
+
+
+@SuppressLint("SimpleDateFormat")
+fun formatDate(date: Date): String {
+    val formatter = SimpleDateFormat("MMM dd, yyyy")
+    return formatter.format(date)
+}
+
+@SuppressLint("SimpleDateFormat")
+fun formatTime(date: Date): String {
+    val formatter = SimpleDateFormat("hh:mm a")
+    return formatter.format(date)
+}
+
+fun getDayOfWeek(dayOfWeek: Int): String {
+    return when (dayOfWeek) {
+        1 -> "Monday"
+        2 -> "Tuesday"
+        3 -> "Wednesday"
+        4 -> "Thursday"
+        5 -> "Friday"
+        6 -> "Saturday"
+        7 -> "Sunday"
+        else -> ""
     }
 }
 

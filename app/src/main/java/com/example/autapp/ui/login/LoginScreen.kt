@@ -7,8 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,32 +21,53 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.autapp.R
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    modifier: Modifier = Modifier,
-    onLoginSuccess: (Int) -> Unit = {},
+    onLoginSuccess: (String, String) -> Unit,
+    navController: NavController,
+    isDarkTheme: Boolean
 ) {
     val TAG = "LoginScreen"
     Log.d(TAG, "LoginScreen composed")
 
-    // Use theme colors
+    val username by remember { derivedStateOf { viewModel.username } }
+    val password by remember { derivedStateOf { viewModel.password } }
+    val loginResult by remember { derivedStateOf { viewModel.loginResult } }
     val colorScheme = MaterialTheme.colorScheme
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         viewModel.reset()
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(colorScheme.background)
-            .windowInsetsPadding(WindowInsets.statusBars)
-    ) {
+    // Show snackbar for login errors
+    LaunchedEffect(loginResult) {
+        loginResult?.let {
+            if (it.contains("error", ignoreCase = true)) {
+                snackbarHostState.showSnackbar(it)
+            }
+        }
+    }
+
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(16.dp)
+            )
+        },
+        containerColor = colorScheme.background
+    ) { paddingValues ->
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(16.dp))
@@ -68,7 +88,6 @@ fun LoginScreen(
                 )
             }
 
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -84,9 +103,9 @@ fun LoginScreen(
                     textAlign = TextAlign.Center,
                     color = colorScheme.onBackground
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+
                 OutlinedTextField(
-                    value = viewModel.username,
+                    value = username,
                     onValueChange = { viewModel.updateUsername(it) },
                     label = { Text("Username") },
                     modifier = Modifier
@@ -100,8 +119,9 @@ fun LoginScreen(
                         unfocusedLabelColor = colorScheme.onSurface
                     )
                 )
+
                 OutlinedTextField(
-                    value = viewModel.password,
+                    value = password,
                     onValueChange = { viewModel.updatePassword(it) },
                     label = { Text("Password") },
                     visualTransformation = PasswordVisualTransformation(),
@@ -118,13 +138,24 @@ fun LoginScreen(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
                 Button(
                     onClick = {
                         viewModel.login(
-                            onSuccess = { studentId -> onLoginSuccess(studentId) },
-                            onFailure = {}
+                            onSuccess = { userId, role, isFirstLogin, _ ->
+                                if (isFirstLogin && role != "Admin") {
+                                    navController.navigate("change_password/$username/$role/$userId") {
+                                        popUpTo("login") { inclusive = true } // Clear back stack
+                                    }
+                                } else {
+                                    onLoginSuccess(userId, role)
+                                }
+                            },
+                            onFailure = { error ->
+                                Log.e(TAG, "Login failed: $error")
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(error)
+                                }
+                            }
                         )
                     },
                     modifier = Modifier
@@ -142,17 +173,6 @@ fun LoginScreen(
                     )
                 }
 
-                viewModel.loginResult?.let {
-                    Text(
-                        text = it,
-                        fontSize = 14.sp,
-                        fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
-                        color = if (it.contains("successful")) colorScheme.primary else Color.Red,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-
                 Text(
                     text = "Forgotten password?",
                     fontSize = 14.sp,
@@ -163,8 +183,6 @@ fun LoginScreen(
                         .clickable { /* Handle forgotten password click */ }
                         .padding(vertical = 8.dp)
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     text = "Remember to always log out by\n" +
