@@ -15,6 +15,7 @@ import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.Alignment
@@ -189,6 +190,7 @@ fun EditMaterialDialog(
 
     val typeOptions = listOf("PDF", "Link", "Video", "Slides")
     var expanded by remember { mutableStateOf(false) }
+    var selectedType by remember { mutableStateOf(type) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -200,21 +202,37 @@ fun EditMaterialDialog(
                 OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth())
                 Spacer(modifier = Modifier.height(8.dp))
 
-                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                Box {
                     OutlinedTextField(
                         value = type,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Material Type") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                        modifier = Modifier.fillMaxWidth()
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                modifier = Modifier.clickable { expanded = true }
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { expanded = true }
                     )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        typeOptions.forEach {
-                            DropdownMenuItem(text = { Text(it) }, onClick = {
-                                type = it
-                                expanded = false
-                            })
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        typeOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    type = option
+                                    expanded = false
+                                }
+                            )
                         }
                     }
                 }
