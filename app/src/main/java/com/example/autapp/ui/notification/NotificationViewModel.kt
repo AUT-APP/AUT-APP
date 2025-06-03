@@ -37,7 +37,7 @@ class NotificationViewModel(
     private val timetableEntryRepository: FirebaseTimetableRepository,
     private val courseRepository: FirebaseCourseRepository,
     private val notificationRepository: FirebaseNotificationRepository,
-    private val timetableNotificationPreference: FirebaseTimetableNotificationPreference,
+    private val timetableNotificationPreferenceRepository: FirebaseTimetableNotificationPreferenceRepository,
     settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
@@ -244,7 +244,7 @@ class NotificationViewModel(
                     application.timetableEntryRepository,
                     application.courseRepository,
                     application.notificationRepository,
-                    application.timetableNotificationPreference,
+                    application.timetableNotificationPreferenceRepository,
                     SettingsDataStore(context)
                 )
             }

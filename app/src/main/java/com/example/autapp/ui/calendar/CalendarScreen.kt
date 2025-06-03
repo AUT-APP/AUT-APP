@@ -11,11 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autapp.data.firebase.FirebaseBooking
 import com.example.autapp.data.firebase.FirebaseEvent
-import com.example.autapp.data.dao.TimetableEntryDao
-import com.example.autapp.data.models.Booking
-import com.example.autapp.data.models.Event
-import kotlinx.coroutines.coroutineScope
+import com.example.autapp.data.firebase.FirebaseTimetableEntry
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -155,11 +153,11 @@ fun CalendarScreen(
                     onSetReminder = { item, minutes ->
                         coroutineScope.launch {
                             val scheduledTimeMillis = when (item) {
-                                is TimetableEntryDao.TimetableEntryWithCourse -> viewModel.updateReminder(context, item, minutes)
-                                is Event -> viewModel.updateReminder(context, item, minutes)
-                                is Booking -> viewModel.updateReminder(context, item, minutes)
+                                is FirebaseTimetableEntry -> viewModel.updateReminder(context, item, minutes)
+                                is FirebaseEvent -> viewModel.updateReminder(context, item, minutes)
+                                is FirebaseBooking -> viewModel.updateReminder(context, item, minutes)
                                 else -> null
-                            } as Long?
+                            }
                             // Dismiss any currently showing snackbar
                             snackbarHostState.currentSnackbarData?.dismiss()
                             val warning = when {
@@ -174,16 +172,16 @@ fun CalendarScreen(
                                 val scheduledTimeString = formatter.format(scheduledDate)
                                 // Construct the message
                                 when (item) {
-                                    is TimetableEntryDao.TimetableEntryWithCourse -> "${item.course.name} ${item.entry.type} notification scheduled for $scheduledTimeString"
-                                    is Event -> "${item.title} event notification scheduled for $scheduledTimeString"
-                                    is Booking -> "${item.roomId} booking notification scheduled for $scheduledTimeString"
+                                    is FirebaseTimetableEntry -> "${item.courseId} ${item.type} notification scheduled for $scheduledTimeString"
+                                    is FirebaseEvent -> "${item.title} event notification scheduled for $scheduledTimeString"
+                                    is FirebaseBooking -> "${item.roomId} booking notification scheduled for $scheduledTimeString"
                                     else -> "Failed to schedule notification: Unknown item type"
                                 }
                             } else {
                                 when (item) {
-                                    is TimetableEntryDao.TimetableEntryWithCourse -> "Failed to schedule ${item.course.name} ${item.entry.type} notification"
-                                    is Event -> "Failed to schedule ${item.title} event notification"
-                                    is Booking -> "Failed to schedule ${item.roomId} booking notification "
+                                    is FirebaseTimetableEntry -> "Failed to schedule ${item.courseId} ${item.type} notification"
+                                    is FirebaseEvent -> "Failed to schedule ${item.title} event notification"
+                                    is FirebaseBooking -> "Failed to schedule ${item.roomId} booking notification "
                                     else -> "Failed to schedule notification."
                                 }
                             }
@@ -202,9 +200,9 @@ fun CalendarScreen(
                     onSetReminder = { item, minutes ->
                         coroutineScope.launch {
                             when (item) {
-                                is TimetableEntryDao.TimetableEntryWithCourse -> viewModel.updateReminder(context, item, minutes)
-                                is Event -> viewModel.updateReminder(context, item, minutes)
-                                is Booking -> viewModel.updateReminder(context, item, minutes)
+                                is FirebaseTimetableEntry -> viewModel.updateReminder(context, item, minutes)
+                                is FirebaseEvent -> viewModel.updateReminder(context, item, minutes)
+                                is FirebaseBooking -> viewModel.updateReminder(context, item, minutes)
                             }
                         }
                     },  // Passing a general handler that checks the type of item

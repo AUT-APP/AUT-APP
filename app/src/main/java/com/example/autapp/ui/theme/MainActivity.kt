@@ -375,7 +375,6 @@ fun AppContent(
                 }
             }
             val snackbarHostState = remember { SnackbarHostState() }
-            Log.d("MainActivity", "Entering calendar with student ID: $studentId")
             Scaffold(
                 topBar = {
                     AUTTopAppBar(

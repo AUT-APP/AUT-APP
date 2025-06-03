@@ -224,11 +224,37 @@ data class FirebaseTimetableEntry(
 data class FirebaseTimetableNotificationPreference(
     @DocumentId
     val id: String = "",
-    val studentId: String = "", // Reference to FirebaseStudent
+    val studentId: String? = null, // Reference to FirebaseStudent
+    val teacherId: String? = null, // Reference to FirebaseTeacher
+    val isTeacher: Boolean = false,
     val classSessionId: String = "", // Reference to FirebaseTimetableEntry
     val notificationTime: Int = 15, // Minutes before class
     val isEnabled: Boolean = true
 )
+
+// Timetable Booking Preference
+data class FirebaseBookingNotificationPreference(
+    @DocumentId
+    val id: String = "",
+    val studentId: String = "", // Reference to FirebaseStudent
+    val teacherId: String? = "", // Reference to FirebaseTeacher
+    val isTeacher: Boolean = false,
+    val bookingId: String = "", // Reference to FirebaseBooking
+    val notificationTime: Int = 15, // Minutes before class
+    val isEnabled: Boolean = true
+)
+
+
+// Timetable Event Preference
+data class FirebaseEventNotificationPreference(
+    @DocumentId
+    val id: String = "",
+    val studentId: String = "", // Reference to FirebaseStudent
+    val eventId: String = "", // Reference to FirebaseEvent
+    val notificationTime: Int = 15, // Minutes before class
+    val isEnabled: Boolean = true
+)
+
 
 // Event model
 data class FirebaseEvent(

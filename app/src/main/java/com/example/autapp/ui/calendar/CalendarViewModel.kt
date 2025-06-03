@@ -2,8 +2,6 @@ package com.example.autapp.ui.calendar
 
 import android.content.Context
 import android.util.Log
-import androidx.collection.MutableIntIntMap
-import androidx.collection.emptyIntIntMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -32,7 +30,6 @@ import com.example.autapp.data.firebase.FirebaseBooking
 import com.example.autapp.data.firebase.FirebaseCourseRepository
 import com.example.autapp.data.firebase.QueryCondition
 import com.example.autapp.data.firebase.QueryOperator
-import com.example.autapp.data.models.TimetableNotificationPreference
 import java.util.*
 import com.google.firebase.firestore.Source
 
@@ -54,7 +51,7 @@ data class CalendarUiState(
     val isTeacher: Boolean,  // New field to track if user is a teacher
     val userId: String,
     val courses: List<FirebaseCourse> = emptyList(), // Added courses property
-    val notificationPrefs: MutableIntIntMap = emptyIntIntMap() as MutableIntIntMap// classSessionId -> minutesBefore
+    val notificationPrefs: MutableMap<String, Int> = mutableMapOf() // classSessionId -> minutesBefore
 )
 
 class CalendarViewModel(
@@ -63,7 +60,7 @@ class CalendarViewModel(
     private val eventRepository: FirebaseEventRepository,
     private val bookingRepository: FirebaseBookingRepository,
     private val courseRepository: FirebaseCourseRepository,
-    private val timetableNotificationPreferenceRepository: FirebaseTimetableNotificationPreference,
+    private val timetableNotificationPreferenceRepository: FirebaseTimetableNotificationPreferenceRepository,
     private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
@@ -610,12 +607,14 @@ class CalendarViewModel(
         try {
             // Handle reminder logic for a TimetableEntry
             val classSessionId = entry.entryId
-            val courseName = courseRepository.getById(entry.courseId).name
-            val pref = TimetableNotificationPreference(
-                studentId = _userId, //TODO: Make work with teachers
+            val courseName = courseRepository.getById(entry.courseId)?.name
+            val pref = FirebaseTimetableNotificationPreference(
+                studentId = if (!isTeacher) _userId else null, // only set for students
+                teacherId = if (isTeacher) _userId else null,  // only set for teachers
                 classSessionId = classSessionId,
-                minutesBefore = minutesBefore,
-                enabled = true
+                notificationTime = minutesBefore,
+                isEnabled = true,
+                isTeacher = isTeacher
             )
 
             // Cancel any existing alarm for this class session
@@ -633,11 +632,10 @@ class CalendarViewModel(
                 currentState.copy(notificationPrefs = updatedPrefs)
             }
 
-
             // Schedule notification
-            val session = timetableEntryRepository.getTimetableEntryById(classSessionId)
+            val session = timetableEntryRepository.getById(classSessionId)
             if (session != null) {
-                val minutesBefore = pref.minutesBefore
+                val minutesBefore = pref.notificationTime
                 val notificationText = when (minutesBefore) {
                     0 -> "Your $courseName ${session.type} at ${session.room} is starting now!"
                     60 -> "Your $courseName ${session.type} at ${session.room} is coming up in an hour!"
@@ -650,7 +648,7 @@ class CalendarViewModel(
                     text = notificationText,
                     dayOfWeek = session.dayOfWeek,
                     startTime = session.startTime,
-                    deepLinkUri = "myapp://dashboard/$studentId",
+                    deepLinkUri = "myapp://dashboard/$_userId",
                     minutesBefore = minutesBefore
                 )
                 return@withContext scheduledTimeMillis
