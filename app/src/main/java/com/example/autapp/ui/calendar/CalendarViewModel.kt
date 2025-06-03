@@ -32,6 +32,7 @@ import com.example.autapp.data.firebase.FirebaseBooking
 import com.example.autapp.data.firebase.FirebaseCourseRepository
 import com.example.autapp.data.firebase.QueryCondition
 import com.example.autapp.data.firebase.QueryOperator
+import com.example.autapp.data.models.TimetableNotificationPreference
 import java.util.*
 import com.google.firebase.firestore.Source
 
@@ -52,7 +53,7 @@ data class CalendarUiState(
     val isLoading: Boolean = false, // Flag to indicate if data is currently being loaded.
     val isTeacher: Boolean,  // New field to track if user is a teacher
     val userId: String,
-    val courses: List<FirebaseCourse> = emptyList() // Added courses property
+    val courses: List<FirebaseCourse> = emptyList(), // Added courses property
     val notificationPrefs: MutableIntIntMap = emptyIntIntMap() as MutableIntIntMap// classSessionId -> minutesBefore
 )
 
@@ -62,7 +63,7 @@ class CalendarViewModel(
     private val eventRepository: FirebaseEventRepository,
     private val bookingRepository: FirebaseBookingRepository,
     private val courseRepository: FirebaseCourseRepository,
-    private val timetableNotificationPreferenceRepository: FirebaseTimetableNotificationPreferenceRepository,
+    private val timetableNotificationPreferenceRepository: FirebaseTimetableNotificationPreference,
     private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
@@ -608,11 +609,11 @@ class CalendarViewModel(
     ): Long? = withContext(Dispatchers.IO) {
         try {
             // Handle reminder logic for a TimetableEntry
-            val classSessionId = entry.entry.entryId
-            val courseName = entry.course.name
+            val classSessionId = entry.entryId
+            val courseName = courseRepository.getById(entry.courseId).name
             val pref = TimetableNotificationPreference(
-                studentId = _studentId,
-                classSessionId = entry.entry.entryId,
+                studentId = _userId, //TODO: Make work with teachers
+                classSessionId = classSessionId,
                 minutesBefore = minutesBefore,
                 enabled = true
             )
