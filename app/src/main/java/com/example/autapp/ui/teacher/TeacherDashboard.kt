@@ -782,6 +782,7 @@ fun AddMaterialDialog(
             }
 
 
+
         },
         // Confirm button triggers onConfirm with entered values
         confirmButton = {
@@ -789,17 +790,19 @@ fun AddMaterialDialog(
                 onClick = {
                     onConfirm(title, description, type, contentUrl)
                 },
-                enabled = title.isNotBlank() && description.isNotBlank() && contentUrl.isNotBlank()
+                enabled = title.isNotBlank() && description.isNotBlank() && contentUrl.isNotBlank() &&  MaterialValidator.isValidContent(type, contentUrl)
             ) {
                 Text("Add")
             }
             if (contentUrl.isNotBlank() && !MaterialValidator.isValidContent(type, contentUrl)) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Invalid content format for selected material type.",
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+
         },
         // Cancel button to close the dialog
         dismissButton = {
