@@ -15,6 +15,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import android.app.DatePickerDialog
+import android.opengl.ETC1.isValid
+import androidx.compose.foundation.clickable
 import android.app.TimePickerDialog as AndroidTimePickerDialog
 import androidx.compose.ui.platform.LocalContext
 import com.example.autapp.data.repository.DepartmentRepository
@@ -22,6 +24,11 @@ import kotlinx.coroutines.launch
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.navigation.NavHostController
+import com.example.autapp.util.MaterialValidator
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
 
 @Composable
 fun TeacherDashboard(
@@ -679,6 +686,14 @@ fun AddMaterialDialog(
     // Options for the type dropdown
     val typeOptions = listOf("PDF", "Link", "Video", "Slides")
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val fileLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            contentUrl = selectedUri.toString()
+        }
+    }
+
 
     // Material input dialog
     AlertDialog(
@@ -708,19 +723,23 @@ fun AddMaterialDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Dropdown menu for material type
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = true }) {
                     OutlinedTextField(
                         value = type,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Material Type") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    ExposedDropdownMenu(
+                    DropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
@@ -745,7 +764,25 @@ fun AddMaterialDialog(
                     label = { Text("Content URL") },
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                if (type != "Link") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = {
+                        // You can fine-tune the MIME type based on type
+                        val mimeType = when (type) {
+                            "PDF" -> "application/pdf"
+                            "Video" -> "video/*"
+                            "Slides" -> "application/vnd.ms-powerpoint"
+                            else -> "*/*"
+                        }
+                        fileLauncher.launch(mimeType)
+                    }) {
+                        Text("Browse File")
+                    }
+                }
             }
+
+
         },
         // Confirm button triggers onConfirm with entered values
         confirmButton = {
@@ -757,6 +794,13 @@ fun AddMaterialDialog(
             ) {
                 Text("Add")
             }
+            if (contentUrl.isNotBlank() && !MaterialValidator.isValidContent(type, contentUrl)) {
+                Text(
+                    text = "Invalid content format for selected material type.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         },
         // Cancel button to close the dialog
         dismissButton = {
@@ -764,7 +808,9 @@ fun AddMaterialDialog(
                 Text("Cancel")
             }
         }
+
     )
+
 }
 
 @Composable

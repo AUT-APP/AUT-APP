@@ -21,6 +21,11 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import com.example.autapp.data.models.CourseMaterial
+import com.example.autapp.util.MaterialValidator
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
+
 
 
 @Composable
@@ -191,6 +196,14 @@ fun EditMaterialDialog(
     val typeOptions = listOf("PDF", "Link", "Video", "Slides")
     var expanded by remember { mutableStateOf(false) }
     var selectedType by remember { mutableStateOf(type) }
+    val context = LocalContext.current
+    val fileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            contentUrl = selectedUri.toString()
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -239,6 +252,14 @@ fun EditMaterialDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(value = contentUrl, onValueChange = { contentUrl = it }, label = { Text("Content URL") }, modifier = Modifier.fillMaxWidth())
+
+                if (contentUrl.isNotBlank() && !MaterialValidator.isValidContent(type, contentUrl)) {
+                    Text(
+                        text = "Invalid content format for selected material type.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         },
         confirmButton = {
@@ -246,7 +267,8 @@ fun EditMaterialDialog(
                 onClick = {
                     onConfirm(material.copy(title = title, description = description, type = type, contentUrl = contentUrl))
                 },
-                enabled = title.isNotBlank() && description.isNotBlank() && contentUrl.isNotBlank()
+                enabled = title.isNotBlank() && description.isNotBlank() && contentUrl.isNotBlank() &&  MaterialValidator.isValidContent(type, contentUrl)
+
             ) { Text("Save") }
         },
         dismissButton = {
@@ -255,3 +277,5 @@ fun EditMaterialDialog(
     )
 
 }
+
+
