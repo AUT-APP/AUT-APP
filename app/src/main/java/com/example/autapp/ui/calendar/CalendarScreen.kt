@@ -16,13 +16,17 @@ import com.example.autapp.data.models.Booking
 import com.example.autapp.data.models.Event
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun CalendarScreen(
     viewModel: CalendarViewModel,
     paddingValues: PaddingValues,
     modifier: Modifier = Modifier,
-    onNavigateToManageEvents: () -> Unit
+    onNavigateToManageEvents: () -> Unit,
+    snackbarHostState: SnackbarHostState
 ) {
     // StateFlow for UI state from the ViewModel, collected as State
     val uiState by viewModel.uiState.collectAsState()
@@ -36,6 +40,10 @@ fun CalendarScreen(
     var showAddTodoDialog by remember { mutableStateOf(false) }
     // State to hold the currently selected event for editing or viewing details
     var selectedEvent by remember { mutableStateOf<Event?>(null) }
+
+    val notificationsEnabled: Boolean by viewModel.notificationsEnabled.collectAsState(initial = true)
+    val classRemindersEnabled: Boolean by viewModel.classRemindersEnabled.collectAsState(initial = true)
+
 
     // LaunchedEffect observes navigateToManageEvents. When true, it triggers navigation
     // and then calls a ViewModel function to reset the navigation trigger.
@@ -134,11 +142,44 @@ fun CalendarScreen(
                     onDateSelected = viewModel::updateSelectedDate,
                     onSetReminder = { item, minutes ->
                         coroutineScope.launch {
-                            when (item) {
+                            val scheduledTimeMillis = when (item) {
                                 is TimetableEntryDao.TimetableEntryWithCourse -> viewModel.updateReminder(context, item, minutes)
                                 is Event -> viewModel.updateReminder(context, item, minutes)
                                 is Booking -> viewModel.updateReminder(context, item, minutes)
+                                else -> null
+                            } as Long?
+                            // Dismiss any currently showing snackbar
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                            val warning = when {
+                                !notificationsEnabled -> " (Notifications disabled in settings)"
+                                !classRemindersEnabled -> " (Reminders disabled in settings)"
+                                else -> ""
                             }
+                            val baseMessage = if (scheduledTimeMillis != null) {
+                                // Format the scheduled time into a readable string
+                                val scheduledDate = Date(scheduledTimeMillis)
+                                val formatter = SimpleDateFormat("MMM dd 'at' h:mm a", Locale.getDefault())
+                                val scheduledTimeString = formatter.format(scheduledDate)
+                                // Construct the message
+                                when (item) {
+                                    is TimetableEntryDao.TimetableEntryWithCourse -> "${item.course.name} ${item.entry.type} notification scheduled for $scheduledTimeString"
+                                    is Event -> "${item.title} event notification scheduled for $scheduledTimeString"
+                                    is Booking -> "${item.roomId} booking notification scheduled for $scheduledTimeString"
+                                    else -> "Failed to schedule notification: Unknown item type"
+                                }
+                            } else {
+                                when (item) {
+                                    is TimetableEntryDao.TimetableEntryWithCourse -> "Failed to schedule ${item.course.name} ${item.entry.type} notification"
+                                    is Event -> "Failed to schedule ${item.title} event notification"
+                                    is Booking -> "Failed to schedule ${item.roomId} booking notification "
+                                    else -> "Failed to schedule notification."
+                                }
+                            }
+
+                            snackbarHostState.showSnackbar(
+                                message = "$baseMessage$warning",
+                                duration = SnackbarDuration.Short
+                            )
                         }
                     },  // Passing a general handler that checks the type of item
                     onEventClick = { selectedEvent = it }

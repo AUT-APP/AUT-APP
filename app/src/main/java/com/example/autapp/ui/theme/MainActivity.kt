@@ -271,8 +271,8 @@ fun AppContent(
             LaunchedEffect(studentId) {
                 calendarViewModel.initialize(studentId)
             }
+            val snackbarHostState = remember { SnackbarHostState() }
             Log.d("MainActivity", "Entering calendar with student ID: $studentId")
-
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -292,6 +292,12 @@ fun AppContent(
                         currentRoute = null,
                         currentStudentId = studentId
                     )
+                },
+                snackbarHost = {
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(16.dp) // Ensure visibility
+                    )
                 }
             ) { paddingValues ->
                 CalendarScreen(
@@ -299,7 +305,8 @@ fun AppContent(
                     paddingValues = paddingValues,
                     onNavigateToManageEvents = {
                         navController.navigate("manage_events/$studentId")
-                    }
+                    },
+                    snackbarHostState = snackbarHostState
                 )
             }
         }

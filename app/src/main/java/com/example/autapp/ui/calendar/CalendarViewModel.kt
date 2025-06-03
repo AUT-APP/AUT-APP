@@ -4,16 +4,15 @@ import android.content.Context
 import android.util.Log
 import androidx.collection.MutableIntIntMap
 import androidx.collection.emptyIntIntMap
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.autapp.AUTApplication
 import com.example.autapp.data.dao.TimetableEntryDao
+import com.example.autapp.data.datastores.SettingsDataStore
 import com.example.autapp.data.models.Event
 import com.example.autapp.data.models.Booking
 import com.example.autapp.data.models.TimetableNotificationPreference
@@ -22,7 +21,6 @@ import com.example.autapp.data.repository.StudentRepository
 import com.example.autapp.data.repository.EventRepository
 import com.example.autapp.data.repository.BookingRepository
 import com.example.autapp.data.repository.TimetableNotificationPreferenceRepository
-import com.example.autapp.ui.DashboardViewModel
 import com.example.autapp.util.NotificationScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +28,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import org.threeten.bp.LocalDate
 import org.threeten.bp.ZoneId
 import org.threeten.bp.Instant
@@ -59,7 +59,8 @@ class CalendarViewModel(
     private val studentRepository: StudentRepository,
     private val eventRepository: EventRepository,
     private val bookingRepository: BookingRepository,
-    private val timetableNotificationPreferenceRepository: TimetableNotificationPreferenceRepository
+    private val timetableNotificationPreferenceRepository: TimetableNotificationPreferenceRepository,
+    private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState()) // Private MutableStateFlow to hold the UI state.
@@ -67,6 +68,12 @@ class CalendarViewModel(
     
     private var _studentId: Int = 0 // Stores the ID of the current student.
     val studentId: Int get() = _studentId
+
+    val notificationsEnabled = settingsDataStore.isNotificationsEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val classRemindersEnabled = settingsDataStore.isClassRemindersEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     // StateFlow to signal navigation to the ManageEventsScreen.
     private val _navigateToManageEvents = MutableStateFlow(false)
@@ -446,9 +453,12 @@ class CalendarViewModel(
      * then inserts the updated event. This handles cases where an event might change significantly (e.g. recurring to single).
      * Consider a more targeted update if events have unique persistent IDs that don't change based on title/date.
      */
-    fun updateReminder(context: Context, event: Event, timeBefore: Int) {
-        viewModelScope.launch {
-            // Handle reminder logic for an Event
+    suspend fun updateReminder(context: Context, event: Event, minutesBefore: Int
+    ): Long? = withContext(Dispatchers.IO) {
+        try {
+            return@withContext null
+        } catch (e: Exception) {
+            return@withContext null
         }
     }
 
@@ -518,10 +528,12 @@ class CalendarViewModel(
         }
     }
 
-    fun updateReminder(context: Context, entry: Booking, minutesBefore: Int) {
-        viewModelScope.launch {
-            // Handle reminder logic for a Booking
-
+    suspend fun updateReminder(context: Context, booking: Booking, minutesBefore: Int
+    ): Long? = withContext(Dispatchers.IO) {
+        try {
+            return@withContext null
+        } catch (e: Exception) {
+            return@withContext null
         }
     }
 
@@ -529,13 +541,14 @@ class CalendarViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = this[APPLICATION_KEY] as AUTApplication
-
+                val context = application.applicationContext
                 CalendarViewModel(
                     application.timetableEntryRepository,
                     application.studentRepository,
                     application.eventRepository,
                     application.bookingRepository,
                     application.timetableNotificationPreferenceRepository,
+                    SettingsDataStore(context),
                 )
             }
         }
