@@ -248,6 +248,7 @@ fun EditMaterialDialog(
                             )
                         }
                     }
+
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -260,8 +261,24 @@ fun EditMaterialDialog(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+                if (type != "Link") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = {
+                        val mimeType = when (type) {
+                            "PDF" -> "application/pdf"
+                            "Video" -> "video/*"
+                            "Slides" -> "application/vnd.ms-powerpoint"
+                            else -> "*/*"
+                        }
+                        fileLauncher.launch(mimeType)
+                    }) {
+                        Text("Browse File")
+                    }
+                }
             }
+
         },
+
         confirmButton = {
             Button(
                 onClick = {
@@ -274,6 +291,7 @@ fun EditMaterialDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
+
     )
 
 }

@@ -768,7 +768,6 @@ fun AddMaterialDialog(
                 if (type != "Link") {
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(onClick = {
-                        // You can fine-tune the MIME type based on type
                         val mimeType = when (type) {
                             "PDF" -> "application/pdf"
                             "Video" -> "video/*"
