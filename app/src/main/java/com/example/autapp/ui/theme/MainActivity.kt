@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.dialog
 import com.example.autapp.data.datastores.SettingsDataStore
+import com.example.autapp.data.models.CourseMaterial
 import com.example.autapp.ui.login.LoginScreen
 import com.example.autapp.ui.login.LoginViewModel
 import com.example.autapp.ui.notification.NotificationViewModel
@@ -274,7 +275,8 @@ fun AppContent(
                         departmentRepository = application.departmentRepository,
                         modifier = Modifier.fillMaxSize(),
                         teacherId = userId,
-                        paddingValues = paddingValues
+                        paddingValues = paddingValues,
+                        navController = navController
                     )
                 } else {
                     val studentTimetableEntries by dashboardViewModel.timetableEntries.collectAsState(initial = emptyList<TimetableEntry>())
@@ -334,7 +336,8 @@ fun AppContent(
                         modifier = Modifier.fillMaxSize(),
                         teacherId = userId,
                         paddingValues = paddingValues,
-                        departmentRepository = application.departmentRepository
+                        departmentRepository = application.departmentRepository,
+                        navController = navController
                     )
                 }
             } else {
@@ -792,10 +795,15 @@ fun AppContent(
             // Initialize the ViewModel using its factory
             val viewModel: CourseMaterialViewModel = viewModel(factory = CourseMaterialViewModel.Factory)
 
+
             // Load materials for the given course ID
             LaunchedEffect(courseId) {
                 viewModel.loadMaterialsForCourse(courseId)
             }
+
+            var materialToDelete by remember { mutableStateOf<CourseMaterial?>(null) }
+            var showDeleteDialog by remember { mutableStateOf(false) }
+
             // Main UI layout structure
             Scaffold(
                 topBar = {
@@ -832,9 +840,40 @@ fun AppContent(
                 CourseMaterialScreen(
                     viewModel = viewModel,
                     paddingValues = padding,
-                    courseId = courseId
+                    courseId = courseId,
+                    isTeacher = isTeacher,
+                    onEditMaterial = { /* We'll handle this in a later step */ },
+                    onDeleteMaterial = { materialToDelete = it }
                 )
+                materialToDelete?.let { material ->
+                    if (showDeleteDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showDeleteDialog = false },
+                            title = { Text("Delete Material") },
+                            text = { Text("Are you sure you want to delete this material?") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    viewModel.deleteMaterial(material)
+                                    showDeleteDialog = false
+                                    materialToDelete = null
+                                }) {
+                                    Text("Delete")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = {
+                                    showDeleteDialog = false
+                                    materialToDelete = null
+                                }) {
+                                    Text("Cancel")
+                                }
+                            }
+                        )
+                    }
+                }
+
             }
         }
+
     }
 }

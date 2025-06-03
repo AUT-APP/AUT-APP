@@ -21,6 +21,7 @@ import com.example.autapp.data.repository.DepartmentRepository
 import kotlinx.coroutines.launch
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.navigation.NavHostController
 
 @Composable
 fun TeacherDashboard(
@@ -28,7 +29,8 @@ fun TeacherDashboard(
     departmentRepository: DepartmentRepository, // Added
     modifier: Modifier = Modifier,
     teacherId: Int,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    navController: NavHostController
 ) {
     var showAddAssignmentDialog by remember { mutableStateOf(false) }
     var showAddMaterialDialog by remember { mutableStateOf(false) }
@@ -130,7 +132,9 @@ fun TeacherDashboard(
                         selectedCourseForMaterial = course
                         showAddMaterialDialog = true
                     },
-                    onClick = { viewModel.selectCourse(course) }
+                    onClick = { viewModel.selectCourse(course)
+                    },
+                    navController = navController
                 )
             }
         }
@@ -290,7 +294,8 @@ fun TeacherCourseCard(
     course: Course,
     onAddAssignment: () -> Unit,
     onAddMaterial: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    navController: NavHostController
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showEditDescriptionDialog by remember { mutableStateOf(false) }
@@ -384,15 +389,37 @@ fun TeacherCourseCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
 
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onAddAssignment) {
+                    Button(
+                        onClick = onAddAssignment,
+                        shape = RoundedCornerShape(50)
+                    ) {
                         Text("Add Assignment")
                     }
-                    Button(onClick = onAddMaterial) {
+                    Button(
+                        onClick = onAddMaterial,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(50)
+                    ) {
                         Text("Add Material")
                     }
-                }
 
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = { navController.navigate("materials/${course.courseId}") },
+                        shape = RoundedCornerShape(50),
+
+                    ) {
+                        Text("Edit Materials")
+                    }
+                }
 
             }
         }

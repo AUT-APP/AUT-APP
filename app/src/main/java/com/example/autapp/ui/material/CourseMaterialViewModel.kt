@@ -39,6 +39,13 @@ class CourseMaterialViewModel (
         }
     }
 
+    fun deleteMaterial(material: CourseMaterial) {
+        viewModelScope.launch {
+            repository.deleteMaterial(material)
+            loadMaterialsForCourse(material.courseId) // Refresh after delete
+        }
+    }
+
     // Factory to inject dependencies (repository)
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
