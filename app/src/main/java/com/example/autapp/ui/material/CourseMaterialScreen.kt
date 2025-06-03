@@ -35,6 +35,9 @@ fun CourseMaterialScreen(
     // Collect the list of course materials from the ViewModel
     val materialList by viewModel.materials.collectAsState()
     var materialToDelete by remember { mutableStateOf<CourseMaterial?>(null) }
+    var materialToEdit by remember { mutableStateOf<CourseMaterial?>(null) }
+
+
 
     val context = LocalContext.current
 
@@ -122,7 +125,7 @@ fun CourseMaterialScreen(
 
                             if (isTeacher) {
                                 Row {
-                                    IconButton(onClick = { onEditMaterial(material) }) {
+                                    IconButton(onClick = { materialToEdit = material }) {
                                         Icon(Icons.Default.Edit, contentDescription = "Edit")
                                     }
                                     IconButton(onClick = { materialToDelete = material }) {
@@ -133,6 +136,7 @@ fun CourseMaterialScreen(
                         }
                     }
                 }
+
             }
         }
 
@@ -157,5 +161,79 @@ fun CourseMaterialScreen(
                 }
             )
         }
+
+        materialToEdit?.let { material ->
+            EditMaterialDialog(
+                material = material,
+                onDismiss = { materialToEdit = null },
+                onConfirm = {
+                    viewModel.updateMaterial(it)
+                    materialToEdit = null
+                }
+            )
+        }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditMaterialDialog(
+    material: CourseMaterial,
+    onDismiss: () -> Unit,
+    onConfirm: (CourseMaterial) -> Unit
+) {
+    var title by remember { mutableStateOf(material.title) }
+    var description by remember { mutableStateOf(material.description) }
+    var type by remember { mutableStateOf(material.type) }
+    var contentUrl by remember { mutableStateOf(material.contentUrl ?: "") }
+
+    val typeOptions = listOf("PDF", "Link", "Video", "Slides")
+    var expanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Material") },
+        text = {
+            Column {
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(8.dp))
+
+                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                    OutlinedTextField(
+                        value = type,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Material Type") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        typeOptions.forEach {
+                            DropdownMenuItem(text = { Text(it) }, onClick = {
+                                type = it
+                                expanded = false
+                            })
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(value = contentUrl, onValueChange = { contentUrl = it }, label = { Text("Content URL") }, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm(material.copy(title = title, description = description, type = type, contentUrl = contentUrl))
+                },
+                enabled = title.isNotBlank() && description.isNotBlank() && contentUrl.isNotBlank()
+            ) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+
 }

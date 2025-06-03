@@ -46,6 +46,17 @@ class CourseMaterialViewModel (
         }
     }
 
+    fun updateMaterial(material: CourseMaterial) {
+        viewModelScope.launch {
+            try {
+                repository.updateMaterial(material)
+                loadMaterialsForCourse(material.courseId)
+            } catch (e: Exception) {
+                // Handle error
+            }
+        }
+    }
+
     // Factory to inject dependencies (repository)
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
