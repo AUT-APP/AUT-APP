@@ -588,9 +588,10 @@ class CalendarViewModel(
     }
 
     /**
-     * Updates an existing event. This implementation deletes all events with the same title and date,
-     * then inserts the updated event. This handles cases where an event might change significantly (e.g. recurring to single).
-     * Consider a more targeted update if events have unique persistent IDs that don't change based on title/date.
+     * Manages notification reminders for a specific item (Event, Timetable Entry, or Booking).
+     * This function updates the user's notification preference, cancels any existing alarm,
+     * and schedules a new alarm to deliver the notification `minutesBefore` the item's start time.
+     * Notifications for past times will not be scheduled.
      */
     suspend fun updateReminder(context: Context, event: FirebaseEvent, minutesBefore: Int
     ): Long? = withContext(Dispatchers.IO) {
@@ -634,14 +635,22 @@ class CalendarViewModel(
                 return@withContext null
             }
 
+            val currentUserId = _uiState.value.userId
+            val currentUserIsTeacher = _uiState.value.isTeacher
+
             val scheduledTimeMillis = NotificationScheduler.scheduleNotificationAt(
                 context = context,
                 notificationId = notificationId,
                 title = "${event.title} starts soon!",
                 text = notificationText,
                 targetTime = event.startTime!!,
-                deepLinkUri = "myapp://dashboard/$_userId",
-                minutesBefore = minutesBefore
+                deepLinkUri = "myapp://dashboard/$currentUserId",
+                minutesBefore = minutesBefore,
+                userId = currentUserId,
+                isTeacher = currentUserIsTeacher,
+                notificationType = "EVENT",
+                relatedItemId = event.eventId
+
             )
             scheduledTimeMillis
         } catch (e: Exception) {
@@ -658,13 +667,17 @@ class CalendarViewModel(
         try {
             val classSessionId = entry.entryId
             val courseName = courseRepository.getById(entry.courseId)?.name.orEmpty()
+
+            val currentUserId = _uiState.value.userId
+            val currentUserIsTeacher = _uiState.value.isTeacher
+
             val pref = FirebaseTimetableNotificationPreference(
-                studentId = if (!isTeacher) _userId else null, // only set for students
-                teacherId = if (isTeacher) _userId else null,  // only set for teachers
+                studentId = if (!currentUserIsTeacher) currentUserId else null, // only set for students
+                teacherId = if (currentUserIsTeacher) currentUserId else null,  // only set for teachers
                 classSessionId = classSessionId,
                 notificationTime = minutesBefore,
                 isEnabled = true,
-                isTeacher = isTeacher
+                isTeacher = currentUserIsTeacher
             )
 
             // Save to DB
@@ -695,8 +708,12 @@ class CalendarViewModel(
                 text = notificationText,
                 dayOfWeek = entry.dayOfWeek,
                 startTime = entry.startTime,
-                deepLinkUri = "myapp://dashboard/$_userId",
-                minutesBefore = minutesBefore
+                deepLinkUri = "myapp://dashboard/$currentUserId",
+                minutesBefore = minutesBefore,
+                userId = currentUserId,
+                isTeacher = currentUserIsTeacher,
+                notificationType = "TIMETABLE",
+                relatedItemId = entry.entryId
             )
             scheduledTimeMillis
         } catch (e: Exception) {
@@ -708,6 +725,9 @@ class CalendarViewModel(
     suspend fun updateReminder(context: Context, booking: FirebaseBooking, minutesBefore: Int
     ): Long? = withContext(Dispatchers.IO) {
         try {
+            val currentUserId = _uiState.value.userId
+            val currentUserIsTeacher = _uiState.value.isTeacher
+
             val pref = FirebaseBookingNotificationPreference(
                 studentId = booking.studentId,
                 teacherId = null, // or use logic if needed
@@ -745,8 +765,12 @@ class CalendarViewModel(
                 title = "${booking.building} booking starts soon!",
                 text = notificationText,
                 targetTime = booking.startTime,
-                deepLinkUri = "myapp://dashboard/$_userId",
-                minutesBefore = minutesBefore
+                deepLinkUri = "myapp://dashboard/$currentUserId",
+                minutesBefore = minutesBefore,
+                userId = currentUserId,
+                isTeacher = currentUserIsTeacher,
+                notificationType = "BOOKING",
+                relatedItemId = booking.id
             )
             scheduledTimeMillis
             null

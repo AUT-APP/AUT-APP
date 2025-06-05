@@ -6,6 +6,7 @@ import java.util.Date
 import androidx.core.app.NotificationCompat
 import com.example.autapp.data.models.StudySpace
 import com.example.autapp.data.models.Booking
+import java.util.UUID
 
 // Base user model for authentication
 data class FirebaseUser(
@@ -364,23 +365,16 @@ data class FirebaseStudySpace(
 
 // Notification model
 data class FirebaseNotification(
-    val notificationId: Int = 0,
-    var iconResId: Int,
-    var title: String,
-    var text: String,
-    var priority: Int = NotificationCompat.PRIORITY_DEFAULT,
-    var deepLinkUri: String? = null,
-    var channelId: String,
-    var timestamp: Long = System.currentTimeMillis()
-) {
-    fun getFormattedTitle(vararg values: Any): String {
-        return title.format(*values)
-    }
-    
-    fun getFormattedText(vararg values: Any): String {
-        return text.format(*values)
-    }
-}
+    @DocumentId
+    val notificationId: String = UUID.randomUUID().toString(),
+    val userId: String = "",
+    val isTeacher: Boolean = false,
+    val notificationType: String = "",
+    val relatedItemId: String = "",
+    val scheduledDeliveryTime: Date = Date(),
+    val title: String = "",
+    val text: String = "",
+)
 
 // Department model
 data class FirebaseDepartment(

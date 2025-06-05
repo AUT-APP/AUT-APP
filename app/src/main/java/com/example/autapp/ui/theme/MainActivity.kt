@@ -769,7 +769,7 @@ fun AppContent(
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
             LaunchedEffect(userId, isTeacher) {
                 if (userId.isNotBlank()) {
-                    notificationViewModel.initialize(userId)
+                    notificationViewModel.initialize(userId, isTeacher)
                 }
             }
             val snackbarHostState = remember { SnackbarHostState() }

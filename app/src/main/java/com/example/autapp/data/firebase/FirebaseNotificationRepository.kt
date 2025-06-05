@@ -11,69 +11,47 @@ class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotificati
 
     override fun documentToObject(documentId: String, document: Map<String, Any?>): FirebaseNotification {
         return FirebaseNotification(
-            notificationId = documentId.toInt(),
-            iconResId = (document["iconResId"] as? Number)?.toInt() ?: 0,
+            notificationId = documentId,
+            userId = document["userId"] as? String ?: "",
             title = document["title"] as? String ?: "",
             text = document["text"] as? String ?: "",
-            priority = (document["priority"] as? Number)?.toInt() ?: 0,
-            deepLinkUri = document["deepLinkUri"] as? String,
-            channelId = document["channelId"] as? String ?: "",
-            timestamp = (document["timestamp"] as? Number)?.toLong() ?: 0L
+            isTeacher = document["isTeacher"] as? Boolean == true,
+            notificationType = document["notificationType"] as? String ?: "",
+            relatedItemId = document["relatedItemId"] as? String ?: "",
+            scheduledDeliveryTime = (document["scheduledDeliveryTime"] as? com.google.firebase.Timestamp)?.toDate()
+                ?: Date(),
         )
     }
 
     override fun objectToDocument(obj: FirebaseNotification): Map<String, Any?> {
         return mapOf(
-            "iconResId" to obj.iconResId,
+            "userId" to obj.userId,
             "title" to obj.title,
             "text" to obj.text,
-            "priority" to obj.priority,
-            "deepLinkUri" to obj.deepLinkUri,
-            "channelId" to obj.channelId,
-            "timestamp" to obj.timestamp
+            "isTeacher" to obj.isTeacher,
+            "notificationType" to obj.notificationType,
+            "relatedItemId" to obj.relatedItemId,
+            "scheduledDeliveryTime" to obj.scheduledDeliveryTime
         )
     }
 
-    suspend fun getNotificationsByChannel(channelId: String): List<FirebaseNotification> {
-        return try {
-            val snapshot = collection
-                .whereEqualTo("channelId", channelId)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .get()
-                .await()
-            snapshot.documents.mapNotNull { document -> document.data?.let { documentToObject(document.id, it) } }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
 
-    suspend fun getNotificationsByPriority(priority: Int): List<FirebaseNotification> {
+    suspend fun getRecentNotificationsForUser(limit: Int, userId: String, isTeacher: Boolean): List<FirebaseNotification> {
         return try {
             val snapshot = collection
-                .whereEqualTo("priority", priority)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .get()
-                .await()
-            snapshot.documents.mapNotNull { document -> document.data?.let { documentToObject(document.id, it) } }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    suspend fun getRecentNotifications(limit: Int): List<FirebaseNotification> {
-        return try {
-            val snapshot = collection
-                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("isTeacher", isTeacher)
+                .orderBy("scheduledDeliveryTime", Query.Direction.DESCENDING)
                 .limit(limit.toLong())
                 .get()
                 .await()
-            snapshot.documents.mapNotNull { document -> document.data?.let { documentToObject(document.id, it) } }
+            snapshot.toObjects(FirebaseNotification::class.java)
         } catch (e: Exception) {
             emptyList()
         }
     }
 
-    suspend fun deleteNotification(notificationId: Int): Boolean {
+    suspend fun deleteNotification(notificationId: String): Boolean {
         return try {
             val query = collection.whereEqualTo("notificationId", notificationId).get().await()
             if (query.isEmpty) return false
@@ -86,9 +64,12 @@ class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotificati
         }
     }
 
-    suspend fun deleteNotificationsByChannel(channelId: String): Boolean {
+    suspend fun deleteNotificationsForUser(userId: String, isTeacher: Boolean): Boolean {
         return try {
-            val query = collection.whereEqualTo("channelId", channelId).get().await()
+            val query = collection
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("isTeacher", isTeacher)
+                .get().await()
             val batch = firestore.batch()
             query.documents.forEach { doc ->
                 batch.delete(doc.reference)

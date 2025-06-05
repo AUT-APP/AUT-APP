@@ -1,6 +1,7 @@
 package com.example.autapp.data.models
 
 import androidx.core.app.NotificationCompat
+import java.util.Date
 
 class Notification(
     var notificationId: Int = 0,
@@ -20,16 +21,21 @@ class Notification(
         return text.format(*values)
     }
 
-    fun toFirebaseNotification(): com.example.autapp.data.firebase.FirebaseNotification {
+    fun toFirebaseNotification(
+        userId: String,
+        isTeacher: Boolean,
+        notificationType: String,
+        relatedItemId: String,
+        scheduledDeliveryTime: Date,
+    ): com.example.autapp.data.firebase.FirebaseNotification {
         return com.example.autapp.data.firebase.FirebaseNotification(
-            notificationId = this.notificationId,
-            iconResId = this.iconResId,
+            userId = userId,
+            isTeacher = isTeacher,
+            notificationType = notificationType,
+            relatedItemId = relatedItemId,
+            scheduledDeliveryTime = scheduledDeliveryTime,
             title = this.title,
             text = this.text,
-            priority = this.priority,
-            deepLinkUri = this.deepLinkUri,
-            channelId = this.channelId,
-            timestamp = this.timestamp
         )
     }
 }

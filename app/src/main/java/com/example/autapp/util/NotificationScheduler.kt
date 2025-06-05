@@ -18,7 +18,11 @@ object NotificationScheduler {
         title: String,
         text: String,
         targetTime: Date,
-        minutesBefore: Int
+        minutesBefore: Int,
+        userId: String,
+        isTeacher: Boolean,
+        notificationType: String,
+        relatedItemId: String
     ): Long {
         Log.d(TAG, "Scheduling one-time notification ID: $notificationId at $targetTime minus $minutesBefore minutes")
 
@@ -36,6 +40,10 @@ object NotificationScheduler {
             putExtra("startTimeMillis", targetTime.time)
             putExtra("minutesBefore", minutesBefore)
             putExtra("deepLinkUri", deepLinkUri)
+            putExtra("userId", userId)
+            putExtra("isTeacher", isTeacher)
+            putExtra("notificationType", notificationType)
+            putExtra("relatedItemId", relatedItemId)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -72,7 +80,11 @@ object NotificationScheduler {
         text: String,
         dayOfWeek: Int,
         startTime: Date,
-        minutesBefore: Int
+        minutesBefore: Int,
+        userId: String,
+        isTeacher: Boolean,
+        notificationType: String,
+        relatedItemId: String
     ): Long {
         Log.d(TAG, "Scheduling notification ID: $notificationId for dayOfWeek: $dayOfWeek, minutesBefore: $minutesBefore")
         val calendar = Calendar.getInstance().apply { time = startTime }
@@ -91,6 +103,10 @@ object NotificationScheduler {
             putExtra("startTimeMillis", startTime.time)
             putExtra("minutesBefore", minutesBefore)
             putExtra("deepLinkUri", deepLinkUri)
+            putExtra("userId", userId)
+            putExtra("isTeacher", isTeacher)
+            putExtra("notificationType", notificationType)
+            putExtra("relatedItemId", relatedItemId)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
