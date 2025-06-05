@@ -34,10 +34,10 @@
     import androidx.compose.material3.CardDefaults
     import androidx.compose.material3.Icon
     import androidx.compose.material3.MaterialTheme
+    import androidx.compose.material3.PrimaryTabRow
     import androidx.compose.material3.SnackbarDuration
     import androidx.compose.material3.SnackbarHostState
     import androidx.compose.material3.Tab
-    import androidx.compose.material3.TabRow
     import androidx.compose.material3.Text
     import androidx.compose.runtime.Composable
     import androidx.compose.runtime.LaunchedEffect
@@ -90,7 +90,7 @@
                 .background(MaterialTheme.colorScheme.background)
         ) {
             if (courses.isNotEmpty()) {
-                TabRow(
+                PrimaryTabRow(
                     selectedTabIndex = selectedTabIndex.intValue,
                     containerColor = colorScheme.surface,
                     contentColor = colorScheme.onSurface
@@ -251,7 +251,7 @@
         modifier: Modifier = Modifier
     ) {
         val notificationsEnabled: Boolean by viewModel.notificationsEnabled.collectAsState(initial = true)
-        val classRemindersEnabled: Boolean by viewModel.classRemindersEnabled.collectAsState(initial = true)
+        val remindersEnabled: Boolean by viewModel.remindersEnabled.collectAsState(initial = true)
 
         Card(
             modifier = modifier.fillMaxWidth(),
@@ -349,7 +349,7 @@
                                             snackbarHostState.currentSnackbarData?.dismiss()
                                             val warning = when {
                                                 !notificationsEnabled -> " (Notifications disabled in settings)"
-                                                !classRemindersEnabled -> " (Reminders disabled in settings)"
+                                                !remindersEnabled -> " (Reminders disabled in settings)"
                                                 else -> ""
                                             }
                                             val baseMessage = if (scheduledTimeMillis != null) {

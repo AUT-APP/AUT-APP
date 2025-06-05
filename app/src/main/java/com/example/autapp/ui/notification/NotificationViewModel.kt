@@ -51,7 +51,7 @@ class NotificationViewModel(
     val notificationsEnabled = settingsDataStore.isNotificationsEnabled
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
-    val classRemindersEnabled = settingsDataStore.isClassRemindersEnabled
+    val remindersEnabled = settingsDataStore.isRemindersEnabled
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     // Get Firebase Firestore instance

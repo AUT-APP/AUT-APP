@@ -758,10 +758,6 @@ fun AppContent(
                     viewModel = settingsViewModel,
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = onToggleTheme,
-                    isNotificationsEnabled = settingsViewModel.isNotificationsEnabled.collectAsState(initial = true).value,
-                    onToggleNotifications = { settingsViewModel.setNotificationsEnabled(it) },
-                    isClassRemindersEnabled = settingsViewModel.isClassRemindersEnabled.collectAsState(initial = true).value,
-                    onToggleClassReminders = { settingsViewModel.setClassRemindersEnabled(it) },
                     paddingValues = paddingValues
                 )
             }

@@ -17,7 +17,7 @@ class SettingsDataStore(private val context: Context) {
     }
 
     val isDarkMode: Flow<Boolean> = context.dataStore.data
-        .map { prefs -> prefs[DARK_MODE_KEY] ?: false }
+        .map { prefs -> prefs[DARK_MODE_KEY] == true }
 
     suspend fun setDarkMode(enabled: Boolean) {
         context.dataStore.edit { prefs ->
@@ -26,10 +26,10 @@ class SettingsDataStore(private val context: Context) {
     }
 
     val isNotificationsEnabled: Flow<Boolean> = context.dataStore.data
-        .map { prefs -> prefs[NOTIFICATIONS_ENABLED_KEY] ?: true }
+        .map { prefs -> prefs[NOTIFICATIONS_ENABLED_KEY] != false }
 
-    val isClassRemindersEnabled: Flow<Boolean> = context.dataStore.data
-        .map { prefs -> prefs[CLASS_REMINDERS_ENABLED_KEY] ?: true }
+    val isRemindersEnabled: Flow<Boolean> = context.dataStore.data
+        .map { prefs -> prefs[CLASS_REMINDERS_ENABLED_KEY] != false }
 
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         context.dataStore.edit {
@@ -37,7 +37,7 @@ class SettingsDataStore(private val context: Context) {
         }
     }
 
-    suspend fun setClassRemindersEnabled(enabled: Boolean) {
+    suspend fun setRemindersEnabled(enabled: Boolean) {
         context.dataStore.edit {
             prefs -> prefs[CLASS_REMINDERS_ENABLED_KEY] = enabled
         }

@@ -32,9 +32,9 @@ class NotificationReceiver : BroadcastReceiver() {
 
             val settingsDataStore = SettingsDataStore(context)
             val notificationsEnabled = settingsDataStore.isNotificationsEnabled.first()
-            val classRemindersEnabled = settingsDataStore.isClassRemindersEnabled.first()
+            val remindersEnabled = settingsDataStore.isRemindersEnabled.first()
 
-            if (notificationsEnabled && classRemindersEnabled) {
+            if (notificationsEnabled && remindersEnabled) {
                 // Create and show the notification
                 val notification = Notification(
                     notificationId = notificationId,

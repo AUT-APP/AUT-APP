@@ -53,7 +53,7 @@ fun CalendarScreen(
     var selectedEvent by remember { mutableStateOf<FirebaseEvent?>(null) }
 
     val notificationsEnabled: Boolean by viewModel.notificationsEnabled.collectAsState(initial = true)
-    val classRemindersEnabled: Boolean by viewModel.classRemindersEnabled.collectAsState(initial = true)
+    val remindersEnabled: Boolean by viewModel.remindersEnabled.collectAsState(initial = true)
 
 
     // LaunchedEffect observes navigateToManageEvents. When true, it triggers navigation
@@ -149,7 +149,7 @@ fun CalendarScreen(
             snackbarHostState.currentSnackbarData?.dismiss()
             val warning = when {
                 !notificationsEnabled -> " (Notifications disabled in settings)"
-                !classRemindersEnabled -> " (Reminders disabled in settings)"
+                !remindersEnabled -> " (Reminders disabled in settings)"
                 else -> ""
             }
             val baseMessage = if (scheduledTimeMillis != null) {

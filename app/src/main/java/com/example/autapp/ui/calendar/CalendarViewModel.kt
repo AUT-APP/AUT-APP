@@ -77,7 +77,7 @@ class CalendarViewModel(
     val notificationsEnabled = settingsDataStore.isNotificationsEnabled
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
-    val classRemindersEnabled = settingsDataStore.isClassRemindersEnabled
+    val remindersEnabled = settingsDataStore.isRemindersEnabled
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     // StateFlow to signal navigation to the ManageEventsScreen.
