@@ -19,8 +19,6 @@ import com.example.autapp.data.firebase.FirebaseTimetableEntry
 import org.threeten.bp.LocalDate
 import org.threeten.bp.format.DateTimeFormatter
 import java.util.Date
-import java.util.Locale
-
 
 @Composable
 fun TimetableView(
@@ -33,6 +31,7 @@ fun TimetableView(
 
     selectedEntryForReminder?.let { selectedEntry ->
         ReminderBottomSheet(
+            selectedEntry = selectedEntry,
             onDismiss = { selectedEntryForReminder = null },
             onSelectTime = { minutes ->
                 onSetReminder(selectedEntry, minutes)
@@ -61,11 +60,11 @@ fun TimetableView(
             }
 
             val eventsForDay = uiState.events.filter { event ->
-                event.date?.toLocalDate() == date
+                event.date.toLocalDate() == date
             }
 
             val bookingsForDay = uiState.bookings.filter { booking ->
-                booking.bookingDate?.toLocalDate() == date
+                booking.bookingDate.toLocalDate() == date
             }
 
             val entriesForThisDate = (timetableEntriesForDay + eventsForDay + bookingsForDay).sortedWith(compareBy { entry ->
@@ -118,7 +117,7 @@ fun TimetableView(
                 items(entries) { (date, entry) ->
                     when (entry) {
                         is FirebaseTimetableEntry -> {
-                            val timetableEntry = entry as FirebaseTimetableEntry
+                            val timetableEntry = entry
                             val course = uiState.courses.find { it.courseId == timetableEntry.courseId.toString() }
                             if (course != null) {
                                 TimetableEntryCard(
@@ -134,7 +133,7 @@ fun TimetableView(
                             }
                         }
                         is FirebaseEvent -> {
-                            val event = entry as FirebaseEvent
+                            val event = entry
                             EventCard(
                                 event = event.toEvent(),
                                 onClick = { onEventClick(event) },
@@ -147,7 +146,7 @@ fun TimetableView(
                             )
                         }
                         is FirebaseBooking -> {
-                            val booking = entry as FirebaseBooking
+                            val booking = entry
                             BookingCard(
                                 booking = booking.toBooking(),
                                 modifier = Modifier

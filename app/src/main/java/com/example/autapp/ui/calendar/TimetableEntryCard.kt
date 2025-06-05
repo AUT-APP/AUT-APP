@@ -106,39 +106,3 @@ fun TimetableEntryCard(
         }
     }
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ReminderBottomSheet(
-    onDismiss: () -> Unit,
-    onSelectTime: (Int) -> Unit // e.g., 60, 30, etc.
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text("Remind me before", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(12.dp))
-            listOf(60, 30, 15, 0).forEach { minutes ->
-                val label = when (minutes) {
-                    0 -> "At start time"
-                    60 -> "1 hour before"
-                    else -> "$minutes minutes before"
-                }
-                Button(
-                    onClick = {
-                        onSelectTime(minutes)
-                        onDismiss()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                ) {
-                    Text(label)
-                }
-            }
-        }
-    }
-}

@@ -59,6 +59,7 @@ fun CalendarView(
 
     selectedEntryForReminder?.let { selectedEntry ->
         ReminderBottomSheet(
+            selectedEntry = selectedEntry,
             onDismiss = { selectedEntryForReminder = null },
             onSelectTime = { minutes ->
                 onSetReminder(selectedEntry, minutes)
