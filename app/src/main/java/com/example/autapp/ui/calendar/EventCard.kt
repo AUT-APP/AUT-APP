@@ -66,14 +66,17 @@ fun EventCard(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
+                val isPast = event.startTime?.time?.let { it < System.currentTimeMillis() } == true
                 IconButton(
-                    onClick = onReminderClick,
+                    onClick = { if (!isPast) onReminderClick() },
+                    enabled = !isPast,
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_notification),
                         contentDescription = "Set Reminder",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = if (isPast) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        else MaterialTheme.colorScheme.primary
                     )
                 }
             }

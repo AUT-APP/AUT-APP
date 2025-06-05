@@ -119,6 +119,20 @@ fun CalendarScreen(
     val coroutineScope = rememberCoroutineScope()
     val onSetReminder: (Any, Int) -> Unit = { item, minutes ->
         coroutineScope.launch {
+            // Prevent scheduling notification for a time before the current time
+            val now = System.currentTimeMillis()
+            val itemStartTimeMillis = when (item) {
+                is FirebaseEvent -> item.startTime?.time
+                is FirebaseBooking -> item.startTime.time
+                else -> null
+            }
+
+            if (itemStartTimeMillis != null && itemStartTimeMillis < now) {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarHostState.showSnackbar("Cannot set reminder for a past item.")
+                return@launch
+            }
+
             // Check and request exact alarm permission if needed
             val activity = context as? Activity
             activity?.let {
@@ -145,14 +159,19 @@ fun CalendarScreen(
                 val scheduledTimeString = formatter.format(scheduledDate)
                 // Construct the message
                 when (item) {
-                    is FirebaseTimetableEntry -> "${item.courseId} ${item.type} notification scheduled for $scheduledTimeString"
-                    is FirebaseEvent -> "${item.title} event notification scheduled for $scheduledTimeString"
+                    is FirebaseTimetableEntry -> {
+                        val courseName = uiState.courses.find { it.courseId == item.courseId }?.name ?: item.courseId
+                        "$courseName ${item.type} notification scheduled for $scheduledTimeString"
+                    }                    is FirebaseEvent -> "${item.title} event notification scheduled for $scheduledTimeString"
                     is FirebaseBooking -> "${item.roomId} booking notification scheduled for $scheduledTimeString"
                     else -> "Failed to schedule notification: Unknown item type"
                 }
             } else {
                 when (item) {
-                    is FirebaseTimetableEntry -> "Failed to schedule ${item.courseId} ${item.type} notification"
+                    is FirebaseTimetableEntry -> {
+                        val courseName = uiState.courses.find { it.courseId == item.courseId }?.name ?: item.courseId
+                        "Failed to schedule $courseName ${item.type} notification"
+                    }
                     is FirebaseEvent -> "Failed to schedule ${item.title} event notification"
                     is FirebaseBooking -> "Failed to schedule ${item.roomId} booking notification "
                     else -> "Failed to schedule notification."

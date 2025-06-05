@@ -44,14 +44,17 @@ fun BookingCard(
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.weight(1f)
                 )
+                val isPast = booking.startTime.time < System.currentTimeMillis()
                 IconButton(
-                    onClick = onReminderClick,
+                    onClick = { if (!isPast) onReminderClick() },
+                    enabled = !isPast,
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_notification),
                         contentDescription = "Set Reminder",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = if (isPast) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        else MaterialTheme.colorScheme.primary
                     )
                 }
             }

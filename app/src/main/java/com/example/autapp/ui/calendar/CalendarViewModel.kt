@@ -616,9 +616,20 @@ class CalendarViewModel(
                 else -> "Your event \"${event.title}\" is in $minutesBefore minutes!"
             }
 
-            if (event.startTime == null) {
+            val startTimeMillis = event.startTime?.time
+            if (startTimeMillis  == null) {
                 _uiState.update {
                     it.copy(errorMessage = "Cannot schedule notification: Event start time is missing.")
+                }
+                return@withContext null
+            }
+
+            val now = System.currentTimeMillis()
+            val scheduledTriggerTime = startTimeMillis - minutesBefore * 60 * 1000
+
+            if (scheduledTriggerTime <= now) {
+                _uiState.update {
+                    it.copy(errorMessage = "Cannot schedule notification for a past event/booking.")
                 }
                 return@withContext null
             }
@@ -708,6 +719,16 @@ class CalendarViewModel(
             // Save to DB
             bookingNotificationPreferenceRepository.insertOrUpdatePreference(pref)
 
+            val startTimeMillis = booking.startTime.time
+            val now = System.currentTimeMillis()
+            val scheduledTriggerTime = startTimeMillis - minutesBefore * 60 * 1000
+
+            if (scheduledTriggerTime <= now) {
+                _uiState.update {
+                    it.copy(errorMessage = "Cannot schedule notification for a past event/booking.")
+                }
+                return@withContext null
+            }
 
             // Cancel any existing alarm for this class session
             val notificationId = booking.id.hashCode()
