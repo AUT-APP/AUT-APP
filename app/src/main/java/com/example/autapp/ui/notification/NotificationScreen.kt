@@ -12,18 +12,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -42,7 +45,16 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+// Convert the word to lowercase, then capitalize its first letter
+fun String.toTitleCase(): String {
+    return split(" ").joinToString(" ") { word ->
+        word.lowercase(Locale.getDefault()).replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+        }
+    }
+}
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationScreen(
     viewModel: NotificationViewModel,
@@ -57,11 +69,6 @@ fun NotificationScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-    // Re-fetch notifications when screen is displayed
-    LaunchedEffect(Unit) {
-        viewModel.fetchNotificationData()
-    }
-
     // Observe and show error messages
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -69,65 +76,59 @@ fun NotificationScreen(
                 message = it,
                 duration = SnackbarDuration.Short
             )
-            viewModel.clearErrorMessage() // Clear message after showing
+            viewModel.clearErrorMessage()
         }
     }
 
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        // Clear All Notifications Button
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        viewModel.clearAllNotifications()
-                        snackbarHostState.showSnackbar(
-                            message = "All notifications cleared!",
-                            duration = SnackbarDuration.Short
-                        )
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Clear All",
-                    tint = MaterialTheme.colorScheme.onError
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("Clear All", color = MaterialTheme.colorScheme.onError)
+    Scaffold(
+        modifier = Modifier.padding(paddingValues),
+        floatingActionButton = {
+            if (notifications.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            viewModel.clearAllNotifications()
+                            snackbarHostState.showSnackbar(
+                                message = "All notifications cleared!",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                ) {
+                    Icon(Icons.Default.DeleteForever, "Clear All Notifications")
+                }
             }
-        }
-
-        if (notifications.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No notifications to display.", style = MaterialTheme.typography.titleMedium)
-            }
-        } else {
-            LazyColumn(
+        },
+        content = { innerPadding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-                items(notifications) { notification ->
-                    NotificationItemCard(notification = notification)
+
+                if (notifications.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No notifications to display.", style = MaterialTheme.typography.titleMedium)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(notifications) { notification ->
+                            NotificationItemCard(notification = notification)
+                        }
+                    }
                 }
             }
         }
-    }
+    )
 
 }
 
@@ -137,7 +138,7 @@ fun NotificationItemCard(notification: FirebaseNotification) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -146,13 +147,13 @@ fun NotificationItemCard(notification: FirebaseNotification) {
                 text = notification.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = notification.text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -161,16 +162,28 @@ fun NotificationItemCard(notification: FirebaseNotification) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Type: ${notification.notificationType}",
+                    text = "Type: ${notification.notificationType.toTitleCase()}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                val dateFormat = SimpleDateFormat("MMM dd, h:mm a", Locale.getDefault())
-                Text(
-                    text = dateFormat.format(notification.scheduledDeliveryTime),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ){
+                    Icon(
+                        imageVector = Icons.Filled.Schedule,
+                        contentDescription = "Time",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    val dateFormat = SimpleDateFormat("MMM dd, h:mm a", Locale.getDefault())
+                    Text(
+                        text = dateFormat.format(notification.scheduledDeliveryTime),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
             }
         }
     }
