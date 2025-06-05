@@ -30,7 +30,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 
 @Composable
 fun CourseMaterialScreen(
-    courseId: Int,
+    courseId: String,
     viewModel: CourseMaterialViewModel,
     paddingValues: PaddingValues,
     isTeacher: Boolean,

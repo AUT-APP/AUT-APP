@@ -4,7 +4,6 @@ import android.app.Application
 import com.jakewharton.threetenabp.AndroidThreeTen
 import com.example.autapp.util.NotificationHelper
 import com.example.autapp.data.firebase.FirebaseBusScheduleRepository
-import com.example.autapp.data.repository.CourseMaterialRepository
 
 class AUTApplication : Application() {
     // Initialize Firebase repositories
@@ -22,7 +21,7 @@ class AUTApplication : Application() {
     val notificationRepository by lazy { com.example.autapp.data.firebase.FirebaseNotificationRepository() }
     val activityLogRepository by lazy { com.example.autapp.data.firebase.FirebaseActivityLogRepository() }
     val eventRepository by lazy { com.example.autapp.data.firebase.FirebaseEventRepository() }
-    val courseMaterialRepository by lazy { CourseMaterialRepository(database.courseMaterialDao()) }
+    val courseMaterialRepository by lazy { com.example.autapp.data.firebase.FirebaseCourseMaterialRepository() }
     val timetableNotificationPreference by lazy { com.example.autapp.data.firebase.FirebaseTimetableNotificationPreference() }
     val busScheduleRepository by lazy { FirebaseBusScheduleRepository(com.google.firebase.firestore.FirebaseFirestore.getInstance()) }
 

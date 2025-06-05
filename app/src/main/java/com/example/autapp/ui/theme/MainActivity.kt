@@ -40,7 +40,6 @@ import com.example.autapp.ui.components.AUTBottomBar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import com.example.autapp.data.datastores.SettingsDataStore
 import com.example.autapp.data.firebase.FirebaseUser
 import com.example.autapp.data.firebase.FirebaseTimetableEntry
 import androidx.compose.runtime.getValue
@@ -179,6 +178,9 @@ fun AppContent(
     // Always start at login to ensure LoginScreen handles navigation
     val startDestination = "login"
 
+    val courseMaterialViewModel: CourseMaterialViewModel = viewModel(factory = CourseMaterialViewModel.Factory)
+
+
     NavHost(navController = navController, startDestination = startDestination) {
         composable("login") {
             val coroutineScope = rememberCoroutineScope()
@@ -282,18 +284,10 @@ fun AppContent(
                 ) { paddingValues ->
                     TeacherDashboard(
                         viewModel = teacherDashboardViewModel,
+                        courseMaterialViewModel = courseMaterialViewModel,
                         departmentRepository = application.departmentRepository,
                         teacherId = userId,
                         paddingValues = paddingValues,
-                        navController = navController
-                    )
-                } else {
-                    val studentTimetableEntries by dashboardViewModel.timetableEntries.collectAsState(initial = emptyList<TimetableEntry>())
-                    StudentDashboard(
-                        viewModel = dashboardViewModel,
-                        paddingValues = paddingValues,
-                        isDarkTheme = isDarkTheme,
-                        timetableEntries = studentTimetableEntries,
                         navController = navController
                     )
                 }
@@ -360,6 +354,7 @@ fun AppContent(
                 ) { paddingValues ->
                     TeacherDashboard(
                         viewModel = teacherDashboardViewModel,
+                        courseMaterialViewModel = courseMaterialViewModel,
                         modifier = Modifier.fillMaxSize(),
                         teacherId = userId,
                         paddingValues = paddingValues,
@@ -370,9 +365,11 @@ fun AppContent(
                         TeacherDashboard(
                             viewModel = teacherDashboardViewModel,
                             departmentRepository = application.departmentRepository,
+                            courseMaterialViewModel = courseMaterialViewModel,
                             modifier = Modifier.fillMaxSize(),
                             teacherId = userId,
-                            paddingValues = paddingValues
+                            paddingValues = paddingValues,
+                            navController = navController
                         )
                     } else {
                         val studentTimetableEntries by dashboardViewModel.timetableEntries.collectAsState(initial = emptyList<FirebaseTimetableEntry>())
@@ -380,7 +377,8 @@ fun AppContent(
                             viewModel = dashboardViewModel,
                             paddingValues = paddingValues,
                             isDarkTheme = isDarkTheme,
-                            timetableEntries = studentTimetableEntries
+                            timetableEntries = studentTimetableEntries,
+                            navController = navController
                         )
                     }
                 }
@@ -873,9 +871,9 @@ fun AppContent(
         }
         composable(
             route = "materials/{courseId}",
-            arguments = listOf(navArgument("courseId") { type = NavType.IntType })
+            arguments = listOf(navArgument("courseId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val courseId = backStackEntry.arguments?.getInt("courseId") ?: 0
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
 
             // Initialize the ViewModel using its factory
             val viewModel: CourseMaterialViewModel = viewModel(factory = CourseMaterialViewModel.Factory)
@@ -899,6 +897,7 @@ fun AppContent(
                         navController = navController,
                         showBackButton = true,
                         currentRoute = "materials",
+                        currentUserRole = currentUserRole,
                         currentUserId = if (isTeacher) currentTeacherId else currentStudentId,
                         isTeacher = isTeacher,
                     )
@@ -910,6 +909,7 @@ fun AppContent(
                         navController = navController,
                         calendarViewModel = calendarViewModel,
                         currentRoute = "materials",
+                        currentUserRole = currentUserRole,
                         currentUserId = if (isTeacher) currentTeacherId else currentStudentId,
                         isTeacher = isTeacher,
                         onClick = {

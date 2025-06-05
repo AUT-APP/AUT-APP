@@ -30,6 +30,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
 import android.util.Log
+import com.example.autapp.data.models.Course
+import com.example.autapp.data.models.CourseMaterial
+import com.example.autapp.ui.material.CourseMaterialViewModel
 
 private const val TAG = "TeacherDashboard"
 
@@ -37,6 +40,7 @@ private const val TAG = "TeacherDashboard"
 fun TeacherDashboard(
     viewModel: TeacherDashboardViewModel,
     departmentRepository: FirebaseDepartmentRepository,
+    courseMaterialViewModel: CourseMaterialViewModel,
     modifier: Modifier = Modifier,
     teacherId: String,
     paddingValues: PaddingValues,
@@ -44,7 +48,7 @@ fun TeacherDashboard(
 ) {
     var showAddAssignmentDialog by remember { mutableStateOf(false) }
     var showAddMaterialDialog by remember { mutableStateOf(false) }
-    var selectedCourseForMaterial by remember { mutableStateOf<Course?>(null) }
+    var selectedCourseForMaterial by remember { mutableStateOf<FirebaseCourse?>(null) }
     var showAddGradeDialog by remember { mutableStateOf(false) }
     var selectedCourseForAssignment by remember { mutableStateOf<FirebaseCourse?>(null) }
     var selectedAssignmentForGrade by remember { mutableStateOf<FirebaseAssignment?>(null) }
@@ -283,7 +287,10 @@ fun TeacherDashboard(
             onDismiss = { showAddMaterialDialog = false },
             onConfirm = { title, description, type, contentUrl ->
 
-                viewModel.addMaterial(
+                val courseId = selectedCourseForMaterial!!.courseId
+                Log.d("AddMaterial", "Adding material for courseId: $courseId")
+
+                courseMaterialViewModel.addMaterial(
                     CourseMaterial(
                         courseId = selectedCourseForMaterial!!.courseId,
                         title = title,
@@ -681,10 +688,12 @@ fun AddAssignmentDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddMaterialDialog(
-    courseId: Int,
+    courseId: String,
     onDismiss: () -> Unit,
     onConfirm: (title: String, description: String, type: String, contentUrl: String) -> Unit
 ) {
+
+
     // input fields
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -701,6 +710,7 @@ fun AddMaterialDialog(
             contentUrl = selectedUri.toString()
         }
     }
+
 
 
     // Material input dialog
@@ -791,6 +801,7 @@ fun AddMaterialDialog(
 
 
 
+
         },
         // Confirm button triggers onConfirm with entered values
         confirmButton = {
@@ -801,6 +812,7 @@ fun AddMaterialDialog(
                 enabled = title.isNotBlank() && description.isNotBlank() && contentUrl.isNotBlank() &&  MaterialValidator.isValidContent(type, contentUrl)
             ) {
                 Text("Add")
+
             }
             if (contentUrl.isNotBlank() && !MaterialValidator.isValidContent(type, contentUrl)) {
                 Spacer(modifier = Modifier.height(8.dp))

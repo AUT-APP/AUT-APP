@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import java.text.SimpleDateFormat
 import java.util.Locale
 import android.content.Intent
+import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.example.autapp.data.firebase.*
@@ -49,7 +50,7 @@ fun StudentDashboard(
     viewModel: DashboardViewModel,
     paddingValues: PaddingValues,
     isDarkTheme: Boolean,
-    navController: NavController
+    navController: NavController,
     timetableEntries: List<FirebaseTimetableEntry>
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background

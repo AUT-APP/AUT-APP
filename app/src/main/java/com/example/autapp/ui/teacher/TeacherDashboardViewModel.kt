@@ -9,9 +9,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.autapp.data.models.CourseMaterial
 import com.example.autapp.AUTApplication
 import com.example.autapp.data.firebase.*
-import com.example.autapp.data.repository.CourseMaterialRepository
+import com.example.autapp.data.models.Assignment
+import com.example.autapp.data.models.Grade
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +26,7 @@ class TeacherDashboardViewModel(
     private val courseRepository: FirebaseCourseRepository,
     private val assignmentRepository: FirebaseAssignmentRepository,
     private val gradeRepository: FirebaseGradeRepository,
-    private val courseMaterialRepository: CourseMaterialRepository,
+    private val courseMaterialRepository: FirebaseCourseMaterialRepository,
     private val studentRepository: FirebaseStudentRepository
 ) : ViewModel() {
 
@@ -195,18 +197,13 @@ class TeacherDashboardViewModel(
     fun addMaterial(material: CourseMaterial) {
         viewModelScope.launch {
             try {
-                courseMaterialRepository.insertMaterial(material)
+                courseMaterialRepository.create(material)
                 fetchTeacherData() // refresh view
             } catch (e: Exception) {
                 errorMessage = "Error adding material: ${e.message}"
             }
         }
     }
-
-
-    // Add dummy update functions to satisfy ViewModel dependencies if needed by the UI/other parts
-    fun updateAssignment(assignment: Assignment) { /* TODO: Implement update logic */ }
-    fun updateGrade(grade: Grade) { /* TODO: Implement update logic */ }
 
     fun loadStudentsForCourse(course: FirebaseCourse) {
         viewModelScope.launch {
@@ -295,8 +292,8 @@ class TeacherDashboardViewModel(
                     application.teacherRepository,
                     application.courseRepository,
                     application.assignmentRepository,
-                    application.courseMaterialRepository,
                     application.gradeRepository,
+                    application.courseMaterialRepository,
                     application.studentRepository
                 )
             }
