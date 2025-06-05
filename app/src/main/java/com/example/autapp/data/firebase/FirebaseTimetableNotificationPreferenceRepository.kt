@@ -56,8 +56,6 @@ class FirebaseTimetableNotificationPreferenceRepository :
         }
     }
 
-
-
     suspend fun deletePreference(userId: String, classSessionId: String) {
         try {
             val id = "${userId}_$classSessionId"

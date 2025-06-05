@@ -9,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
+import com.example.autapp.R
 import com.example.autapp.data.models.Booking
 import java.text.SimpleDateFormat
 import java.util.*
@@ -31,12 +33,28 @@ fun BookingCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Room booking title
-            Text(
-                text = "Room Booking",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Room booking title
+                Text(
+                    text = "Room Booking",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = onReminderClick,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_notification),
+                        contentDescription = "Set Reminder",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             // Time with icon
             Row(

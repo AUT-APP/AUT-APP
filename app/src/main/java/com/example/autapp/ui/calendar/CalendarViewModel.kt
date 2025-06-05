@@ -61,6 +61,8 @@ class CalendarViewModel(
     private val bookingRepository: FirebaseBookingRepository,
     private val courseRepository: FirebaseCourseRepository,
     private val timetableNotificationPreferenceRepository: FirebaseTimetableNotificationPreferenceRepository,
+    private val eventNotificationPreferenceRepository: FirebaseEventNotificationPreferenceRepository,
+    private val bookingNotificationPreferenceRepository: FirebaseBookingNotificationPreferenceRepository,
     private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
@@ -593,9 +595,47 @@ class CalendarViewModel(
     suspend fun updateReminder(context: Context, event: FirebaseEvent, minutesBefore: Int
     ): Long? = withContext(Dispatchers.IO) {
         try {
-            return@withContext null
+            val pref = FirebaseEventNotificationPreference(
+                studentId = event.studentId,
+                eventId = event.eventId,
+                notificationTime = minutesBefore,
+                isEnabled = true
+            )
+
+            // Save to DB
+            eventNotificationPreferenceRepository.insertOrUpdatePreference(pref)
+
+            // Cancel any existing alarm for this event session
+            val notificationId = event.eventId.hashCode()
+            NotificationScheduler.cancelScheduledNotification(context, notificationId)
+
+            // Schedule notification
+            val notificationText = when (minutesBefore) {
+                0 -> "Your event \"${event.title}\" is starting now!"
+                60 -> "Your event \"${event.title}\" is in an hour!"
+                else -> "Your event \"${event.title}\" is in $minutesBefore minutes!"
+            }
+
+            if (event.startTime == null) {
+                _uiState.update {
+                    it.copy(errorMessage = "Cannot schedule notification: Event start time is missing.")
+                }
+                return@withContext null
+            }
+
+            val scheduledTimeMillis = NotificationScheduler.scheduleNotificationAt(
+                context = context,
+                notificationId = notificationId,
+                title = "${event.title} starts soon!",
+                text = notificationText,
+                targetTime = event.startTime!!,
+                deepLinkUri = "myapp://dashboard/$_userId",
+                minutesBefore = minutesBefore
+            )
+            scheduledTimeMillis
         } catch (e: Exception) {
-            return@withContext null
+            _uiState.value = _uiState.value.copy(errorMessage = "Failed to set event notification: ${e.message}")
+            null
         }
     }
 
@@ -605,9 +645,8 @@ class CalendarViewModel(
             minutesBefore: Int
     ): Long? = withContext(Dispatchers.IO) {
         try {
-            // Handle reminder logic for a TimetableEntry
             val classSessionId = entry.entryId
-            val courseName = courseRepository.getById(entry.courseId)?.name
+            val courseName = courseRepository.getById(entry.courseId)?.name.orEmpty()
             val pref = FirebaseTimetableNotificationPreference(
                 studentId = if (!isTeacher) _userId else null, // only set for students
                 teacherId = if (isTeacher) _userId else null,  // only set for teachers
@@ -616,10 +655,6 @@ class CalendarViewModel(
                 isEnabled = true,
                 isTeacher = isTeacher
             )
-
-            // Cancel any existing alarm for this class session
-            val notificationId = classSessionId.hashCode()
-            NotificationScheduler.cancelScheduledNotification(context, notificationId)
 
             // Save to DB
             timetableNotificationPreferenceRepository.insertOrUpdatePreference(pref)
@@ -632,46 +667,71 @@ class CalendarViewModel(
                 currentState.copy(notificationPrefs = updatedPrefs)
             }
 
+            // Cancel any existing alarm for this class session
+            val notificationId = classSessionId.hashCode()
+            NotificationScheduler.cancelScheduledNotification(context, notificationId)
+
             // Schedule notification
-            val session = timetableEntryRepository.getById(classSessionId)
-            if (session != null) {
-                val minutesBefore = pref.notificationTime
-                val notificationText = when (minutesBefore) {
-                    0 -> "Your $courseName ${session.type} at ${session.room} is starting now!"
-                    60 -> "Your $courseName ${session.type} at ${session.room} is coming up in an hour!"
-                    else -> "Your $courseName ${session.type} at ${session.room} is coming up in $minutesBefore minutes!"
-                }
-                val scheduledTimeMillis = NotificationScheduler.scheduleClassNotification(
-                    context = context,
-                    notificationId = pref.classSessionId.hashCode(),
-                    title = "$courseName starts soon!",
-                    text = notificationText,
-                    dayOfWeek = session.dayOfWeek,
-                    startTime = session.startTime,
-                    deepLinkUri = "myapp://dashboard/$_userId",
-                    minutesBefore = minutesBefore
-                )
-                return@withContext scheduledTimeMillis
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Class session not found."
-                )
-                return@withContext null
+            val notificationText = when (minutesBefore) {
+                0 -> "Your $courseName ${entry.type} at ${entry.room} is starting now!"
+                60 -> "Your $courseName ${entry.type} at ${entry.room} is coming up in an hour!"
+                else -> "Your $courseName ${entry.type} at ${entry.room} is coming up in $minutesBefore minutes!"
             }
-        } catch (e: Exception) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = "Failed to set notification preference: ${e.message}"
+            val scheduledTimeMillis = NotificationScheduler.scheduleClassNotification(
+                context = context,
+                notificationId = notificationId,
+                title = "$courseName starts soon!",
+                text = notificationText,
+                dayOfWeek = entry.dayOfWeek,
+                startTime = entry.startTime,
+                deepLinkUri = "myapp://dashboard/$_userId",
+                minutesBefore = minutesBefore
             )
-            return@withContext null
+            scheduledTimeMillis
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Failed to set class notification: ${e.message}")
+            null
         }
     }
 
     suspend fun updateReminder(context: Context, booking: FirebaseBooking, minutesBefore: Int
     ): Long? = withContext(Dispatchers.IO) {
         try {
-            return@withContext null
+            val pref = FirebaseBookingNotificationPreference(
+                studentId = booking.studentId,
+                teacherId = null, // or use logic if needed
+                bookingId = booking.id,
+                notificationTime = minutesBefore,
+                isEnabled = true
+            )
+
+            // Save to DB
+            bookingNotificationPreferenceRepository.insertOrUpdatePreference(pref)
+
+
+            // Cancel any existing alarm for this class session
+            val notificationId = booking.id.hashCode()
+            NotificationScheduler.cancelScheduledNotification(context, notificationId)
+
+            val notificationText = when (minutesBefore) {
+                0 -> "Your room booking at ${booking.building} is starting now!"
+                60 -> "Your room booking at ${booking.building} starts in an hour!"
+                else -> "Your room booking at ${booking.building} starts in $minutesBefore minutes!"
+            }
+            val scheduledTimeMillis = NotificationScheduler.scheduleNotificationAt(
+                context = context,
+                notificationId = notificationId,
+                title = "${booking.building} booking starts soon!",
+                text = notificationText,
+                targetTime = booking.startTime,
+                deepLinkUri = "myapp://dashboard/$_userId",
+                minutesBefore = minutesBefore
+            )
+            scheduledTimeMillis
+            null
         } catch (e: Exception) {
-            return@withContext null
+            _uiState.value = _uiState.value.copy(errorMessage = "Failed to set booking notification: ${e.message}")
+            null
         }
     }
 
@@ -687,6 +747,8 @@ class CalendarViewModel(
                     application.bookingRepository,
                     application.courseRepository,
                     application.timetableNotificationPreferenceRepository,
+                    application.eventNotificationPreferenceRepository,
+                    application.bookingNotificationPreferenceRepository,
                     SettingsDataStore(context),
                 )
             }

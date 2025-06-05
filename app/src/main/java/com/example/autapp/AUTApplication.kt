@@ -22,6 +22,8 @@ class AUTApplication : Application() {
     val activityLogRepository by lazy { com.example.autapp.data.firebase.FirebaseActivityLogRepository() }
     val eventRepository by lazy { com.example.autapp.data.firebase.FirebaseEventRepository() }
     val timetableNotificationPreferenceRepository by lazy { com.example.autapp.data.firebase.FirebaseTimetableNotificationPreferenceRepository() }
+    val bookingNotificationPreferenceRepository by lazy { com.example.autapp.data.firebase.FirebaseBookingNotificationPreferenceRepository() }
+    val eventNotificationPreferenceRepository by lazy { com.example.autapp.data.firebase.FirebaseEventNotificationPreferenceRepository() }
     val busScheduleRepository by lazy { FirebaseBusScheduleRepository(com.google.firebase.firestore.FirebaseFirestore.getInstance()) }
 
     override fun onCreate() {

@@ -1,5 +1,15 @@
 package com.example.autapp.ui.calendar
 
+import android.Manifest
+import android.app.Activity
+import android.app.AlarmManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -11,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import com.example.autapp.data.firebase.FirebaseBooking
 import com.example.autapp.data.firebase.FirebaseEvent
 import com.example.autapp.data.firebase.FirebaseTimetableEntry
@@ -60,6 +72,97 @@ fun CalendarScreen(
             viewModel.fetchEventsForDate() // Fetch events for the selected date
         } else {
             viewModel.fetchNextTwoWeeksData() // Fetch data for the next two weeks in Timetable View
+        }
+    }
+
+    val context = LocalContext.current
+    // State to track notification permission
+    var hasNotificationsPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true // Permission is automatically granted on versions below Android 13
+            }
+        )
+    }
+
+    // Activity result launcher for permission request
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted -> hasNotificationsPermission = isGranted }
+    )
+
+    // Request permission only once when the Composable is first launched
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationsPermission) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    fun requestExactAlarmPermissionIfNeeded(activity: Activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if (!alarmManager.canScheduleExactAlarms()) {
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = "package:${activity.packageName}".toUri()
+                }
+                activity.startActivity(intent)
+            }
+        }
+    }
+
+    // Shared onSetReminder logic
+    val coroutineScope = rememberCoroutineScope()
+    val onSetReminder: (Any, Int) -> Unit = { item, minutes ->
+        coroutineScope.launch {
+            // Check and request exact alarm permission if needed
+            val activity = context as? Activity
+            activity?.let {
+                requestExactAlarmPermissionIfNeeded(it)
+            }
+
+            val scheduledTimeMillis = when (item) {
+                is FirebaseTimetableEntry -> viewModel.updateReminder(context, item, minutes)
+                is FirebaseEvent -> viewModel.updateReminder(context, item, minutes)
+                is FirebaseBooking -> viewModel.updateReminder(context, item, minutes)
+                else -> null
+            }
+            // Dismiss any currently showing snackbar
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val warning = when {
+                !notificationsEnabled -> " (Notifications disabled in settings)"
+                !classRemindersEnabled -> " (Reminders disabled in settings)"
+                else -> ""
+            }
+            val baseMessage = if (scheduledTimeMillis != null) {
+                // Format the scheduled time into a readable string
+                val scheduledDate = Date(scheduledTimeMillis)
+                val formatter = SimpleDateFormat("MMM dd 'at' h:mm a", Locale.getDefault())
+                val scheduledTimeString = formatter.format(scheduledDate)
+                // Construct the message
+                when (item) {
+                    is FirebaseTimetableEntry -> "${item.courseId} ${item.type} notification scheduled for $scheduledTimeString"
+                    is FirebaseEvent -> "${item.title} event notification scheduled for $scheduledTimeString"
+                    is FirebaseBooking -> "${item.roomId} booking notification scheduled for $scheduledTimeString"
+                    else -> "Failed to schedule notification: Unknown item type"
+                }
+            } else {
+                when (item) {
+                    is FirebaseTimetableEntry -> "Failed to schedule ${item.courseId} ${item.type} notification"
+                    is FirebaseEvent -> "Failed to schedule ${item.title} event notification"
+                    is FirebaseBooking -> "Failed to schedule ${item.roomId} booking notification "
+                    else -> "Failed to schedule notification."
+                }
+            }
+
+            snackbarHostState.showSnackbar(
+                message = "$baseMessage$warning",
+                duration = SnackbarDuration.Short
+            )
         }
     }
 
@@ -144,68 +247,17 @@ fun CalendarScreen(
             }
         // Display the main content (Calendar or Timetable view) if data is loaded successfully
         } else {
-            val coroutineScope = rememberCoroutineScope()
-            val context = LocalContext.current
             if (showCalendarView) {
                 CalendarView(
                     uiState = uiState,
                     onDateSelected = viewModel::updateSelectedDate,
-                    onSetReminder = { item, minutes ->
-                        coroutineScope.launch {
-                            val scheduledTimeMillis = when (item) {
-                                is FirebaseTimetableEntry -> viewModel.updateReminder(context, item, minutes)
-                                is FirebaseEvent -> viewModel.updateReminder(context, item, minutes)
-                                is FirebaseBooking -> viewModel.updateReminder(context, item, minutes)
-                                else -> null
-                            }
-                            // Dismiss any currently showing snackbar
-                            snackbarHostState.currentSnackbarData?.dismiss()
-                            val warning = when {
-                                !notificationsEnabled -> " (Notifications disabled in settings)"
-                                !classRemindersEnabled -> " (Reminders disabled in settings)"
-                                else -> ""
-                            }
-                            val baseMessage = if (scheduledTimeMillis != null) {
-                                // Format the scheduled time into a readable string
-                                val scheduledDate = Date(scheduledTimeMillis)
-                                val formatter = SimpleDateFormat("MMM dd 'at' h:mm a", Locale.getDefault())
-                                val scheduledTimeString = formatter.format(scheduledDate)
-                                // Construct the message
-                                when (item) {
-                                    is FirebaseTimetableEntry -> "${item.courseId} ${item.type} notification scheduled for $scheduledTimeString"
-                                    is FirebaseEvent -> "${item.title} event notification scheduled for $scheduledTimeString"
-                                    is FirebaseBooking -> "${item.roomId} booking notification scheduled for $scheduledTimeString"
-                                    else -> "Failed to schedule notification: Unknown item type"
-                                }
-                            } else {
-                                when (item) {
-                                    is FirebaseTimetableEntry -> "Failed to schedule ${item.courseId} ${item.type} notification"
-                                    is FirebaseEvent -> "Failed to schedule ${item.title} event notification"
-                                    is FirebaseBooking -> "Failed to schedule ${item.roomId} booking notification "
-                                    else -> "Failed to schedule notification."
-                                }
-                            }
-
-                            snackbarHostState.showSnackbar(
-                                message = "$baseMessage$warning",
-                                duration = SnackbarDuration.Short
-                            )
-                        }
-                    },  // Passing a general handler that checks the type of item
+                    onSetReminder = onSetReminder,
                     onEventClick = { selectedEvent = it }
                 )
             } else {
                 TimetableView(
                     uiState = uiState,
-                    onSetReminder = { item, minutes ->
-                        coroutineScope.launch {
-                            when (item) {
-                                is FirebaseTimetableEntry -> viewModel.updateReminder(context, item, minutes)
-                                is FirebaseEvent -> viewModel.updateReminder(context, item, minutes)
-                                is FirebaseBooking -> viewModel.updateReminder(context, item, minutes)
-                            }
-                        }
-                    },  // Passing a general handler that checks the type of item
+                    onSetReminder = onSetReminder,
                     onEventClick = { selectedEvent = it }
                 )
             }

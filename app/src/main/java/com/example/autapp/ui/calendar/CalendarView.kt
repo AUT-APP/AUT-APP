@@ -35,8 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.autapp.data.models.Event
-import com.example.autapp.data.models.Booking
 import com.example.autapp.data.firebase.FirebaseEvent
 import com.example.autapp.data.firebase.FirebaseBooking
 import com.example.autapp.data.firebase.FirebaseTimetableEntry
@@ -68,8 +66,6 @@ fun CalendarView(
             }
         )
     }
-
-
 
     Column(
         modifier = modifier.fillMaxWidth()
