@@ -26,6 +26,11 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
 
+        <!-- Add Google Play Services version -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+
         <activity
             android:name=".ui.theme.MainActivity"
             android:exported="true"

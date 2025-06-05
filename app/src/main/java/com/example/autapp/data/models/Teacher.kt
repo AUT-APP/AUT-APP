@@ -1,24 +1,7 @@
 package com.example.autapp.data.models
 
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
-
-@Entity(
-    tableName = "teacher_table",
-    foreignKeys = [
-        ForeignKey(
-            entity = Department::class,
-            parentColumns = ["departmentId"],
-            childColumns = ["departmentId"],
-            onDelete = ForeignKey.RESTRICT // Prevents deletion of a department in use
-        )
-    ],
-    indices = [Index("departmentId")]
-)
 data class Teacher(
-    @PrimaryKey(autoGenerate = true) val teacherId: Int = 0,
+    val teacherId: Int = 0,
     val firstName: String,
     val lastName: String,
     val username: String,

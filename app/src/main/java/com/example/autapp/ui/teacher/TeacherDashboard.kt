@@ -9,7 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.autapp.data.models.*
+import com.example.autapp.data.firebase.*
 import java.util.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -19,7 +19,7 @@ import android.opengl.ETC1.isValid
 import androidx.compose.foundation.clickable
 import android.app.TimePickerDialog as AndroidTimePickerDialog
 import androidx.compose.ui.platform.LocalContext
-import com.example.autapp.data.repository.DepartmentRepository
+import com.example.autapp.data.firebase.FirebaseDepartmentRepository
 import kotlinx.coroutines.launch
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -29,13 +29,16 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
+import android.util.Log
+
+private const val TAG = "TeacherDashboard"
 
 @Composable
 fun TeacherDashboard(
     viewModel: TeacherDashboardViewModel,
-    departmentRepository: DepartmentRepository, // Added
+    departmentRepository: FirebaseDepartmentRepository,
     modifier: Modifier = Modifier,
-    teacherId: Int,
+    teacherId: String,
     paddingValues: PaddingValues,
     navController: NavHostController
 ) {
@@ -43,8 +46,8 @@ fun TeacherDashboard(
     var showAddMaterialDialog by remember { mutableStateOf(false) }
     var selectedCourseForMaterial by remember { mutableStateOf<Course?>(null) }
     var showAddGradeDialog by remember { mutableStateOf(false) }
-    var selectedCourseForAssignment by remember { mutableStateOf<Course?>(null) }
-    var selectedAssignmentForGrade by remember { mutableStateOf<Assignment?>(null) }
+    var selectedCourseForAssignment by remember { mutableStateOf<FirebaseCourse?>(null) }
+    var selectedAssignmentForGrade by remember { mutableStateOf<FirebaseAssignment?>(null) }
 
     // When a course is selected, load students
     val selectedCourse by viewModel.selectedCourse.collectAsState()
@@ -58,7 +61,7 @@ fun TeacherDashboard(
     viewModel.teacher?.let { teacher ->
         LaunchedEffect(teacher.departmentId) {
             coroutineScope.launch {
-                val department = departmentRepository.getDepartmentById(teacher.departmentId)
+                val department = departmentRepository.getDepartmentByDepartmentId(teacher.departmentId.toString())
                 departmentName = department?.name ?: "Unknown"
             }
         }
@@ -104,7 +107,7 @@ fun TeacherDashboard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Department: ${departmentName ?: "Loading..."}", // Updated
+                        text = "Department: ${departmentName ?: "Loading..."}",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -236,16 +239,16 @@ fun TeacherDashboard(
         AddAssignmentDialog(
             course = selectedCourseForAssignment!!,
             onDismiss = { showAddAssignmentDialog = false },
-            onConfirm = { name, location, dueDate, weight, maxScore, type ->
+            onConfirm = { name, location, dueDate, weight, maxScore, type, courseId ->
                 viewModel.createAssignment(
-                    Assignment(
+                    FirebaseAssignment(
                         name = name,
                         location = location,
                         due = dueDate,
                         weight = weight,
                         maxScore = maxScore,
                         type = type,
-                        courseId = selectedCourseForAssignment!!.courseId
+                        courseId = courseId
                     )
                 )
                 showAddAssignmentDialog = false
@@ -260,11 +263,11 @@ fun TeacherDashboard(
             onDismiss = { showAddGradeDialog = false },
             onConfirm = { studentId, score ->
                 viewModel.addGrade(
-                    Grade(
+                    FirebaseGrade(
                         assignmentId = selectedAssignmentForGrade!!.assignmentId,
                         studentId = studentId,
                         _score = score,
-                        grade = "",
+                        grade = "", // Grade will be calculated automatically based on score
                         feedback = null
                     )
                 )
@@ -298,7 +301,7 @@ fun TeacherDashboard(
 @Composable
 fun TeacherCourseCard(
     viewModel: TeacherDashboardViewModel,
-    course: Course,
+    course: FirebaseCourse,
     onAddAssignment: () -> Unit,
     onAddMaterial: () -> Unit,
     onClick: () -> Unit,
@@ -307,8 +310,8 @@ fun TeacherCourseCard(
     var expanded by remember { mutableStateOf(false) }
     var showEditDescriptionDialog by remember { mutableStateOf(false) }
     var showEditGradesDialog by remember { mutableStateOf(false) }
-    var selectedAssignment by remember { mutableStateOf<Assignment?>(null) }
-    var showDeleteDialog by remember { mutableStateOf<Pair<Boolean, Assignment?>>(false to null) }
+    var selectedAssignment by remember { mutableStateOf<FirebaseAssignment?>(null) }
+    var showDeleteDialog by remember { mutableStateOf<Pair<Boolean, FirebaseAssignment?>>(false to null) }
 
     val studentsInCourse by viewModel.studentsInSelectedCourse.collectAsState()
     val gradesForAssignment by viewModel.gradesForAssignment.collectAsState()
@@ -375,6 +378,7 @@ fun TeacherCourseCard(
                             Text(assignment.name, style = MaterialTheme.typography.bodyMedium)
                             Row {
                                 Button(onClick = {
+                                    Log.d(TAG, "View/Add Grades button clicked for assignment: ${assignment.name}")
                                     viewModel.loadStudentsForCourse(course)
                                     viewModel.loadGradesForAssignment(assignment.assignmentId)
                                     selectedAssignment = assignment
@@ -438,7 +442,9 @@ fun TeacherCourseCard(
             onDismiss = { showEditDescriptionDialog = false },
             onConfirm = { title, summary, objectives ->
                 viewModel.updateCourseDescription(
-                    course.copy(
+                    FirebaseCourse(
+                        courseId = course.courseId,
+                        name = course.name,
                         title = title,
                         description = "$summary\n\nCourse Objectives:\n$objectives"
                     )
@@ -455,7 +461,9 @@ fun TeacherCourseCard(
             assignment = selectedAssignment!!,
             onDismiss = { showEditGradesDialog = false },
             onSave = { updatedGrades ->
+                Log.d(TAG, "Save button clicked in EditGradesDialog")
                 viewModel.saveGradesForAssignment(updatedGrades)
+                viewModel.loadAllGrades()
                 showEditGradesDialog = false
             }
         )
@@ -483,7 +491,7 @@ fun TeacherCourseCard(
 @Composable
 fun AddCourseDialog(
     onDismiss: () -> Unit,
-    onConfirm: (courseId: Int, name: String, title: String, description: String, location: String?) -> Unit
+    onConfirm: (courseId: String, name: String, title: String, description: String, location: String?) -> Unit
 ) {
     var courseId by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
@@ -534,7 +542,7 @@ fun AddCourseDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(courseId.toIntOrNull() ?: 0, name, title, description, location.takeIf { it.isNotBlank() }) },
+                onClick = { onConfirm(courseId, name, title, description, location.takeIf { it.isNotBlank() }) },
                 enabled = courseId.isNotBlank() && name.isNotBlank() && title.isNotBlank() && description.isNotBlank()
             ) {
                 Text("Add")
@@ -550,9 +558,9 @@ fun AddCourseDialog(
 
 @Composable
 fun AddAssignmentDialog(
-    course: Course,
+    course: FirebaseCourse,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, location: String, dueDate: Date, weight: Double, maxScore: Double, type: String) -> Unit
+    onConfirm: (name: String, location: String, dueDate: Date, weight: Double, maxScore: Double, type: String, courseId: String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
@@ -655,7 +663,7 @@ fun AddAssignmentDialog(
                 onClick = {
                     val weightValue = weight.toDoubleOrNull() ?: 0.0
                     val maxScoreValue = maxScore.toDoubleOrNull() ?: 0.0
-                    onConfirm(name, location, dueDate, weightValue, maxScoreValue, type)
+                    onConfirm(name, location, dueDate, weightValue, maxScoreValue, type, course.courseId)
                 },
                 enabled = name.isNotBlank() && location.isNotBlank() && weight.isNotBlank() && maxScore.isNotBlank() && type.isNotBlank()
             ) {
@@ -817,9 +825,9 @@ fun AddMaterialDialog(
 
 @Composable
 fun AddGradeDialog(
-    assignment: Assignment,
+    assignment: FirebaseAssignment,
     onDismiss: () -> Unit,
-    onConfirm: (studentId: Int, score: Double) -> Unit
+    onConfirm: (studentId: String, score: Double) -> Unit
 ) {
     var studentId by remember { mutableStateOf("") }
     var score by remember { mutableStateOf("") }
@@ -849,7 +857,7 @@ fun AddGradeDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(studentId.toIntOrNull() ?: 0, score.toDoubleOrNull() ?: 0.0) },
+                onClick = { onConfirm(studentId, score.toDoubleOrNull() ?: 0.0) },
                 enabled = studentId.isNotBlank() && score.isNotBlank()
             ) {
                 Text("Add")
@@ -865,7 +873,7 @@ fun AddGradeDialog(
 
 @Composable
 fun EditCourseDescriptionDialog(
-    course: Course,
+    course: FirebaseCourse,
     onDismiss: () -> Unit,
     onConfirm: (title: String, summary: String, objectives: String) -> Unit
 ) {
@@ -920,15 +928,15 @@ fun EditCourseDescriptionDialog(
 
 @Composable
 fun EditGradesDialog(
-    students: List<Student>,
-    grades: List<Grade>,
-    assignment: Assignment,
+    students: List<FirebaseStudent>,
+    grades: List<FirebaseGrade>,
+    assignment: FirebaseAssignment,
     onDismiss: () -> Unit,
-    onSave: (List<Grade>) -> Unit
+    onSave: (List<FirebaseGrade>) -> Unit
 ) {
     // Map studentId to grade and feedback for easy editing
-    val gradeMap = remember { mutableStateMapOf<Int, String>() }
-    val feedbackMap = remember { mutableStateMapOf<Int, String>() }
+    val gradeMap = remember { mutableStateMapOf<String, String>() }
+    val feedbackMap = remember { mutableStateMapOf<String, String>() }
     students.forEach { student ->
         val grade = grades.find { it.studentId == student.studentId }
         gradeMap.putIfAbsent(student.studentId, grade?.score?.toString() ?: "")
@@ -964,14 +972,17 @@ fun EditGradesDialog(
                 val updatedGrades = students.map { student ->
                     val score = gradeMap[student.studentId]?.toDoubleOrNull() ?: 0.0
                     val feedback = feedbackMap[student.studentId]
-                    grades.find { it.studentId == student.studentId }?.copy(_score = score, feedback = feedback)
-                        ?: Grade(
-                            assignmentId = assignment.assignmentId,
-                            studentId = student.studentId,
-                            _score = score,
-                            grade = "", // Will be auto-calculated
-                            feedback = feedback
-                        )
+                    // Find existing grade or create new one
+                    grades.find { it.studentId == student.studentId }?.copy(
+                        _score = score,
+                        feedback = feedback
+                    ) ?: FirebaseGrade(
+                        assignmentId = assignment.assignmentId,
+                        studentId = student.studentId,
+                        _score = score,
+                        grade = "", // Grade will be calculated automatically based on score
+                        feedback = feedback
+                    )
                 }
                 onSave(updatedGrades)
             }) { Text("Save") }
@@ -984,8 +995,8 @@ fun EditGradesDialog(
 
 @Composable
 fun StudentsInCourseSection(
-    students: List<Student>,
-    course: Course?
+    students: List<FirebaseStudent>,
+    course: FirebaseCourse?
 ) {
     if (course != null) {
         Text(

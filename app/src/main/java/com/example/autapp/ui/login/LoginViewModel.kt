@@ -9,22 +9,19 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.autapp.AUTApplication
-import com.example.autapp.data.repository.StudentRepository
-import com.example.autapp.data.repository.TeacherRepository
-import com.example.autapp.data.repository.UserRepository
+import com.example.autapp.data.firebase.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.example.autapp.data.models.User
 import android.util.Log
 
 class LoginViewModel(
-    private val userRepository: UserRepository,
-    private val studentRepository: StudentRepository,
-    private val teacherRepository: TeacherRepository
+    private val userRepository: FirebaseUserRepository,
+    private val studentRepository: FirebaseStudentRepository,
+    private val teacherRepository: FirebaseTeacherRepository
 ) : ViewModel() {
 
     var username by mutableStateOf("")
@@ -41,8 +38,8 @@ class LoginViewModel(
 
     private var currentUserRole: String? = null
 
-    private val _currentUser = MutableStateFlow<User?>(null)
-    val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
+    private val _currentUser = MutableStateFlow<FirebaseUser?>(null)
+    val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
 
     fun updateUsername(newUsername: String) {
         username = newUsername
@@ -52,7 +49,7 @@ class LoginViewModel(
         password = newPassword
     }
 
-    fun login(onSuccess: (Int, String, Boolean, String?) -> Unit, onFailure: (String) -> Unit) {
+    fun login(onSuccess: (String, String, Boolean, String?) -> Unit, onFailure: (String) -> Unit) {
         viewModelScope.launch {
             try {
                 // Hardcoded admin login
@@ -61,59 +58,52 @@ class LoginViewModel(
                     currentUserRole = "Admin"
                     _currentUser.value = null // No user object for admin
                     Log.d("LoginViewModel", "Admin login successful")
-                    onSuccess(0, "Admin", false, null)
+                    onSuccess("0", "Admin", false, null)
                     return@launch
                 }
 
-                // Check user credentials
-                val user = userRepository.getUserByUsername(username)
-                val isValid = user != null && userRepository.checkUser(username, password)
-
-                if (!isValid) {
-                    loginResult = "Invalid credentials"
-                    _currentUser.value = null
-                    Log.d("LoginViewModel", "Invalid credentials for username: $username")
-                    withContext(Dispatchers.Main) { onFailure("Invalid credentials") }
-                    return@launch
-                }
+                // Use Firebase Authentication to sign in
+                val user = userRepository.signIn(username, password)
 
                 if (user != null) {
                     _currentUser.value = user
                     when (user.role) {
                         "Student" -> {
-                            val student = studentRepository.getStudentByUsername(username)
-                            if (student?.studentId != null) {
+                            // Get student details using the authenticated user's ID
+                            val student = studentRepository.getById(user.id)
+                            if (student != null) {
                                 loginResult = "Login successful"
                                 dob = student.dob
                                 currentUserRole = "Student"
                                 Log.d("LoginViewModel", "Student login successful: ${user.username}, isFirstLogin: ${user.isFirstLogin}")
-                                onSuccess(student.studentId, "Student", user.isFirstLogin, student.dob)
+                                onSuccess(user.id, "Student", user.isFirstLogin, student.dob)
                             } else {
-                                loginResult = "Error: Student not found"
+                                loginResult = "Error: Student profile not found"
                                 _currentUser.value = null
-                                Log.d("LoginViewModel", "Student not found for username: $username")
-                                onFailure("Error: Student not found")
+                                Log.d("LoginViewModel", "Student profile not found for user ID: ${user.id}")
+                                onFailure("Error: Student profile not found")
                             }
                         }
                         "Teacher" -> {
-                            val teacher = teacherRepository.getTeacherByUsername(username)
-                            if (teacher?.teacherId != null) {
+                            // Get teacher details using the authenticated user's ID
+                            val teacher = teacherRepository.getById(user.id)
+                            if (teacher != null) {
                                 loginResult = "Login successful"
                                 dob = teacher.dob
                                 currentUserRole = "Teacher"
                                 Log.d("LoginViewModel", "Teacher login successful: ${user.username}, isFirstLogin: ${user.isFirstLogin}")
-                                onSuccess(teacher.teacherId, "Teacher", user.isFirstLogin, teacher.dob)
+                                onSuccess(user.id, "Teacher", user.isFirstLogin, teacher.dob)
                             } else {
-                                loginResult = "Error: Teacher not found"
+                                loginResult = "Error: Teacher profile not found"
                                 _currentUser.value = null
-                                Log.d("LoginViewModel", "Teacher not found for username: $username")
-                                onFailure("Error: Teacher not found")
+                                Log.d("LoginViewModel", "Teacher profile not found for user ID: ${user.id}")
+                                onFailure("Error: Teacher profile not found")
                             }
                         }
                         else -> {
                             loginResult = "Error: Invalid user role"
                             _currentUser.value = null
-                            Log.d("LoginViewModel", "Invalid user role for username: $username")
+                            Log.d("LoginViewModel", "Invalid user role for username: ${user.username}")
                             onFailure("Error: Invalid user role")
                         }
                     }
@@ -122,7 +112,7 @@ class LoginViewModel(
             } catch (e: Exception) {
                 loginResult = "Login error: ${e.message}"
                 _currentUser.value = null
-                Log.e("LoginViewModel", "Login error: ${e.message}")
+                Log.e("LoginViewModel", "Login error: ${e.message}", e)
                 withContext(Dispatchers.Main) { onFailure("Login error: ${e.message}") }
             }
         }
@@ -131,25 +121,13 @@ class LoginViewModel(
     fun updateUserPassword(username: String, newPassword: String, onSuccess: () -> Unit, onFailure: (String) -> Unit) {
         viewModelScope.launch {
             try {
+                // Find the user by username first to get their ID
                 val user = userRepository.getUserByUsername(username)
                 if (user != null) {
-                    val updatedUser = user.copy(password = newPassword, isFirstLogin = false)
-                    userRepository.updateUser(updatedUser)
-                    // Update password in Student or Teacher table if applicable
-                    when (user.role) {
-                        "Student" -> {
-                            val student = studentRepository.getStudentByUsername(username)
-                            if (student != null) {
-                                studentRepository.updateStudent(student.copy(password = newPassword))
-                            }
-                        }
-                        "Teacher" -> {
-                            val teacher = teacherRepository.getTeacherByUsername(username)
-                            if (teacher != null) {
-                                teacherRepository.updateTeacher(teacher.copy(password = newPassword))
-                            }
-                        }
-                    }
+                    // Update password using Firebase Authentication
+                    userRepository.updatePassword(newPassword)
+                    // Update isFirstLogin flag in the Firestore user document
+                    userRepository.updateProfile(user.copy(isFirstLogin = false))
                     Log.d("LoginViewModel", "Password updated for: $username, isFirstLogin set to false")
                     onSuccess()
                 } else {
@@ -157,7 +135,7 @@ class LoginViewModel(
                     onFailure("User not found")
                 }
             } catch (e: Exception) {
-                Log.e("LoginViewModel", "Error updating password: ${e.message}")
+                Log.e("LoginViewModel", "Error updating password: ${e.message}", e)
                 onFailure("Error updating password: ${e.message}")
             }
         }

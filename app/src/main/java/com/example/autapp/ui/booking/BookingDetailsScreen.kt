@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.autapp.data.models.Booking
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.logging.Logger
@@ -33,7 +33,7 @@ fun BookingDetailsScreen(
     level: String,
     date: String,
     timeSlot: String,
-    studentId: Int,
+    studentId: String,
     campus: String,
     building: String,
     isDarkTheme: Boolean,
@@ -42,15 +42,16 @@ fun BookingDetailsScreen(
 ) {
     var durationMinutes by remember { mutableStateOf(30) }
     val errorMessage by viewModel.errorMessage.collectAsState()
-    val bookingSuccess by viewModel.bookingSuccess.collectAsState()
     val availableDurations by viewModel.availableDurations.collectAsState()
+    val bookingSuccess by viewModel.bookingSuccess.collectAsState()
     val containerColor = if (isDarkTheme) Color(0xFF121212) else Color(0xFFF5F5F5)
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
     var showConfirmation by remember { mutableStateOf(false) }
     var pendingBooking by remember { mutableStateOf<Booking?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     val isValidInput = spaceId.isNotEmpty() && level.isNotEmpty() && date.isNotEmpty() &&
-            timeSlot.isNotEmpty() && studentId != 0 && durationMinutes > 0 &&
+            timeSlot.isNotEmpty() && studentId.isNotEmpty() && durationMinutes > 0 &&
             campus.isNotEmpty() && building.isNotEmpty()
 
     val parsedDate = try {
@@ -81,28 +82,37 @@ fun BookingDetailsScreen(
     }
     val isDateValid = !parsedDate.after(maxDate) && (isToday || parsedDate.after(Date()))
 
-    LaunchedEffect(errorMessage, bookingSuccess) {
-        when {
-            errorMessage != null -> {
-                Logger.getLogger("BookingDetailsScreen").info("Showing error: $errorMessage")
-                snackbarHostState.showSnackbar(
-                    message = errorMessage!!,
-                    actionLabel = "Dismiss",
-                    duration = SnackbarDuration.Long
-                )
-                viewModel.clearErrorMessage()
-            }
-            bookingSuccess -> {
-                Logger.getLogger("BookingDetailsScreen").info("Showing success message")
+    // Handle navigation on successful booking
+    LaunchedEffect(bookingSuccess) {
+        if (bookingSuccess) {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            try {
                 snackbarHostState.showSnackbar(
                     message = "Booking created successfully!",
                     actionLabel = "OK",
                     duration = SnackbarDuration.Short
                 )
-                delay(1000L)
-                navController.popBackStack()
-                viewModel.clearBookingSuccess()
+            } catch (e: Exception) {
+                Logger.getLogger("BookingDetailsScreen").severe("Error showing success snackbar: ${e.message}")
             }
+            viewModel.clearBookingSuccess()
+            navController.popBackStack()
+        }
+    }
+
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            Logger.getLogger("BookingDetailsScreen").info("Showing error: $errorMessage")
+            try {
+                snackbarHostState.showSnackbar(
+                    message = errorMessage!!,
+                    actionLabel = "Dismiss",
+                    duration = SnackbarDuration.Long
+                )
+            } catch (e: Exception) {
+                Logger.getLogger("BookingDetailsScreen").severe("Error showing snackbar: ${e.message}")
+            }
+            viewModel.clearErrorMessage()
         }
     }
 
@@ -152,6 +162,8 @@ fun BookingDetailsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp)),
+
+
                 colors = CardDefaults.cardColors(
                     containerColor = if (isDarkTheme) Color(0xFF242424) else Color.White
                 )
@@ -281,14 +293,32 @@ fun BookingDetailsScreen(
                         pendingBooking?.let { booking ->
                             Logger.getLogger("BookingDetailsScreen").info("Confirming booking: $booking")
                             viewModel.createBooking(
-                                studentId = booking.studentId,
                                 spaceId = booking.roomId,
-                                building = booking.building,
-                                campus = booking.campus,
                                 level = booking.level,
-                                bookingDate = booking.bookingDate,
-                                startTime = booking.startTime,
-                                endTime = booking.endTime
+                                date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(booking.bookingDate),
+                                timeSlot = SimpleDateFormat("HH:mm", Locale.US).format(booking.startTime),
+                                studentId = booking.studentId,
+                                durationMinutes = durationMinutes,
+                                campus = booking.campus,
+                                building = booking.building,
+                                onSuccess = {
+                                    Logger.getLogger("BookingDetailsScreen").info("Booking created successfully")
+                                },
+                                onFailure = { errorMessage ->
+                                    Logger.getLogger("BookingDetailsScreen").severe("Booking failed: $errorMessage")
+                                    coroutineScope.launch {
+                                        try {
+                                            snackbarHostState.showSnackbar(
+                                                message = errorMessage,
+                                                actionLabel = "Dismiss",
+                                                duration = SnackbarDuration.Long
+                                            )
+                                        } catch (e: Exception) {
+                                            Logger.getLogger("BookingDetailsScreen").severe("Error showing failure snackbar: ${e.message}")
+                                        }
+                                        viewModel.clearErrorMessage()
+                                    }
+                                }
                             )
                             pendingBooking = null
                             showConfirmation = false

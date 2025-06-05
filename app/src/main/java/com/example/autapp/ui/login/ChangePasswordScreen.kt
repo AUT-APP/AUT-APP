@@ -21,7 +21,7 @@ fun ChangePasswordScreen(
     navController: NavController,
     username: String,
     role: String,
-    userId: Int,
+    userId: String,
     isDarkTheme: Boolean,
     onPasswordChanged: () -> Unit
 ) {
@@ -47,8 +47,9 @@ fun ChangePasswordScreen(
                 navController = navController,
                 showBackButton = true,
                 currentRoute = "change_password/$username/$role/$userId",
-                currentUserId = userId, // Use userId from parameters
-                isTeacher = role == "Teacher" // Set based on role
+                currentUserId = userId,
+                isTeacher = role == "Teacher",
+                currentUserRole = role
             )
         }
     ) { paddingValues ->

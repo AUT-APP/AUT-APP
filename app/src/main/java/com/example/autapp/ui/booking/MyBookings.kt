@@ -1,4 +1,5 @@
 package com.example.autapp.ui.booking
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,14 +21,17 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.autapp.data.models.Booking
 import java.text.SimpleDateFormat
-import java.util.*enum class BookingStatusFilter { ALL, ACTIVE, UPCOMING, COMPLETED }
+import java.util.*
 
-enum class DateRange { ALL, TODAY, THIS_WEEK, THIS_MONTH }@OptIn(ExperimentalMaterial3Api::class)
+enum class BookingStatusFilter { ALL, ACTIVE, UPCOMING }
+enum class DateRange { ALL, TODAY, THIS_WEEK, THIS_MONTH }
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyBookingsScreen(
     viewModel: BookingViewModel,
     navController: NavController,
-    studentId: Int,
+    studentId: String,
     isDarkTheme: Boolean,
     paddingValues: PaddingValues
 ) {
@@ -50,7 +54,6 @@ fun MyBookingsScreen(
                 BookingStatusFilter.ALL -> true
                 BookingStatusFilter.ACTIVE -> booking.isActive
                 BookingStatusFilter.UPCOMING -> booking.isUpcoming
-                BookingStatusFilter.COMPLETED -> booking.isCompleted
             }
             val matchesDate = when (selectedDateRange) {
                 DateRange.ALL -> true
@@ -122,8 +125,9 @@ fun MyBookingsScreen(
             Text(it, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
         }
     }
+}
 
-}@Composable
+@Composable
 fun EmptyBookingsState(isDarkTheme: Boolean) {
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
     Box(
@@ -156,10 +160,12 @@ fun EmptyBookingsState(isDarkTheme: Boolean) {
             )
         }
     }
-}@Composable
+}
+
+@Composable
 fun BookingCard(booking: Booking, onCancel: () -> Unit, isDarkTheme: Boolean) {
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
-    var showCancelConfirmation by remember { mutableStateOf(false) } // State for dialog visibility
+    var showCancelConfirmation by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -222,7 +228,7 @@ fun BookingCard(booking: Booking, onCancel: () -> Unit, isDarkTheme: Boolean) {
             Spacer(modifier = Modifier.height(16.dp))
             if (booking.isActive || booking.isUpcoming) {
                 Button(
-                    onClick = { showCancelConfirmation = true }, // Show dialog instead of direct cancel
+                    onClick = { showCancelConfirmation = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -237,7 +243,6 @@ fun BookingCard(booking: Booking, onCancel: () -> Unit, isDarkTheme: Boolean) {
         }
     }
 
-    // Confirmation Dialog for Canceling Booking
     if (showCancelConfirmation) {
         AlertDialog(
             onDismissRequest = { showCancelConfirmation = false },
@@ -265,7 +270,7 @@ fun BookingCard(booking: Booking, onCancel: () -> Unit, isDarkTheme: Boolean) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onCancel() // Trigger the cancel action
+                        onCancel()
                         showCancelConfirmation = false
                     }
                 ) {
@@ -284,14 +289,15 @@ fun BookingCard(booking: Booking, onCancel: () -> Unit, isDarkTheme: Boolean) {
             textContentColor = textColor
         )
     }
-}@Composable
+}
+
+@Composable
 fun BookingStatusTag(booking: Booking, isDarkTheme: Boolean) {
     val textColor = if (isDarkTheme) Color.White else Color.White
     val backgroundColor = when {
-        booking.isActive -> Color(0xFF6ABF69)
-        booking.isUpcoming -> Color(0xFF42A5F5)
-        booking.isCompleted -> Color(0xFFEF5350)
-        else -> Color.Gray
+        booking.isActive -> Color(0xFF6ABF69) // Green for Active
+        booking.isUpcoming -> Color(0xFF42A5F5) // Blue for Upcoming
+        else -> Color.Gray // Fallback (should not occur)
     }
     Box(
         modifier = Modifier
@@ -303,7 +309,6 @@ fun BookingStatusTag(booking: Booking, isDarkTheme: Boolean) {
             text = when {
                 booking.isActive -> "Active"
                 booking.isUpcoming -> "Upcoming"
-                booking.isCompleted -> "Completed"
                 else -> "Unknown"
             },
             color = textColor,
@@ -313,7 +318,9 @@ fun BookingStatusTag(booking: Booking, isDarkTheme: Boolean) {
             overflow = TextOverflow.Ellipsis
         )
     }
-}@Composable
+}
+
+@Composable
 fun MyBookingsFilter(
     selectedStatusFilter: BookingStatusFilter,
     onStatusFilterSelected: (BookingStatusFilter) -> Unit,
@@ -434,10 +441,3 @@ fun MyBookingsFilter(
         }
     }
 }
-val Booking.isActive: Boolean
-    get() = status == "ACTIVE" && endTime.after(Date())
-    val Booking.isUpcoming: Boolean
-    get() = status == "ACTIVE" && startTime.after(Date())
-    val Booking.isCompleted: Boolean
-    get() = status == "CANCELED" || endTime.before(Date())
-

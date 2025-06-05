@@ -9,11 +9,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
-import com.example.autapp.data.dao.TimetableEntryDao
+import com.example.autapp.data.firebase.FirebaseTimetableEntry
+import com.example.autapp.data.firebase.FirebaseCourse
+import java.text.SimpleDateFormat
 
 @Composable
 fun TimetableEntryCard(
-    entry: TimetableEntryDao.TimetableEntryWithCourse,
+    timetableEntry: FirebaseTimetableEntry,
+    course: FirebaseCourse,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -30,7 +33,7 @@ fun TimetableEntryCard(
         ) {
             // Course code and name
             Text(
-                text = "${entry.course.courseId} - ${entry.course.name}",
+                text = "${course.name} - ${course.title}",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -47,7 +50,7 @@ fun TimetableEntryCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "${entry.entry.startTime.format()} - ${entry.entry.endTime.format()}",
+                    text = "${SimpleDateFormat("HH:mm").format(timetableEntry.startTime)} - ${SimpleDateFormat("HH:mm").format(timetableEntry.endTime)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -65,15 +68,15 @@ fun TimetableEntryCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = entry.entry.room,
+                    text = timetableEntry.room,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (entry.entry.type.isNotBlank()) {
+            if (timetableEntry.type.isNotBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = entry.entry.type,
+                    text = timetableEntry.type,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary
                 )

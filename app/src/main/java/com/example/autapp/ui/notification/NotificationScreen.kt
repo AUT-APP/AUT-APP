@@ -66,6 +66,7 @@
     import java.util.Date
     import java.util.Locale
     import org.threeten.bp.format.TextStyle as ADBTextStyle
+    import com.example.autapp.data.firebase.FirebaseTimetableEntry
 
     @Composable
     fun NotificationScreen(
@@ -135,7 +136,7 @@
     @Composable
     fun CourseNotificationsTab(
         viewModel: NotificationViewModel,
-        courseId: Int,
+        courseId: String,
         courseName: String,
         snackbarHostState: SnackbarHostState,
         coroutineScope: CoroutineScope
@@ -186,7 +187,7 @@
                     Column {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TimetableEntryCard(
-                                timetableEntry = timetableEntry,
+                                timetableEntry = timetableEntry.toTimetableEntry(),
                                 notificationPrefs = notificationPrefs,
                                 context = context,
                                 viewModel = viewModel,
@@ -202,6 +203,18 @@
                 }
             }
         }
+    }
+
+    private fun FirebaseTimetableEntry.toTimetableEntry(): TimetableEntry {
+        return TimetableEntry(
+            entryId = this.entryId.toIntOrNull() ?: 0,
+            courseId = this.courseId.toIntOrNull() ?: 0,
+            dayOfWeek = this.dayOfWeek,
+            startTime = this.startTime,
+            endTime = this.endTime,
+            room = this.room,
+            type = this.type
+        )
     }
 
     private fun Date.format(): String {
@@ -309,7 +322,7 @@
                                             viewModel.deleteNotificationPreference(
                                                 context,
                                                 studentId = viewModel.studentId,
-                                                classSessionId = timetableEntry.entryId
+                                                classSessionId = timetableEntry.entryId.toString()
                                             )
                                             // Dismiss any currently showing snackbar
                                             snackbarHostState.currentSnackbarData?.dismiss()
@@ -328,7 +341,7 @@
                                                 viewModel.setNotificationPreference(
                                                     context = context,
                                                     studentId = viewModel.studentId,
-                                                    classSessionId = timetableEntry.entryId,
+                                                    classSessionId = timetableEntry.entryId.toString(),
                                                     minutesBefore = minutes,
                                                     courseName = courseName
                                                 )

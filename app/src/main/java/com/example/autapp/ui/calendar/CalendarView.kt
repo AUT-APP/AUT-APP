@@ -35,9 +35,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.autapp.data.dao.TimetableEntryDao
 import com.example.autapp.data.models.Event
 import com.example.autapp.data.models.Booking
+import com.example.autapp.data.firebase.FirebaseEvent
+import com.example.autapp.data.firebase.FirebaseBooking
+import com.example.autapp.data.firebase.FirebaseTimetableEntry
 import org.threeten.bp.LocalDate
 import org.threeten.bp.YearMonth
 import org.threeten.bp.format.DateTimeFormatter
@@ -48,7 +50,7 @@ import java.util.Locale
 fun CalendarView(
     uiState: CalendarUiState,
     onDateSelected: (LocalDate) -> Unit,
-    onEventClick: (Event) -> Unit,
+    onEventClick: (FirebaseEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // State to keep track of the currently displayed month and year.
@@ -175,13 +177,13 @@ fun CalendarView(
         // Finally, sort them by start time.
         val selectedDateEntries = uiState.timetableEntries
             .filter { entry ->
-                entry.entry.dayOfWeek == uiState.selectedDate.dayOfWeek.value
+                entry.dayOfWeek == uiState.selectedDate.dayOfWeek.value
             }
             .distinctBy { entry ->
                 // Create a unique key for distinctBy based on course, start and end time
-                "${entry.entry.courseId}_${entry.entry.startTime.time}_${entry.entry.endTime.time}"
+                "${entry.courseId}_${entry.startTime.time}_${entry.endTime.time}"
             }
-            .sortedBy { it.entry.startTime }
+            .sortedBy { it.startTime }
 
         // Events for the selected date (already filtered in ViewModel, just sort by start time).
         val selectedDateEvents = uiState.filteredEvents.sortedBy { it.startTime }
@@ -202,19 +204,22 @@ fun CalendarView(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(selectedDateEntries) { entry: TimetableEntryDao.TimetableEntryWithCourse ->
-                    TimetableEntryCard(entry = entry)
+                items(selectedDateEntries) { entry: FirebaseTimetableEntry ->
+                    val course = uiState.courses.find { it.courseId == entry.courseId.toString() }
+                    if (course != null) {
+                        TimetableEntryCard(timetableEntry = entry, course = course)
+                    }
                 }
 
-                items(selectedDateEvents) { event: Event ->
+                items(selectedDateEvents) { event: FirebaseEvent ->
                     EventCard(
-                        event = event,
+                        event = event.toEvent(),
                         onClick = { onEventClick(event) }
                     )
                 }
 
-                items(selectedDateBookings) { booking: Booking ->
-                    BookingCard(booking = booking)
+                items(selectedDateBookings) { booking: FirebaseBooking ->
+                    BookingCard(booking = booking.toBooking())
                 }
             }
         } else {

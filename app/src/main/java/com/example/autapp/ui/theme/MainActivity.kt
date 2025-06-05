@@ -19,7 +19,7 @@ import androidx.navigation.navArgument
 import com.example.autapp.AUTApplication
 import com.example.autapp.ui.admin.AdminDashboardScreen
 import com.example.autapp.ui.booking.BookingDetailsScreen
-import com.example.autapp.ui.booking.BookingScreen
+import com.example.autapp.ui.booking.BookingsScreen
 import com.example.autapp.ui.booking.BookingViewModel
 import com.example.autapp.ui.calendar.CalendarScreen
 import com.example.autapp.ui.calendar.CalendarViewModel
@@ -40,7 +40,9 @@ import com.example.autapp.ui.components.AUTBottomBar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import com.example.autapp.ui.notification.NotificationScreen
+import com.example.autapp.data.datastores.SettingsDataStore
+import com.example.autapp.data.firebase.FirebaseUser
+import com.example.autapp.data.firebase.FirebaseTimetableEntry
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +55,6 @@ import com.example.autapp.ui.login.LoginScreen
 import com.example.autapp.ui.login.LoginViewModel
 import com.example.autapp.ui.notification.NotificationViewModel
 import com.example.autapp.ui.settings.SettingsViewModel
-import com.example.autapp.ui.teacher.TeacherDashboard
 import com.example.autapp.ui.teacher.TeacherDashboardViewModel
 import com.example.autapp.data.models.TimetableEntry
 import com.example.autapp.data.models.User
@@ -62,9 +63,10 @@ import com.example.autapp.ui.material.CourseMaterialScreen
 import com.example.autapp.ui.material.CourseMaterialViewModel
 
 class MainActivity : ComponentActivity() {
-    private var currentStudentId by mutableStateOf<Int?>(null)
-    private var currentTeacherId by mutableStateOf<Int?>(null)
+    private var currentStudentId by mutableStateOf<String?>(null)
+    private var currentTeacherId by mutableStateOf<String?>(null)
     private var isTeacher by mutableStateOf(false)
+    private var currentUserRole by mutableStateOf<String?>(null)
 
     private val loginViewModel: LoginViewModel by viewModels { LoginViewModel.Factory }
     private val dashboardViewModel: DashboardViewModel by viewModels { DashboardViewModel.Factory }
@@ -74,7 +76,7 @@ class MainActivity : ComponentActivity() {
     private val notificationViewModel: NotificationViewModel by viewModels { NotificationViewModel.Factory }
     private val settingsViewModel: SettingsViewModel by viewModels { SettingsViewModel.Factory }
     private val chatViewModel: ChatViewModel by viewModels()
-    private val transportViewModel: TransportViewModel by viewModels()
+    private val transportViewModel: TransportViewModel by viewModels { TransportViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,7 +119,9 @@ class MainActivity : ComponentActivity() {
                     onTeacherIdChange = { currentTeacherId = it },
                     isTeacher = isTeacher,
                     onIsTeacherChange = { isTeacher = it },
-                    application = application as AUTApplication
+                    application = application as AUTApplication,
+                    currentUserRole = currentUserRole,
+                    onRoleChange = { role -> currentUserRole = role }
                 )
             }
         }
@@ -137,16 +141,18 @@ fun AppContent(
     settingsViewModel: SettingsViewModel,
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit,
-    currentStudentId: Int?,
-    onStudentIdChange: (Int?) -> Unit,
-    currentTeacherId: Int?,
-    onTeacherIdChange: (Int?) -> Unit,
+    currentStudentId: String?,
+    onStudentIdChange: (String?) -> Unit,
+    currentTeacherId: String?,
+    onTeacherIdChange: (String?) -> Unit,
     isTeacher: Boolean,
     onIsTeacherChange: (Boolean) -> Unit,
-    application: AUTApplication
+    application: AUTApplication,
+    currentUserRole: String?,
+    onRoleChange: (String?) -> Unit
 ) {
-    val currentUserState: State<User?> = loginViewModel.currentUser.collectAsState(initial = null)
-    val currentUser: User? = currentUserState.value
+    val currentUserState: State<FirebaseUser?> = loginViewModel.currentUser.collectAsState(initial = null)
+    val currentUser: FirebaseUser? = currentUserState.value
 
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
@@ -160,6 +166,7 @@ fun AppContent(
                 onTeacherIdChange(null)
                 // dashboardViewModel initialization happens in the dashboard composable
             }
+            onRoleChange(currentUser.role)
         } else {
             Log.d("AppContent", "No current user")
             onIsTeacherChange(false)
@@ -174,35 +181,54 @@ fun AppContent(
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable("login") {
+            val coroutineScope = rememberCoroutineScope()
             LoginScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = { userId, role ->
                     Log.d("AppContent", "onLoginSuccess: userId=$userId, role=$role")
-                    when (role) {
-                        "Admin" -> {
-                            onIsTeacherChange(false)
-                            onStudentIdChange(null)
-                            onTeacherIdChange(null)
-                            navController.navigate("admin_dashboard") {
-                                popUpTo("login") { inclusive = true }
+                    coroutineScope.launch {
+                        when (role) {
+                            "Admin" -> {
+                                onRoleChange("Admin")
+                                onIsTeacherChange(false)
+                                onStudentIdChange(null)
+                                onTeacherIdChange(null)
+                                navController.navigate("admin_dashboard") {
+                                    popUpTo("login") { inclusive = true }
+                                }
                             }
-                        }
-                        "Student" -> {
-                            onStudentIdChange(userId)
-                            onIsTeacherChange(false)
-                            onTeacherIdChange(null)
-                            dashboardViewModel.initialize(userId)
-                            navController.navigate("dashboard/$userId") {
-                                popUpTo("login") { inclusive = true }
+                            "Teacher" -> {
+                                onIsTeacherChange(true)
+                                onStudentIdChange(null)
+                                onTeacherIdChange(userId)
+                                navController.navigate("teacherDashboard") {
+                                    popUpTo("login") { inclusive = true }
+                                }
                             }
-                        }
-                        "Teacher" -> {
-                            onTeacherIdChange(userId)
-                            onIsTeacherChange(true)
-                            onStudentIdChange(null)
-                            teacherDashboardViewModel.initialize(userId)
-                            navController.navigate("dashboard/$userId") {
-                                popUpTo("login") { inclusive = true }
+                            "Student" -> {
+                                val student = application.studentRepository.getById(userId)
+                                if (student != null) {
+                                    val studentId = student.studentId
+                                    Log.d("AppContent", "Fetched studentId: $studentId for userId: $userId")
+                                    onStudentIdChange(studentId)
+                                    onIsTeacherChange(false)
+                                    onTeacherIdChange(null)
+                                    dashboardViewModel.initialize(studentId)
+                                    navController.navigate("dashboard/$studentId") {
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                } else {
+                                    Log.e("AppContent", "Student document not found for userId: $userId")
+                                    // Handle case where student document is not found (e.g., show error message)
+                                }
+                            }
+                            else -> {
+                                onIsTeacherChange(false)
+                                onStudentIdChange(userId)
+                                onTeacherIdChange(null)
+                                navController.navigate("dashboard/$userId") {
+                                    popUpTo("login") { inclusive = true }
+                                }
                             }
                         }
                     }
@@ -218,62 +244,45 @@ fun AppContent(
                 courseRepository = application.courseRepository,
                 departmentRepository = application.departmentRepository,
                 navController = navController,
-                isDarkTheme = isDarkTheme
+                isDarkTheme = isDarkTheme,
+                timetableEntryRepository = application.timetableEntryRepository
             )
         }
-        composable(
-            route = "dashboard/{userId}",
-            arguments = listOf(navArgument("userId") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-            if (!isTeacher && (currentStudentId == null || currentStudentId != userId)) {
-                onStudentIdChange(userId)
-            }
-            if (isTeacher && (currentTeacherId == null || currentTeacherId != userId)) {
-                onTeacherIdChange(userId)
-            }
-            LaunchedEffect(userId, isTeacher) {
-                if (!isTeacher && userId != 0 && dashboardViewModel.studentId != userId) {
-                    dashboardViewModel.initialize(userId)
-                }
-                if (isTeacher && userId != 0 && teacherDashboardViewModel.teacherId != userId) {
-                    teacherDashboardViewModel.initialize(userId)
-                }
-            }
-            Scaffold(
-                topBar = {
-                    AUTTopAppBar(
-                        title = if (isTeacher) "Teacher Dashboard" else "Dashboard",
-                        isDarkTheme = isDarkTheme,
-                        navController = navController,
-                        showBackButton = false,
-                        currentRoute = (if (isTeacher) "dashboard/$userId" else "dashboard/$userId"),
-                        currentUserId = userId,
-                        isTeacher = isTeacher
-                    )
-                },
-                bottomBar = {
-                    AUTBottomBar(
-                        isDarkTheme = isDarkTheme,
-                        navController = navController,
-                        calendarViewModel = calendarViewModel,
-                        currentRoute = (if (isTeacher) "dashboard/$userId" else "dashboard/$userId"),
-                        currentUserId = userId,
-                        isTeacher = isTeacher,
-                        onClick = {
-                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
-                            if (userId != null) {
-                                navController.navigate("dashboard/$userId")
-                            }
-                        }
-                    )
-                }
-            ) { paddingValues ->
-                if (isTeacher) {
+        composable("teacherDashboard") {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            val userId = currentTeacherId
+
+            if (userId != null && userId.isNotBlank()) {
+                Scaffold(
+                    topBar = {
+                        AUTTopAppBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            title = "Teacher Dashboard",
+                            showBackButton = false,
+                            currentRoute = currentRoute,
+                            currentUserId = userId,
+                            isTeacher = true,
+                            currentUserRole = currentUserRole
+                        )
+                    },
+                    bottomBar = {
+                        AUTBottomBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            calendarViewModel = calendarViewModel,
+                            currentRoute = currentRoute,
+                            currentUserId = userId,
+                            isTeacher = true,
+                            onClick = { /* Handle click if needed */ },
+                            currentUserRole = currentUserRole
+                        )
+                    }
+                ) { paddingValues ->
                     TeacherDashboard(
                         viewModel = teacherDashboardViewModel,
                         departmentRepository = application.departmentRepository,
-                        modifier = Modifier.fillMaxSize(),
                         teacherId = userId,
                         paddingValues = paddingValues,
                         navController = navController
@@ -288,30 +297,47 @@ fun AppContent(
                         navController = navController
                     )
                 }
+            } else {
+                LaunchedEffect(Unit) {
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
+                }
             }
         }
-        composable("teacherDashboard") {
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentRoute = navBackStackEntry?.destination?.route
-            val userId = currentTeacherId
-
-            if (userId != null) {
-                LaunchedEffect(userId) {
-                    if (teacherDashboardViewModel.teacherId != userId) {
+        composable(
+            route = "dashboard/{userId}",
+            arguments = listOf(
+                navArgument("userId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            if (userId.isNotBlank()) {
+                if (!isTeacher && (currentStudentId == null || currentStudentId != userId)) {
+                    onStudentIdChange(userId)
+                }
+                if (isTeacher && (currentTeacherId == null || currentTeacherId != userId)) {
+                    onTeacherIdChange(userId)
+                }
+                LaunchedEffect(userId, isTeacher) {
+                    if (!isTeacher && dashboardViewModel.studentId != userId) {
+                        dashboardViewModel.initialize(userId)
+                    }
+                    if (isTeacher && teacherDashboardViewModel.teacherId != userId) {
                         teacherDashboardViewModel.initialize(userId)
                     }
                 }
-                
                 Scaffold(
                     topBar = {
                         AUTTopAppBar(
-                            title = "Teacher Dashboard",
+                            title = if (isTeacher) "Teacher Dashboard" else "Dashboard",
                             isDarkTheme = isDarkTheme,
                             navController = navController,
                             showBackButton = false,
-                            currentRoute = currentRoute,
+                            currentRoute = "dashboard",
                             currentUserId = userId,
-                            isTeacher = true
+                            isTeacher = isTeacher,
+                            currentUserRole = currentUserRole
                         )
                     },
                     bottomBar = {
@@ -319,15 +345,16 @@ fun AppContent(
                             isDarkTheme = isDarkTheme,
                             navController = navController,
                             calendarViewModel = calendarViewModel,
-                            currentRoute = currentRoute,
+                            currentRoute = "dashboard",
                             currentUserId = userId,
-                            isTeacher = true,
+                            isTeacher = isTeacher,
                             onClick = {
-                                Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: true")
-                                if (userId != null) {
+                                Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                                if (userId.isNotBlank()) {
                                     navController.navigate("dashboard/$userId")
                                 }
-                            }
+                            },
+                            currentUserRole = currentUserRole
                         )
                     }
                 ) { paddingValues ->
@@ -339,9 +366,25 @@ fun AppContent(
                         departmentRepository = application.departmentRepository,
                         navController = navController
                     )
+                    if (isTeacher) {
+                        TeacherDashboard(
+                            viewModel = teacherDashboardViewModel,
+                            departmentRepository = application.departmentRepository,
+                            modifier = Modifier.fillMaxSize(),
+                            teacherId = userId,
+                            paddingValues = paddingValues
+                        )
+                    } else {
+                        val studentTimetableEntries by dashboardViewModel.timetableEntries.collectAsState(initial = emptyList<FirebaseTimetableEntry>())
+                        StudentDashboard(
+                            viewModel = dashboardViewModel,
+                            paddingValues = paddingValues,
+                            isDarkTheme = isDarkTheme,
+                            timetableEntries = studentTimetableEntries
+                        )
+                    }
                 }
             } else {
-                // If no teacher ID is available, navigate to login
                 LaunchedEffect(Unit) {
                     navController.navigate("login") {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
@@ -351,16 +394,12 @@ fun AppContent(
         }
         composable(
             route = "calendar/{userId}",
-            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
             LaunchedEffect(userId, isTeacher) {
-                if (isTeacher) {
+                if (userId.isNotBlank()) {
                     calendarViewModel.initialize(userId, isTeacher)
-                } else {
-                    if (userId != 0 && calendarViewModel.userId != userId) {
-                        calendarViewModel.initialize(userId, isTeacher)
-                    }
                 }
             }
             Scaffold(
@@ -372,7 +411,8 @@ fun AppContent(
                         showBackButton = true,
                         currentRoute = "calendar",
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        currentUserRole = currentUserRole
                     )
                 },
                 bottomBar = {
@@ -385,10 +425,11 @@ fun AppContent(
                         isTeacher = isTeacher,
                         onClick = {
                             Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
-                            if (userId != null) {
+                            if (userId.isNotBlank()) {
                                 navController.navigate("dashboard/$userId")
                             }
-                        }
+                        },
+                        currentUserRole = currentUserRole
                     )
                 }
             ) { paddingValues ->
@@ -403,16 +444,12 @@ fun AppContent(
         }
         composable(
             route = "manage_events/{userId}",
-            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
             LaunchedEffect(userId, isTeacher) {
-                if (isTeacher) {
+                if (userId.isNotBlank()) {
                     calendarViewModel.initialize(userId, isTeacher)
-                } else {
-                    if (userId != 0 && calendarViewModel.userId != userId) {
-                        calendarViewModel.initialize(userId, isTeacher)
-                    }
                 }
             }
             Scaffold(
@@ -424,7 +461,8 @@ fun AppContent(
                         showBackButton = true,
                         currentRoute = "manage_events",
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        currentUserRole = currentUserRole
                     )
                 },
                 bottomBar = {
@@ -437,10 +475,11 @@ fun AppContent(
                         isTeacher = isTeacher,
                         onClick = {
                             Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
-                            if (userId != null) {
+                            if (userId.isNotBlank()) {
                                 navController.navigate("dashboard/$userId")
                             }
-                        }
+                        },
+                        currentUserRole = currentUserRole
                     )
                 }
             ) { paddingValues ->
@@ -452,48 +491,58 @@ fun AppContent(
         }
         composable(
             route = "bookings/{userId}",
-            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-            if (!isTeacher && (currentStudentId == null || currentStudentId != userId)) {
-                onStudentIdChange(userId)
-            }
-            Scaffold(
-                topBar = {
-                    AUTTopAppBar(
-                        title = "Bookings",
-                        isDarkTheme = isDarkTheme,
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            if (userId.isNotBlank()) {
+                if (!isTeacher && (currentStudentId == null || currentStudentId != userId)) {
+                    onStudentIdChange(userId)
+                }
+                Scaffold(
+                    topBar = {
+                        AUTTopAppBar(
+                            title = "Bookings",
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            showBackButton = true,
+                            currentRoute = "bookings",
+                            currentUserId = userId,
+                            isTeacher = isTeacher,
+                            currentUserRole = currentUserRole
+                        )
+                    },
+                    bottomBar = {
+                        AUTBottomBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            calendarViewModel = calendarViewModel,
+                            currentRoute = "bookings",
+                            currentUserId = userId,
+                            isTeacher = isTeacher,
+                            onClick = {
+                                Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                                if (userId.isNotBlank()) {
+                                    navController.navigate("dashboard/$userId")
+                                }
+                            },
+                            currentUserRole = currentUserRole
+                        )
+                    }
+                ) { paddingValues ->
+                    BookingsScreen(
+                        viewModel = bookingViewModel,
                         navController = navController,
-                        showBackButton = true,
-                        currentRoute = "bookings",
-                        currentUserId = userId,
-                        isTeacher = isTeacher
-                    )
-                },
-                bottomBar = {
-                    AUTBottomBar(
+                        studentId = userId,
                         isDarkTheme = isDarkTheme,
-                        navController = navController,
-                        calendarViewModel = calendarViewModel,
-                        currentRoute = "bookings",
-                        currentUserId = userId,
-                        isTeacher = isTeacher,
-                        onClick = {
-                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
-                            if (userId != null) {
-                                navController.navigate("dashboard/$userId")
-                            }
-                        }
+                        paddingValues = paddingValues
                     )
                 }
-            ) { paddingValues ->
-                BookingScreen(
-                    viewModel = bookingViewModel,
-                    navController = navController,
-                    studentId = userId,
-                    isDarkTheme = isDarkTheme,
-                    paddingValues = paddingValues
-                )
+            } else {
+                LaunchedEffect(Unit) {
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
+                }
             }
         }
         composable(
@@ -503,117 +552,137 @@ fun AppContent(
                 navArgument("level") { type = NavType.StringType },
                 navArgument("date") { type = NavType.StringType },
                 navArgument("timeSlot") { type = NavType.StringType },
-                navArgument("userId") { type = NavType.IntType },
+                navArgument("userId") { type = NavType.StringType },
                 navArgument("campus") { type = NavType.StringType },
                 navArgument("building") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-            if (!isTeacher && (currentStudentId == null || currentStudentId != userId)) {
-                onStudentIdChange(userId)
-            }
-            val spaceId = backStackEntry.arguments?.getString("spaceId") ?: ""
-            val level = backStackEntry.arguments?.getString("level") ?: ""
-            val date = backStackEntry.arguments?.getString("date") ?: ""
-            val timeSlot = backStackEntry.arguments?.getString("timeSlot") ?: ""
-            val campus = backStackEntry.arguments?.getString("campus") ?: ""
-            val building = backStackEntry.arguments?.getString("building") ?: ""
-            val snackbarHostState = remember { SnackbarHostState() }
-            Scaffold(
-                topBar = {
-                    AUTTopAppBar(
-                        title = "Booking Details",
-                        isDarkTheme = isDarkTheme,
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            if (userId.isNotBlank()) {
+                if (!isTeacher && (currentStudentId == null || currentStudentId != userId)) {
+                    onStudentIdChange(userId)
+                }
+                val spaceId = backStackEntry.arguments?.getString("spaceId") ?: ""
+                val level = backStackEntry.arguments?.getString("level") ?: ""
+                val date = backStackEntry.arguments?.getString("date") ?: ""
+                val timeSlot = backStackEntry.arguments?.getString("timeSlot") ?: ""
+                val campus = backStackEntry.arguments?.getString("campus") ?: ""
+                val building = backStackEntry.arguments?.getString("building") ?: ""
+                val snackbarHostState = remember { SnackbarHostState() }
+                Scaffold(
+                    topBar = {
+                        AUTTopAppBar(
+                            title = "Booking Details",
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            showBackButton = true,
+                            currentRoute = "booking_details",
+                            currentUserId = userId,
+                            isTeacher = isTeacher,
+                            currentUserRole = currentUserRole
+                        )
+                    },
+                    bottomBar = {
+                        AUTBottomBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            calendarViewModel = calendarViewModel,
+                            currentRoute = "booking_details",
+                            currentUserId = userId,
+                            isTeacher = isTeacher,
+                            onClick = {
+                                Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                                if (userId.isNotBlank()) {
+                                    navController.navigate("dashboard/$userId")
+                                }
+                            },
+                            currentUserRole = currentUserRole
+                        )
+                    },
+                    snackbarHost = {
+                        SnackbarHost(
+                            hostState = snackbarHostState,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                ) { paddingValues ->
+                    BookingDetailsScreen(
+                        viewModel = bookingViewModel,
                         navController = navController,
-                        showBackButton = true,
-                        currentRoute = "booking_details",
-                        currentUserId = userId,
-                        isTeacher = isTeacher
-                    )
-                },
-                bottomBar = {
-                    AUTBottomBar(
+                        spaceId = spaceId,
+                        level = level,
+                        date = date,
+                        timeSlot = timeSlot,
+                        studentId = userId,
+                        campus = campus,
+                        building = building,
                         isDarkTheme = isDarkTheme,
-                        navController = navController,
-                        calendarViewModel = calendarViewModel,
-                        currentRoute = "booking_details",
-                        currentUserId = userId,
-                        isTeacher = isTeacher,
-                        onClick = {
-                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
-                            if (userId != null) {
-                                navController.navigate("dashboard/$userId")
-                            }
-                        }
-                    )
-                },
-                snackbarHost = {
-                    SnackbarHost(
-                        hostState = snackbarHostState,
-                        modifier = Modifier.padding(16.dp)
+                        paddingValues = paddingValues,
+                        snackbarHostState = snackbarHostState
                     )
                 }
-            ) { paddingValues ->
-                BookingDetailsScreen(
-                    viewModel = bookingViewModel,
-                    navController = navController,
-                    spaceId = spaceId,
-                    level = level,
-                    date = date,
-                    timeSlot = timeSlot,
-                    studentId = userId,
-                    campus = campus,
-                    building = building,
-                    isDarkTheme = isDarkTheme,
-                    paddingValues = paddingValues,
-                    snackbarHostState = snackbarHostState
-                )
+            } else {
+                LaunchedEffect(Unit) {
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
+                }
             }
         }
         composable(
             route = "transport/{userId}",
-            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-            if (!isTeacher && (currentStudentId == null || currentStudentId != userId)) {
-                onStudentIdChange(userId)
-            }
-            if (isTeacher && (currentTeacherId == null || currentTeacherId != userId)) {
-                onTeacherIdChange(userId)
-            }
-            Scaffold(
-                topBar = {
-                    AUTTopAppBar(
-                        title = "Shuttle Bus",
-                        isDarkTheme = isDarkTheme,
-                        navController = navController,
-                        showBackButton = true,
-                        currentRoute = "transport",
-                        currentUserId = userId,
-                        isTeacher = isTeacher
-                    )
-                },
-                bottomBar = {
-                    AUTBottomBar(
-                        isDarkTheme = isDarkTheme,
-                        navController = navController,
-                        calendarViewModel = calendarViewModel,
-                        currentRoute = "transport",
-                        currentUserId = userId,
-                        isTeacher = isTeacher,
-                        onClick = {
-                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
-                            if (userId != null) {
-                                navController.navigate("dashboard/$userId")
-                            }
-                        }
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            if (userId.isNotBlank()) {
+                if (!isTeacher && (currentStudentId == null || currentStudentId != userId)) {
+                    onStudentIdChange(userId)
+                }
+                if (isTeacher && (currentTeacherId == null || currentTeacherId != userId)) {
+                    onTeacherIdChange(userId)
+                }
+                Scaffold(
+                    topBar = {
+                        AUTTopAppBar(
+                            title = "Shuttle Bus",
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            showBackButton = true,
+                            currentRoute = "transport",
+                            currentUserId = userId,
+                            isTeacher = isTeacher,
+                            currentUserRole = currentUserRole
+                        )
+                    },
+                    bottomBar = {
+                        AUTBottomBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            calendarViewModel = calendarViewModel,
+                            currentRoute = "transport",
+                            currentUserId = userId,
+                            isTeacher = isTeacher,
+                            onClick = {
+                                Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                                if (userId.isNotBlank()) {
+                                    navController.navigate("dashboard/$userId")
+                                }
+                            },
+                            currentUserRole = currentUserRole
+                        )
+                    }
+                ) { padding ->
+                    TransportScreen(
+                        viewModel = transportViewModel,
+                        paddingValues = padding
                     )
                 }
-            ) { padding ->
-                TransportScreen(
-                    viewModel = transportViewModel,
-                    paddingValues = padding
-                )
+            } else {
+                LaunchedEffect(Unit) {
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
+                }
             }
         }
         composable("chat") {
@@ -621,40 +690,50 @@ fun AppContent(
             val currentRoute = navBackStackEntry?.destination?.route
             val userId = if (isTeacher) currentTeacherId else currentStudentId
 
-            Scaffold(
-                topBar = {
-                    AUTTopAppBar(
-                        title = "Chatbot",
-                        isDarkTheme = isDarkTheme,
+            if (userId != null && userId.isNotBlank()) {
+                Scaffold(
+                    topBar = {
+                        AUTTopAppBar(
+                            title = "AI Chat",
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            showBackButton = true,
+                            currentRoute = currentRoute,
+                            currentUserId = userId,
+                            isTeacher = isTeacher,
+                            currentUserRole = currentUserRole
+                        )
+                    },
+                    bottomBar = {
+                        AUTBottomBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            calendarViewModel = calendarViewModel,
+                            currentRoute = currentRoute,
+                            currentUserId = userId,
+                            isTeacher = isTeacher,
+                            onClick = {
+                                Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                                if (userId.isNotBlank()) {
+                                    navController.navigate("dashboard/$userId")
+                                }
+                            },
+                            currentUserRole = currentUserRole
+                        )
+                    }
+                ) { paddingValues ->
+                    ChatScreen(
+                        viewModel = chatViewModel,
                         navController = navController,
-                        showBackButton = true,
-                        currentRoute = currentRoute,
-                        currentUserId = userId,
-                        isTeacher = isTeacher
-                    )
-                },
-                bottomBar = {
-                    AUTBottomBar(
-                        isDarkTheme = isDarkTheme,
-                        navController = navController,
-                        calendarViewModel = calendarViewModel,
-                        currentRoute = currentRoute,
-                        currentUserId = userId,
-                        isTeacher = isTeacher,
-                        onClick = {
-                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
-                            if (userId != null) {
-                                navController.navigate("dashboard/$userId")
-                            }
-                        }
+                        paddingValues = paddingValues
                     )
                 }
-            ) { paddingValues ->
-                ChatScreen(
-                    viewModel = chatViewModel,
-                    navController = navController,
-                    paddingValues = paddingValues
-                )
+            } else {
+                LaunchedEffect(Unit) {
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
+                }
             }
         }
         composable("settings") {
@@ -671,45 +750,49 @@ fun AppContent(
                         showBackButton = true,
                         currentRoute = currentRoute,
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        currentUserRole = currentUserRole
                     )
                 },
                 bottomBar = {
-                    AUTBottomBar(
-                        isDarkTheme = isDarkTheme,
-                        navController = navController,
-                        calendarViewModel = calendarViewModel,
-                        currentRoute = currentRoute,
-                        currentUserId = userId,
-                        isTeacher = isTeacher,
-                        onClick = {
-                            Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
-                            if (userId != null) {
-                                navController.navigate("dashboard/$userId")
-                            }
-                        }
-                    )
+                    if (currentUserRole != "Admin") {
+                        AUTBottomBar(
+                            isDarkTheme = isDarkTheme,
+                            navController = navController,
+                            calendarViewModel = calendarViewModel,
+                            currentRoute = currentRoute,
+                            currentUserId = userId,
+                            isTeacher = isTeacher,
+                            onClick = {
+                                Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
+                                if (userId?.isNotBlank() == true) {
+                                    navController.navigate("dashboard/$userId")
+                                }
+                            },
+                            currentUserRole = currentUserRole
+                        )
+                    }
                 }
             ) { paddingValues ->
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     isDarkTheme = isDarkTheme,
+                    onToggleTheme = onToggleTheme,
                     isNotificationsEnabled = settingsViewModel.isNotificationsEnabled.collectAsState(initial = true).value,
                     onToggleNotifications = { settingsViewModel.setNotificationsEnabled(it) },
                     isClassRemindersEnabled = settingsViewModel.isClassRemindersEnabled.collectAsState(initial = true).value,
                     onToggleClassReminders = { settingsViewModel.setClassRemindersEnabled(it) },
-                    onToggleTheme = onToggleTheme,
                     paddingValues = paddingValues
                 )
             }
         }
         composable(
             route = "notification/{userId}",
-            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
             LaunchedEffect(userId, isTeacher) {
-                if (!isTeacher && userId != 0) {
+                if (userId.isNotBlank()) {
                     notificationViewModel.initialize(userId)
                 }
             }
@@ -723,7 +806,8 @@ fun AppContent(
                         showBackButton = true,
                         currentRoute = "notification",
                         currentUserId = userId,
-                        isTeacher = isTeacher
+                        isTeacher = isTeacher,
+                        currentUserRole = currentUserRole
                     )
                 },
                 bottomBar = {
@@ -736,10 +820,11 @@ fun AppContent(
                         isTeacher = isTeacher,
                         onClick = {
                             Log.d("AUTBottomBar", "Home button clicked. currentUserId: $userId, isTeacher: $isTeacher")
-                            if (userId != null) {
+                            if (userId.isNotBlank()) {
                                 navController.navigate("dashboard/$userId")
                             }
-                        }
+                        },
+                        currentUserRole = currentUserRole
                     )
                 },
                 snackbarHost = {
@@ -761,12 +846,12 @@ fun AppContent(
             arguments = listOf(
                 navArgument("username") { type = NavType.StringType },
                 navArgument("role") { type = NavType.StringType },
-                navArgument("userId") { type = NavType.IntType }
+                navArgument("userId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val username = backStackEntry.arguments?.getString("username") ?: ""
             val role = backStackEntry.arguments?.getString("role") ?: ""
-            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
             ChangePasswordScreen(
                 viewModel = loginViewModel,
                 navController = navController,

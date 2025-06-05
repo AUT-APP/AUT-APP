@@ -17,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -36,7 +35,7 @@ import java.util.*
 fun BookingScreen(
     viewModel: BookingViewModel,
     navController: NavController,
-    studentId: Int,
+    studentId: String,
     isDarkTheme: Boolean,
     paddingValues: PaddingValues
 ) {
@@ -54,6 +53,22 @@ fun BookingScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val containerColor = if (isDarkTheme) Color(0xFF121212) else Color(0xFFF5F5F5)
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsState()
+
+    // Refresh slots when the screen is resumed (e.g., after popping back from BookingDetailsScreen)
+    LaunchedEffect(lifecycleState, selectedCampus, selectedBuilding, selectedSpaceId, selectedLevel, selectedDate) {
+        if (lifecycleState == androidx.lifecycle.Lifecycle.State.RESUMED && selectedCampus.isNotEmpty() && selectedBuilding.isNotEmpty()) {
+            viewModel.fetchAvailableSlots(
+                spaceId = if (selectedSpaceId == "All") null else selectedSpaceId,
+                building = selectedBuilding,
+                campus = selectedCampus,
+                level = if (selectedLevel.isEmpty()) null else selectedLevel,
+                date = selectedDate,
+                studentId = studentId
+            )
+        }
+    }
 
     LaunchedEffect(campuses) {
         if (campuses.isNotEmpty() && selectedCampus !in campuses) {
@@ -88,19 +103,6 @@ fun BookingScreen(
             if (selectedSpaceId != "All" && studySpaces.none { it.spaceId == selectedSpaceId }) {
                 viewModel.updateFilters(selectedCampus, selectedBuilding, "All", selectedLevel, selectedDate)
             }
-        }
-    }
-
-    LaunchedEffect(selectedCampus, selectedBuilding, selectedSpaceId, selectedLevel, selectedDate) {
-        if (selectedCampus.isNotEmpty() && selectedBuilding.isNotEmpty()) {
-            viewModel.fetchAvailableSlots(
-                spaceId = if (selectedSpaceId == "All") null else selectedSpaceId,
-                building = selectedBuilding,
-                campus = selectedCampus,
-                level = if (selectedLevel.isEmpty()) null else selectedLevel,
-                date = selectedDate,
-                studentId = studentId
-            )
         }
     }
 
@@ -172,7 +174,10 @@ fun BookingScreen(
                 navController = navController,
                 selectedDate = selectedDate,
                 studentId = studentId,
-                isDarkTheme = isDarkTheme
+                isDarkTheme = isDarkTheme,
+                studySpaces = studySpaces,
+                selectedLevel = selectedLevel,
+                selectedSpaceId = selectedSpaceId
             )
         }
 
@@ -187,6 +192,8 @@ fun BookingScreen(
         }
     }
 }
+
+// ... (Rest of the file remains unchanged, including BookingLegend, LegendItem, RoomBookingContent, LevelHeader, BookingTable, BookingSlotItem, FilterBar, and EmptyBookingSlotsState composables)
 
 @Composable
 fun BookingLegend(isDarkTheme: Boolean) {
@@ -224,8 +231,11 @@ fun RoomBookingContent(
     bookingSlots: List<BookingSlot>,
     navController: NavController,
     selectedDate: Date,
-    studentId: Int,
-    isDarkTheme: Boolean
+    studentId: String,
+    isDarkTheme: Boolean,
+    studySpaces: List<StudySpace>,
+    selectedLevel: String,
+    selectedSpaceId: String
 ) {
     val expandedLevels = remember { mutableStateMapOf<String, Boolean>().apply { levels.forEach { put(it, true) } } }
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
@@ -247,7 +257,9 @@ fun RoomBookingContent(
                         navController = navController,
                         selectedDate = selectedDate,
                         studentId = studentId,
-                        isDarkTheme = isDarkTheme
+                        isDarkTheme = isDarkTheme,
+                        studySpaces = studySpaces.filter { it.level == level },
+                        selectedSpaceId = selectedSpaceId
                     )
                 }
             }
@@ -281,8 +293,10 @@ fun BookingTable(
     bookingSlots: List<BookingSlot>,
     navController: NavController,
     selectedDate: Date,
-    studentId: Int,
-    isDarkTheme: Boolean
+    studentId: String,
+    isDarkTheme: Boolean,
+    studySpaces: List<StudySpace>,
+    selectedSpaceId: String
 ) {
     val timeSlots = listOf(
         "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -290,7 +304,11 @@ fun BookingTable(
         "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
         "20:00", "20:30"
     )
-    val spaces = bookingSlots.map { it.roomId }.distinct()
+    val spacesToDisplay = if (selectedSpaceId == "All") {
+        studySpaces.map { it.spaceId }.sorted()
+    } else {
+        studySpaces.filter { it.spaceId == selectedSpaceId }.map { it.spaceId }.sorted()
+    }
     val textColor = if (isDarkTheme) Color.White else Color(0xFF333333)
     val scrollState = rememberScrollState()
 
@@ -361,7 +379,7 @@ fun BookingTable(
             LazyColumn(
                 modifier = Modifier.heightIn(max = 300.dp)
             ) {
-                items(spaces) { spaceId ->
+                items(spacesToDisplay) { spaceId ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -376,7 +394,7 @@ fun BookingTable(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                spaceId,
+                                text = studySpaces.find { it.spaceId == spaceId }?.spaceId ?: spaceId,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
                                 color = textColor,
@@ -483,7 +501,6 @@ fun FilterBar(
     var spaceExpanded by remember { mutableStateOf(false) }
     var levelExpanded by remember { mutableStateOf(false) }
 
-    // Remove "All" from levelOptions
     val levelOptions = allLevels.sorted()
     val spaceOptions = listOf("All") + studySpaces
         .filter { selectedLevel.isEmpty() || it.level == selectedLevel }
@@ -661,7 +678,7 @@ fun FilterBar(
             ) {
                 OutlinedTextField(
                     value = if (selectedLevel.isEmpty()) {
-                        if (isLevelEnabled) "Select Level" else "Select Level"
+                        if (isLevelEnabled) "Select Level" else "Select Building First"
                     } else {
                         selectedLevel
                     },
@@ -791,7 +808,8 @@ fun FilterBar(
                             DropdownMenuItem(
                                 text = { Text(space, color = textColor, fontSize = 14.sp) },
                                 onClick = {
-                                    onSpaceSelected(space)
+                                    val spaceIdToSelect = if (space == "All") "All" else space
+                                    onSpaceSelected(spaceIdToSelect)
                                     spaceExpanded = false
                                 },
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
@@ -809,7 +827,6 @@ fun FilterBar(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Old Button for Date Selection
         Button(
             onClick = {
                 val calendar = Calendar.getInstance().apply { time = selectedDate }

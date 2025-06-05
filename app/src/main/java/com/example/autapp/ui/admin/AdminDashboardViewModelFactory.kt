@@ -2,18 +2,16 @@ package com.example.autapp.ui.admin
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.autapp.data.repository.ActivityLogRepository
-import com.example.autapp.data.repository.CourseRepository
-import com.example.autapp.data.repository.DepartmentRepository
-import com.example.autapp.data.repository.StudentRepository
-import com.example.autapp.data.repository.TeacherRepository
+import com.example.autapp.data.firebase.*
 
 class AdminDashboardViewModelFactory(
-    private val studentRepository: StudentRepository,
-    private val teacherRepository: TeacherRepository,
-    private val courseRepository: CourseRepository,
-    private val departmentRepository: DepartmentRepository,
-    private val activityLogRepository: ActivityLogRepository
+    private val studentRepository: FirebaseStudentRepository,
+    private val teacherRepository: FirebaseTeacherRepository,
+    private val courseRepository: FirebaseCourseRepository,
+    private val departmentRepository: FirebaseDepartmentRepository,
+    private val activityLogRepository: FirebaseActivityLogRepository,
+    private val userRepository: FirebaseUserRepository,
+    private val timetableEntryRepository: FirebaseTimetableRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AdminDashboardViewModel::class.java)) {
@@ -23,7 +21,9 @@ class AdminDashboardViewModelFactory(
                 teacherRepository,
                 courseRepository,
                 departmentRepository,
-                activityLogRepository
+                activityLogRepository,
+                userRepository,
+                timetableEntryRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

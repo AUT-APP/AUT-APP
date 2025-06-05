@@ -1,25 +1,8 @@
 package com.example.autapp.data.models
 
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
 import java.util.Date
 
-@Entity(
-    tableName = "assignment_table",
-    foreignKeys = [
-        ForeignKey(
-            entity = Course::class,
-            parentColumns = ["courseId"],
-            childColumns = ["courseId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index(value = ["courseId"])]
-)
 data class Assignment(
-    @PrimaryKey(autoGenerate = true)
     val assignmentId: Int = 0,
     var name: String,
     var location: String,
