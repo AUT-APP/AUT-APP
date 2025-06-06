@@ -773,7 +773,6 @@ class CalendarViewModel(
                 relatedItemId = booking.id
             )
             scheduledTimeMillis
-            null
         } catch (e: Exception) {
             _uiState.value = _uiState.value.copy(errorMessage = "Failed to set booking notification: ${e.message}")
             null
