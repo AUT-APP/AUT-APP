@@ -1,35 +1,37 @@
 package com.example.autapp.ui.calendar
 
-import android.Manifest
-import android.app.Activity
-import android.app.AlarmManager
-import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
-import com.example.autapp.data.firebase.FirebaseBooking
 import com.example.autapp.data.firebase.FirebaseEvent
-import com.example.autapp.data.firebase.FirebaseTimetableEntry
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun CalendarScreen(
@@ -75,115 +77,13 @@ fun CalendarScreen(
         }
     }
 
-    val context = LocalContext.current
-    // State to track notification permission
-    var hasNotificationsPermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            } else {
-                true // Permission is automatically granted on versions below Android 13
-            }
-        )
-    }
-
-    // Activity result launcher for permission request
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted -> hasNotificationsPermission = isGranted }
+    val onSetReminder = rememberReminderScheduler(
+        snackbarHostState = snackbarHostState,
+        viewModel = viewModel,
+        uiState = uiState,
+        notificationsEnabled = notificationsEnabled,
+        remindersEnabled = remindersEnabled
     )
-
-    // Request permission only once when the Composable is first launched
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationsPermission) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-
-    fun requestExactAlarmPermissionIfNeeded(activity: Activity) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            if (!alarmManager.canScheduleExactAlarms()) {
-                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                    data = "package:${activity.packageName}".toUri()
-                }
-                activity.startActivity(intent)
-            }
-        }
-    }
-
-    // Shared onSetReminder logic
-    val coroutineScope = rememberCoroutineScope()
-    val onSetReminder: (Any, Int) -> Unit = { item, minutes ->
-        coroutineScope.launch {
-            // Prevent scheduling notification for a time before the current time
-            val now = System.currentTimeMillis()
-            val itemStartTimeMillis = when (item) {
-                is FirebaseEvent -> item.startTime?.time
-                is FirebaseBooking -> item.startTime.time
-                else -> null
-            }
-
-            if (itemStartTimeMillis != null && itemStartTimeMillis < now) {
-                snackbarHostState.currentSnackbarData?.dismiss()
-                snackbarHostState.showSnackbar("Cannot set reminder for a past item.")
-                return@launch
-            }
-
-            // Check and request exact alarm permission if needed
-            val activity = context as? Activity
-            activity?.let {
-                requestExactAlarmPermissionIfNeeded(it)
-            }
-
-            val scheduledTimeMillis = when (item) {
-                is FirebaseTimetableEntry -> viewModel.updateReminder(context, item, minutes)
-                is FirebaseEvent -> viewModel.updateReminder(context, item, minutes)
-                is FirebaseBooking -> viewModel.updateReminder(context, item, minutes)
-                else -> null
-            }
-            // Dismiss any currently showing snackbar
-            snackbarHostState.currentSnackbarData?.dismiss()
-            val warning = when {
-                !notificationsEnabled -> " (Notifications disabled in settings)"
-                !remindersEnabled -> " (Reminders disabled in settings)"
-                else -> ""
-            }
-            val baseMessage = if (scheduledTimeMillis != null) {
-                // Format the scheduled time into a readable string
-                val scheduledDate = Date(scheduledTimeMillis)
-                val formatter = SimpleDateFormat("MMM dd 'at' h:mm a", Locale.getDefault())
-                val scheduledTimeString = formatter.format(scheduledDate)
-                // Construct the message
-                when (item) {
-                    is FirebaseTimetableEntry -> {
-                        val courseName = uiState.courses.find { it.courseId == item.courseId }?.name ?: item.courseId
-                        "$courseName ${item.type} notification scheduled for $scheduledTimeString"
-                    }                    is FirebaseEvent -> "${item.title} event notification scheduled for $scheduledTimeString"
-                    is FirebaseBooking -> "${item.roomId} booking notification scheduled for $scheduledTimeString"
-                    else -> "Failed to schedule notification: Unknown item type"
-                }
-            } else {
-                when (item) {
-                    is FirebaseTimetableEntry -> {
-                        val courseName = uiState.courses.find { it.courseId == item.courseId }?.name ?: item.courseId
-                        "Failed to schedule $courseName ${item.type} notification"
-                    }
-                    is FirebaseEvent -> "Failed to schedule ${item.title} event notification"
-                    is FirebaseBooking -> "Failed to schedule ${item.roomId} booking notification "
-                    else -> "Failed to schedule notification."
-                }
-            }
-
-            snackbarHostState.showSnackbar(
-                message = "$baseMessage$warning",
-                duration = SnackbarDuration.Short
-            )
-        }
-    }
 
     Column(
         modifier = modifier
