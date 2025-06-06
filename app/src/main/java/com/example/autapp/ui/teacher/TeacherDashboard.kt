@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.opengl.ETC1.isValid
 import androidx.compose.foundation.clickable
 import android.app.TimePickerDialog as AndroidTimePickerDialog
@@ -692,148 +693,148 @@ fun AddMaterialDialog(
     onDismiss: () -> Unit,
     onConfirm: (title: String, description: String, type: String, contentUrl: String) -> Unit
 ) {
-
-
-    // input fields
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("PDF") }
     var contentUrl by remember { mutableStateOf("") }
 
-    // Options for the type dropdown
     val typeOptions = listOf("PDF", "Link", "Video", "Slides")
     var expanded by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-    val fileLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { selectedUri ->
-            contentUrl = selectedUri.toString()
-        }
-    }
 
 
 
-    // Material input dialog
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add Course Material") },
-        text = {
-            Column {
-                Text("Course ID: $courseId", style = MaterialTheme.typography.bodySmall)
-                Spacer(modifier = Modifier.height(8.dp))
+    Box(modifier = Modifier.fillMaxSize()) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Add Course Material") },
+            text = {
+                Column {
+                    Text("Course ID: $courseId", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                // Title input
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Description input
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Dropdown menu for material type
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = true }) {
                     OutlinedTextField(
-                        value = type,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Material Type") },
-                        trailingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = null
-                            )
-                        },
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("Title") },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        typeOptions.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option) },
-                                onClick = {
-                                    type = option
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Content URL input
-                OutlinedTextField(
-                    value = contentUrl,
-                    onValueChange = { contentUrl = it },
-                    label = { Text("Content URL") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                if (type != "Link") {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = {
-                        val mimeType = when (type) {
-                            "PDF" -> "application/pdf"
-                            "Video" -> "video/*"
-                            "Slides" -> "application/vnd.ms-powerpoint"
-                            else -> "*/*"
+
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Description") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Material type dropdown
+                    Box {
+                        OutlinedTextField(
+                            value = type,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Material Type") },
+                            trailingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    modifier = Modifier.clickable { expanded = true }
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth().clickable { expanded = true }
+                        )
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            typeOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        type = option
+                                        expanded = false
+                                    }
+                                )
+                            }
                         }
-                        fileLauncher.launch(mimeType)
-                    }) {
-                        Text("Browse File")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Google Drive or direct URL input
+                    OutlinedTextField(
+                        value = contentUrl,
+                        onValueChange = { contentUrl = it },
+                        label = { Text("Google Drive Link or URL") },
+                        placeholder = { Text("Paste the link here...") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (type != "Link") {
+                        Button(onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                data = Uri.parse("https://drive.google.com/drive/my-drive")
+                                setPackage("com.google.android.apps.docs")
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                val fallbackIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://drive.google.com/drive/my-drive"))
+                                context.startActivity(fallbackIntent)
+                            }
+                        }) {
+                            Text("Browse Google Drive")
+                        }
+                    }
+
+                    if (contentUrl.isNotBlank() && !MaterialValidator.isValidContent(type, contentUrl)) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Invalid content format for selected type or invalid link.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
+            },
+
+
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (MaterialValidator.isValidContent(type, contentUrl)) {
+                            onConfirm(title, description, type, contentUrl)
+                        } else {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Invalid format or unsupported link type.")
+                            }
+                        }
+                    },
+                    enabled = title.isNotBlank() && description.isNotBlank() && contentUrl.isNotBlank() && MaterialValidator.isValidContent(type, contentUrl
+                    )
+                ) {
+                    Text("Add")
+                }
+            },
+
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
             }
-
-
-
-
-        },
-        // Confirm button triggers onConfirm with entered values
-        confirmButton = {
-            Button(
-                onClick = {
-                    onConfirm(title, description, type, contentUrl)
-                },
-                enabled = title.isNotBlank() && description.isNotBlank() && contentUrl.isNotBlank() &&  MaterialValidator.isValidContent(type, contentUrl)
-            ) {
-                Text("Add")
-
-            }
-            if (contentUrl.isNotBlank() && !MaterialValidator.isValidContent(type, contentUrl)) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Invalid content format for selected material type.",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-        },
-        // Cancel button to close the dialog
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-
-    )
-
+        )
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
 }
+
 
 @Composable
 fun AddGradeDialog(
@@ -1002,7 +1003,9 @@ fun EditGradesDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
+
     )
+
 }
 
 @Composable
