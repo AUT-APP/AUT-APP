@@ -6,7 +6,8 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 
-class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotification>("notifications") {
+class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotification>("notifications"),
+    NotificationRepository {
     private val firestore = FirebaseFirestore.getInstance()
 
     override fun documentToObject(documentId: String, document: Map<String, Any?>): FirebaseNotification {
@@ -36,7 +37,7 @@ class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotificati
     }
 
 
-    suspend fun getRecentNotificationsForUser(limit: Int, userId: String, isTeacher: Boolean): List<FirebaseNotification> {
+    override suspend fun getRecentNotificationsForUser(limit: Int, userId: String, isTeacher: Boolean): List<FirebaseNotification> {
         return try {
             val snapshot = collection
                 .whereEqualTo("userId", userId)
@@ -64,7 +65,7 @@ class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotificati
         }
     }
 
-    suspend fun deleteNotificationsForUser(userId: String, isTeacher: Boolean): Boolean {
+    override suspend fun deleteNotificationsForUser(userId: String, isTeacher: Boolean): Boolean {
         return try {
             val query = collection
                 .whereEqualTo("userId", userId)

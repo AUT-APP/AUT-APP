@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 const val TAG = "NotificationViewModel"
 class NotificationViewModel(
-    private val notificationRepository: FirebaseNotificationRepository
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     private var _userId: String = ""

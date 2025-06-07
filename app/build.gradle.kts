@@ -111,6 +111,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.inline)
+    testImplementation("org.robolectric:robolectric:4.14.1")
 
     // For instrumented tests (androidTest)
     androidTestImplementation("org.mockito:mockito-android:5.2.0")
