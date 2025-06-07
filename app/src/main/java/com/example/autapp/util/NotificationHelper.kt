@@ -68,7 +68,7 @@ object NotificationHelper {
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             // Log an error or handle missing permission
-            println("Error: POST_NOTIFICATIONS permission missing.")
+            Log.w(TAG, "POST_NOTIFICATIONS permission missing.")
             return
         }
 
