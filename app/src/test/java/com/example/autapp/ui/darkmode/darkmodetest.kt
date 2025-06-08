@@ -30,13 +30,12 @@ class DarkModeTest {
     }
 
     @Test
-    fun `default dark mode is off`() = runBlocking {
-        // Given a fresh data store with no preference set,
-        // When querying isDarkMode
-        val defaultDarkMode: Boolean = settingsDataStore.isDarkMode.first()
+    fun `isdarkmode is true when enabled`() = runBlocking {
+        // When setting dark mode to true
+        settingsDataStore.setDarkMode(true)
 
-        // Then it should be false
-        assertFalse(defaultDarkMode)
+        // Then isDarkMode should be true
+        assertTrue(settingsDataStore.isDarkMode.first())
     }
 
     @Test
