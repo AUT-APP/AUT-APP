@@ -49,10 +49,10 @@ class NotificationReceiver : BroadcastReceiver() {
                     iconResId = R.drawable.ic_notification, // Your icon
                     title = title,
                     text = text,
-                    channelId = NotificationHelper.HIGH_PRIORITY_CHANNEL_ID,
+                    priority = NotificationCompat.PRIORITY_DEFAULT,
                     deepLinkUri = deepLinkUri,
-                    priority = NotificationCompat.PRIORITY_DEFAULT
-
+                    channelId = NotificationHelper.HIGH_PRIORITY_CHANNEL_ID,
+                    timestamp = System.currentTimeMillis()
                 )
                 NotificationHelper.pushNotification(context, notification)
 
@@ -69,7 +69,8 @@ class NotificationReceiver : BroadcastReceiver() {
                             isTeacher = isTeacher,
                             notificationType = notificationType,
                             relatedItemId = relatedItemId,
-                            scheduledDeliveryTime = scheduledDeliveryTime
+                            scheduledDeliveryTime = scheduledDeliveryTime,
+                            channelId = NotificationHelper.HIGH_PRIORITY_CHANNEL_ID
                         )
                     )
                     Log.d(TAG, "Logged notification ID: ${notification.notificationId}")

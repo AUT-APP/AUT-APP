@@ -379,6 +379,7 @@ data class FirebaseNotification(
     var priority: Int = NotificationCompat.PRIORITY_DEFAULT,
     var deepLinkUri: String? = null,
     var channelId: String,
+    var iconResId: Int = 0,
     var timestamp: Long = System.currentTimeMillis()
 )
 

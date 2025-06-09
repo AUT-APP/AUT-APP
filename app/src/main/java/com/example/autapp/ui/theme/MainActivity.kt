@@ -58,9 +58,6 @@ import com.example.autapp.ui.login.LoginViewModel
 import com.example.autapp.ui.notification.NotificationViewModel
 import com.example.autapp.ui.settings.SettingsViewModel
 import com.example.autapp.ui.teacher.TeacherDashboardViewModel
-import com.example.autapp.data.models.TimetableEntry
-import com.example.autapp.data.models.User
-import com.example.autapp.ui.StudentDashboard
 import com.example.autapp.ui.material.CourseMaterialScreen
 import com.example.autapp.ui.material.CourseMaterialViewModel
 

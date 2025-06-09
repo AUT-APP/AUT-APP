@@ -24,6 +24,8 @@ class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotificati
             relatedItemId = document["relatedItemId"] as? String ?: "",
             scheduledDeliveryTime = (document["scheduledDeliveryTime"] as? com.google.firebase.Timestamp)?.toDate()
                 ?: Date(),
+            channelId = document["channelId"] as? String ?: "default_channel",
+            iconResId = (document["iconResId"] as? Number)?.toInt() ?: 0
         )
     }
 
@@ -35,7 +37,9 @@ class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotificati
             "isTeacher" to obj.isTeacher,
             "notificationType" to obj.notificationType,
             "relatedItemId" to obj.relatedItemId,
-            "scheduledDeliveryTime" to obj.scheduledDeliveryTime
+            "scheduledDeliveryTime" to obj.scheduledDeliveryTime,
+            "channelId" to obj.channelId,
+            "iconResId" to obj.iconResId
         )
     }
 
@@ -99,14 +103,19 @@ class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotificati
                     try {
                         doc.data?.let { data ->
                             FirebaseNotification(
-                                notificationId = doc.id.hashCode(),
+                                notificationId = doc.id,
                                 iconResId = (data["iconResId"] as? Number)?.toInt() ?: 0,
                                 title = data["title"] as? String ?: "",
                                 text = data["text"] as? String ?: "",
                                 channelId = data["channelId"] as? String ?: "",
                                 priority = (data["priority"] as? Number)?.toInt() ?: 0,
                                 deepLinkUri = data["deepLinkUri"] as? String,
-                                timestamp = (data["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis()
+                                timestamp = (data["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis(),
+                                userId = data["userId"] as? String ?: "",
+                                isTeacher = data["isTeacher"] as? Boolean == true,
+                                notificationType = data["notificationType"] as? String ?: "",
+                                relatedItemId = data["relatedItemId"] as? String ?: "",
+                                scheduledDeliveryTime = (data["scheduledDeliveryTime"] as? com.google.firebase.Timestamp)?.toDate() ?: Date()
                             )
                         }
                     } catch (e: Exception) {

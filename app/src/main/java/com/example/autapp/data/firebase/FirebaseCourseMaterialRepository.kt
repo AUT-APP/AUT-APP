@@ -88,7 +88,16 @@ class FirebaseCourseMaterialRepository(
                 text = "New ${savedMaterial.type.lowercase()} material \"${savedMaterial.title}\" was uploaded for $courseTitle ($courseCode)",
                 material = savedMaterial
             )
-            notificationRepository.create(notification.toFirebaseNotification())
+            notificationRepository.create(
+                notification.toFirebaseNotification(
+                    userId = material.courseId, // or the actual userId if available
+                    isTeacher = false, // or actual value if available
+                    notificationType = "material",
+                    relatedItemId = material.materialId,
+                    scheduledDeliveryTime = java.util.Date(System.currentTimeMillis()),
+                    channelId = MATERIAL_CHANNEL_ID
+                )
+            )
             NotificationHelper.pushNotification(context, notification)
             true
         } catch (e: Exception) {
@@ -108,7 +117,16 @@ class FirebaseCourseMaterialRepository(
                 text = "${material.type} material \"${material.title}\" was updated for $courseTitle ($courseCode)",
                 material = material
             )
-            notificationRepository.create(notification.toFirebaseNotification())
+            notificationRepository.create(
+                notification.toFirebaseNotification(
+                    userId = material.courseId, // or the actual userId if available
+                    isTeacher = false, // or actual value if available
+                    notificationType = "material",
+                    relatedItemId = material.materialId,
+                    scheduledDeliveryTime = java.util.Date(System.currentTimeMillis()),
+                    channelId = MATERIAL_CHANNEL_ID
+                )
+            )
             NotificationHelper.pushNotification(context, notification)
             true
         } catch (e: Exception) {
@@ -128,7 +146,16 @@ class FirebaseCourseMaterialRepository(
                 text = "${material.type} material \"${material.title}\" was deleted from $courseTitle ($courseCode)",
                 material = material
             )
-            notificationRepository.create(notification.toFirebaseNotification())
+            notificationRepository.create(
+                notification.toFirebaseNotification(
+                    userId = material.courseId, // or the actual userId if available
+                    isTeacher = false, // or actual value if available
+                    notificationType = "material",
+                    relatedItemId = material.materialId,
+                    scheduledDeliveryTime = java.util.Date(System.currentTimeMillis()),
+                    channelId = MATERIAL_CHANNEL_ID
+                )
+            )
             NotificationHelper.pushNotification(context, notification)
             true
         } catch (e: Exception) {
