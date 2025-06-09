@@ -27,6 +27,7 @@ class Notification(
         notificationType: String,
         relatedItemId: String,
         scheduledDeliveryTime: Date,
+        channelId: String
     ): com.example.autapp.data.firebase.FirebaseNotification {
         return com.example.autapp.data.firebase.FirebaseNotification(
             userId = userId,
@@ -36,6 +37,7 @@ class Notification(
             scheduledDeliveryTime = scheduledDeliveryTime,
             title = this.title,
             text = this.text,
+            channelId = channelId
         )
     }
 }

@@ -8,6 +8,7 @@ import com.example.autapp.data.models.StudySpace
 import com.example.autapp.data.models.Booking
 import com.example.autapp.data.models.Notification
 import java.util.UUID
+import com.example.autapp.R
 
 // Base user model for authentication
 data class FirebaseUser(
@@ -413,8 +414,8 @@ data class FirebaseChatMessage(
 // Extension function to convert FirebaseNotification to Notification
 fun FirebaseNotification.toNotification(): Notification {
     return Notification(
-        notificationId = this.notificationId,
-        iconResId = this.iconResId,
+        notificationId = 0, // or parseInt(this.notificationId) if you want
+        iconResId = R.drawable.ic_notification, // Use your default icon
         title = this.title,
         text = this.text,
         priority = this.priority,
