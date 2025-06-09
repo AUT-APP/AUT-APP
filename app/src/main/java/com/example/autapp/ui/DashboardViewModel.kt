@@ -1,5 +1,6 @@
 package com.example.autapp.ui
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,19 +18,25 @@ import com.example.autapp.data.firebase.FirebaseCourseRepository
 import com.example.autapp.data.firebase.FirebaseGradeRepository
 import com.example.autapp.data.firebase.FirebaseAssignmentRepository
 import com.example.autapp.data.firebase.FirebaseTimetableRepository
+import com.example.autapp.data.firebase.FirebaseNotificationRepository
+import com.example.autapp.data.models.Notification
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.google.firebase.firestore.ListenerRegistration
+import com.example.autapp.data.firebase.FirebaseNotification
+import com.example.autapp.util.NotificationHelper
 
 class DashboardViewModel(
     private val studentRepository: FirebaseStudentRepository,
     private val courseRepository: FirebaseCourseRepository,
     private val gradeRepository: FirebaseGradeRepository,
     private val assignmentRepository: FirebaseAssignmentRepository,
-    private val timetableEntryRepository: FirebaseTimetableRepository
+    private val timetableEntryRepository: FirebaseTimetableRepository,
+    private val notificationRepository: FirebaseNotificationRepository
 ) : ViewModel() {
 
     var studentId by mutableStateOf("")
@@ -39,6 +46,9 @@ class DashboardViewModel(
     var studentGpa by mutableStateOf<Double?>(null)
     var errorMessage by mutableStateOf<String?>(null)
     var isRefreshing by mutableStateOf(false)
+    var notifications by mutableStateOf<List<FirebaseNotification>>(emptyList())
+    private var notificationListener: ListenerRegistration? = null
+    
     private val _timetableEntries = MutableStateFlow<List<FirebaseTimetableEntry>>(emptyList())
     val timetableEntries: StateFlow<List<FirebaseTimetableEntry>> = _timetableEntries.asStateFlow()
 
@@ -48,6 +58,19 @@ class DashboardViewModel(
     fun initialize(studentId: String) {
         this.studentId = studentId
         fetchDashboardData()
+        setupNotificationListener()
+    }
+
+    private fun setupNotificationListener() {
+        notificationListener?.remove()
+        notificationListener = notificationRepository.getNotificationsRealtime { newNotifications ->
+            notifications = newNotifications.sortedByDescending { it.timestamp }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        notificationListener?.remove()
     }
 
     fun fetchDashboardData() {
@@ -148,7 +171,8 @@ class DashboardViewModel(
                     application.courseRepository,
                     application.gradeRepository,
                     application.assignmentRepository,
-                    application.timetableEntryRepository
+                    application.timetableEntryRepository,
+                    application.notificationRepository
                 )
             }
         }

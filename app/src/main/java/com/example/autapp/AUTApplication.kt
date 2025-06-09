@@ -21,7 +21,7 @@ class AUTApplication : Application() {
     val notificationRepository by lazy { com.example.autapp.data.firebase.FirebaseNotificationRepository() }
     val activityLogRepository by lazy { com.example.autapp.data.firebase.FirebaseActivityLogRepository() }
     val eventRepository by lazy { com.example.autapp.data.firebase.FirebaseEventRepository() }
-    val courseMaterialRepository by lazy { com.example.autapp.data.firebase.FirebaseCourseMaterialRepository(notificationRepository) }
+    val courseMaterialRepository by lazy { com.example.autapp.data.firebase.FirebaseCourseMaterialRepository(notificationRepository, courseRepository) }
     val timetableNotificationPreference by lazy { com.example.autapp.data.firebase.FirebaseTimetableNotificationPreference() }
     val busScheduleRepository by lazy { FirebaseBusScheduleRepository(com.google.firebase.firestore.FirebaseFirestore.getInstance()) }
 
@@ -30,7 +30,7 @@ class AUTApplication : Application() {
         // Initialize ThreeTenABP for date/time handling
         AndroidThreeTen.init(this)
         // Create notification channels for the app
-        NotificationHelper.createNotificationChannels(this)
+        com.example.autapp.util.NotificationHelper.createNotificationChannels(this)
         android.util.Log.d("AUTApplication", "Application initialized")
     }
 }

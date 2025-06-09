@@ -1,19 +1,20 @@
 package com.example.autapp.data.firebase
 
+import android.content.Context
+import android.util.Log
 import com.example.autapp.data.models.CourseMaterial
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
-import java.lang.Exception
-import android.content.Context
-import android.util.Log
 import com.example.autapp.data.models.Notification
 import com.example.autapp.util.NotificationHelper
 import androidx.core.app.NotificationCompat
 import com.example.autapp.R
+import com.example.autapp.data.firebase.FirebaseCourseRepository
 
 class FirebaseCourseMaterialRepository(
-    private val notificationRepository: FirebaseNotificationRepository
+    private val notificationRepository: FirebaseNotificationRepository,
+    private val courseRepository: FirebaseCourseRepository
 ) : BaseFirebaseRepository<CourseMaterial>("course_materials") {
 
     companion object {
@@ -79,13 +80,14 @@ class FirebaseCourseMaterialRepository(
         return try {
             val savedId = create(material)
             val savedMaterial = material.copy(materialId = savedId)
-
+            val course = courseRepository.getById(savedMaterial.courseId)
+            val courseTitle = course?.title ?: "Unknown Course"
+            val courseCode = course?.name ?: savedMaterial.courseId
             val notification = buildMaterialNotification(
-                title = "New ${savedMaterial.type} Material Added",
-                text = "${savedMaterial.title} was uploaded for Course ${savedMaterial.courseId}.",
+                title = "New ${savedMaterial.type} material added",
+                text = "New ${savedMaterial.type.lowercase()} material \"${savedMaterial.title}\" was uploaded for $courseTitle ($courseCode)",
                 material = savedMaterial
             )
-
             notificationRepository.create(notification.toFirebaseNotification())
             NotificationHelper.pushNotification(context, notification)
             true
@@ -98,13 +100,14 @@ class FirebaseCourseMaterialRepository(
     suspend fun updateMaterialAndNotify(material: CourseMaterial, context: Context): Boolean {
         return try {
             update(material.materialId, material)
-
+            val course = courseRepository.getById(material.courseId)
+            val courseTitle = course?.title ?: "Unknown Course"
+            val courseCode = course?.name ?: material.courseId
             val notification = buildMaterialNotification(
-                title = "${material.type} Material Updated",
-                text = "${material.title} was updated for Course ${material.courseId}.",
+                title = "${material.type} material updated",
+                text = "${material.type} material \"${material.title}\" was updated for $courseTitle ($courseCode)",
                 material = material
             )
-
             notificationRepository.create(notification.toFirebaseNotification())
             NotificationHelper.pushNotification(context, notification)
             true
@@ -117,13 +120,14 @@ class FirebaseCourseMaterialRepository(
     suspend fun deleteMaterialAndNotify(material: CourseMaterial, context: Context): Boolean {
         return try {
             delete(material.materialId)
-
+            val course = courseRepository.getById(material.courseId)
+            val courseTitle = course?.title ?: "Unknown Course"
+            val courseCode = course?.name ?: material.courseId
             val notification = buildMaterialNotification(
-                title = "${material.type} Material Deleted",
-                text = "${material.title} was removed from Course ${material.courseId}.",
+                title = "${material.type} material deleted",
+                text = "${material.type} material \"${material.title}\" was deleted from $courseTitle ($courseCode)",
                 material = material
             )
-
             notificationRepository.create(notification.toFirebaseNotification())
             NotificationHelper.pushNotification(context, notification)
             true

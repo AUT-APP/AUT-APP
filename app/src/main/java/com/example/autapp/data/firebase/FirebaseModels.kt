@@ -6,6 +6,7 @@ import java.util.Date
 import androidx.core.app.NotificationCompat
 import com.example.autapp.data.models.StudySpace
 import com.example.autapp.data.models.Booking
+import com.example.autapp.data.models.Notification
 
 // Base user model for authentication
 data class FirebaseUser(
@@ -383,4 +384,18 @@ data class FirebaseChatMessage(
     val timestamp: Date? = null,
     val isRead: Boolean = false,
     val type: String = "TEXT" // TEXT, IMAGE, FILE
-) 
+)
+
+// Extension function to convert FirebaseNotification to Notification
+fun FirebaseNotification.toNotification(): Notification {
+    return Notification(
+        notificationId = this.notificationId,
+        iconResId = this.iconResId,
+        title = this.title,
+        text = this.text,
+        priority = this.priority,
+        deepLinkUri = this.deepLinkUri,
+        channelId = this.channelId,
+        timestamp = this.timestamp
+    )
+} 

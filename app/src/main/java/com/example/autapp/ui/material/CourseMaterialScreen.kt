@@ -37,8 +37,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
-
-
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 
 @Composable
 fun CourseMaterialScreen(
@@ -48,18 +50,15 @@ fun CourseMaterialScreen(
     isTeacher: Boolean,
     onEditMaterial: (CourseMaterial) -> Unit,
     onDeleteMaterial: (CourseMaterial) -> Unit
-
 ) {
-    // Collect the list of course materials from the ViewModel
     val materialList by viewModel.materials.collectAsState()
     var materialToDelete by remember { mutableStateOf<CourseMaterial?>(null) }
     var materialToEdit by remember { mutableStateOf<CourseMaterial?>(null) }
     var selectedPdfUri by remember { mutableStateOf<Uri?>(null) }
-
-
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabs = listOf("All", "PDFs", "Links", "Videos", "Slides")
 
     val context = LocalContext.current
-
 
     // Load materials whenever the courseId changes
     LaunchedEffect(courseId) {
@@ -80,8 +79,41 @@ fun CourseMaterialScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Tab Row
+        TabRow(
+            selectedTabIndex = selectedTabIndex,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+            indicator = { tabPositions ->
+                TabRowDefaults.Indicator(
+                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        ) {
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTabIndex == index,
+                    onClick = { selectedTabIndex = index },
+                    text = { Text(title) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Filter materials based on selected tab
+        val filteredMaterials = when (selectedTabIndex) {
+            0 -> materialList // All
+            1 -> materialList.filter { it.type == "PDF" }
+            2 -> materialList.filter { it.type == "Link" }
+            3 -> materialList.filter { it.type == "Video" }
+            4 -> materialList.filter { it.type == "Slides" }
+            else -> materialList
+        }
+
         // List of materials in a scrollable list
-        if (materialList.isEmpty()) {
+        if (filteredMaterials.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -89,101 +121,31 @@ fun CourseMaterialScreen(
                 contentAlignment = Alignment.TopCenter
             ) {
                 Text(
-                    text = "No materials available for this course.",
+                    text = when (selectedTabIndex) {
+                        0 -> "No materials available for this course."
+                        1 -> "No PDF materials available."
+                        2 -> "No link materials available."
+                        3 -> "No video materials available."
+                        4 -> "No slide materials available."
+                        else -> "No materials available."
+                    },
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(materialList) { material ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(4.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = material.title,
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    Text(
-                                        text = "Type: ${material.type}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = material.description,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            if (!material.contentUrl.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    when (material.type) {
-                                        "PDF" -> {
-                                            Button(onClick = {
-                                                openInAppOrBrowser(context, material.contentUrl)
-                                            }) {
-                                                Text("Open PDF")
-                                            }
-                                        }
-                                        "Video" -> {
-                                            Button(onClick = {
-                                                openInAppOrBrowser(context, material.contentUrl)
-                                            }) {
-                                                Text("Open Video")
-                                            }
-                                        }
-                                        "Slides" -> {
-                                            Button(onClick = {
-                                                openInAppOrBrowser(context, material.contentUrl)
-                                            }) {
-                                                Text("Open Slide")
-                                            }
-                                        }
-                                        "Link" -> {
-                                            Button(onClick = {
-                                                openInAppOrBrowser(context, material.contentUrl)
-                                            }) {
-                                                Text("Open Link")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-
-                            if (isTeacher) {
-                                Row {
-                                    IconButton(onClick = { materialToEdit = material }) {
-                                        Icon(Icons.Default.Edit, contentDescription = "Edit")
-                                    }
-                                    IconButton(onClick = { materialToDelete = material }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete")
-                                    }
-                                }
-                            }
-
-                        }
-                    }
+                items(filteredMaterials) { material ->
+                    MaterialCard(
+                        material = material,
+                        isTeacher = isTeacher,
+                        onEdit = { materialToEdit = material },
+                        onDelete = { materialToDelete = material },
+                        context = context
+                    )
                 }
-
             }
         }
-
 
         materialToDelete?.let { material ->
             AlertDialog(
@@ -206,7 +168,6 @@ fun CourseMaterialScreen(
             )
         }
 
-
         materialToEdit?.let { material ->
             EditMaterialDialog(
                 material = material,
@@ -217,8 +178,68 @@ fun CourseMaterialScreen(
                 }
             )
         }
+    }
+}
 
+@Composable
+private fun MaterialCard(
+    material: CourseMaterial,
+    isTeacher: Boolean,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    context: Context
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = material.title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Type: ${material.type}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                
+                if (isTeacher) {
+                    Row {
+                        IconButton(onClick = onEdit) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        }
+                        IconButton(onClick = onDelete) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        }
+                    }
+                }
+            }
 
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = material.description,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            
+            if (!material.contentUrl.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { openInAppOrBrowser(context, material.contentUrl) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Open ${material.type}")
+                }
+            }
+        }
     }
 }
 
@@ -243,9 +264,6 @@ fun openInAppOrBrowser(context: Context, url: String?, appPackage: String? = nul
     context.startActivity(browserIntent)
 }
 
-
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditMaterialDialog(
@@ -263,9 +281,6 @@ fun EditMaterialDialog(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-
-
-
 
     Box(modifier = Modifier.fillMaxSize()) {
         AlertDialog(

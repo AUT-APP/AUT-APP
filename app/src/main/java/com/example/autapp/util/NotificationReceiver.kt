@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.example.autapp.AUTApplication
 import com.example.autapp.R
 import com.example.autapp.data.datastores.SettingsDataStore
@@ -42,7 +43,8 @@ class NotificationReceiver : BroadcastReceiver() {
                     title = title,
                     text = text,
                     channelId = NotificationHelper.HIGH_PRIORITY_CHANNEL_ID,
-                    deepLinkUri = deepLinkUri
+                    deepLinkUri = deepLinkUri,
+                    priority = NotificationCompat.PRIORITY_DEFAULT
 
                 )
                 NotificationHelper.pushNotification(context, notification)

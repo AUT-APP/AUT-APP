@@ -22,6 +22,8 @@ import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.core.net.toUri
+import androidx.core.app.TaskStackBuilder
+import androidx.core.content.ContextCompat
 
 object NotificationHelper {
 
@@ -35,6 +37,10 @@ object NotificationHelper {
     const val HIGH_PRIORITY_CHANNEL_ID = "high_priority_channel"
     const val HIGH_PRIORITY_CHANNEL_NAME = "High Priority Notifications"
     const val HIGH_PRIORITY_CHANNEL_DESC = "Urgent app notifications"
+
+    const val MATERIAL_CHANNEL_ID = "material_channel"
+    const val MATERIAL_CHANNEL_NAME = "Material Notifications"
+    const val MATERIAL_CHANNEL_DESC = "Notifications for course materials"
 
     /*
     fun requestNotificationPermission() {
@@ -136,11 +142,21 @@ object NotificationHelper {
             description = HIGH_PRIORITY_CHANNEL_DESC
         }
 
+        // Material Channel
+        val materialChannel = NotificationChannel(
+            MATERIAL_CHANNEL_ID,
+            MATERIAL_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = MATERIAL_CHANNEL_DESC
+        }
+
         val notificationManager: NotificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         notificationManager.createNotificationChannel(defaultChannel)
         notificationManager.createNotificationChannel(highPriorityChannel)
+        notificationManager.createNotificationChannel(materialChannel)
     }
 
     /**
@@ -149,5 +165,32 @@ object NotificationHelper {
     fun cancelNotification(context: Context, notificationId: Int) {
         val notificationManager = NotificationManagerCompat.from(context)
         notificationManager.cancel(notificationId)
+    }
+
+    fun pushNotification(context: Context, notification: Notification) {
+        val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
+        if (notificationManager == null) return
+
+        val intent = Intent(Intent.ACTION_VIEW, notification.deepLinkUri?.toUri())
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+        val pendingIntent = TaskStackBuilder.create(context).run {
+            addNextIntentWithParentStack(intent)
+            getPendingIntent(
+                notification.notificationId.hashCode(),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        val builder = NotificationCompat.Builder(context, notification.channelId ?: DEFAULT_CHANNEL_ID)
+            .setSmallIcon(notification.iconResId ?: R.drawable.ic_notification)
+            .setContentTitle(notification.title)
+            .setContentText(notification.text)
+            .setPriority(notification.priority ?: NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setWhen(notification.timestamp ?: System.currentTimeMillis())
+
+        notificationManager.notify(notification.notificationId.hashCode(), builder.build())
     }
 }

@@ -1,5 +1,7 @@
 package com.example.autapp.ui.theme
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -16,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.example.autapp.AUTApplication
 import com.example.autapp.ui.admin.AdminDashboardScreen
 import com.example.autapp.ui.booking.BookingDetailsScreen
@@ -871,7 +874,8 @@ fun AppContent(
         }
         composable(
             route = "materials/{courseId}",
-            arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            arguments = listOf(navArgument("courseId") { type = NavType.StringType }),
+            deepLinks = listOf(navDeepLink { uriPattern = "myapp://materials/{courseId}" })
         ) { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
 

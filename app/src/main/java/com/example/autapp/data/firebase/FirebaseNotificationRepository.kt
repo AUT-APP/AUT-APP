@@ -3,8 +3,11 @@ package com.example.autapp.data.firebase
 import com.example.autapp.data.models.Notification
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.tasks.await
 import java.util.Date
+import java.lang.Exception
+import android.util.Log
 
 class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotification>("notifications") {
     private val firestore = FirebaseFirestore.getInstance()
@@ -77,7 +80,7 @@ class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotificati
         return try {
             val query = collection.whereEqualTo("notificationId", notificationId).get().await()
             if (query.isEmpty) return false
-            
+
             val doc = query.documents.first()
             doc.reference.delete().await()
             true
@@ -98,5 +101,39 @@ class FirebaseNotificationRepository : BaseFirebaseRepository<FirebaseNotificati
         } catch (e: Exception) {
             false
         }
+    }
+
+    fun getNotificationsRealtime(onUpdate: (List<FirebaseNotification>) -> Unit): ListenerRegistration {
+        return collection
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(50)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("NotificationRepo", "Error listening for notifications: ${error.message}")
+                    return@addSnapshotListener
+                }
+
+                val notifications = snapshot?.documents?.mapNotNull { doc ->
+                    try {
+                        doc.data?.let { data ->
+                            FirebaseNotification(
+                                notificationId = doc.id.hashCode(),
+                                iconResId = (data["iconResId"] as? Number)?.toInt() ?: 0,
+                                title = data["title"] as? String ?: "",
+                                text = data["text"] as? String ?: "",
+                                channelId = data["channelId"] as? String ?: "",
+                                priority = (data["priority"] as? Number)?.toInt() ?: 0,
+                                deepLinkUri = data["deepLinkUri"] as? String,
+                                timestamp = (data["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis()
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.e("NotificationRepo", "Error parsing notification: ${e.message}")
+                        null
+                    }
+                } ?: emptyList()
+
+                onUpdate(notifications)
+            }
     }
 }
