@@ -11,6 +11,67 @@ import java.util.Date
 object NotificationScheduler {
     const val TAG = "NotificationScheduler"
 
+    fun scheduleNotificationAt(
+        context: Context,
+        deepLinkUri: String,
+        notificationId: Int,
+        title: String,
+        text: String,
+        targetTime: Date,
+        minutesBefore: Int,
+        userId: String,
+        isTeacher: Boolean,
+        notificationType: String,
+        relatedItemId: String
+    ): Long {
+        Log.d(TAG, "Scheduling one-time notification ID: $notificationId at $targetTime minus $minutesBefore minutes")
+
+        val calendar = Calendar.getInstance().apply {
+            time = targetTime
+            add(Calendar.MINUTE, -minutesBefore)
+        }
+
+        val notifyAtMillis = calendar.timeInMillis
+
+        val intent = Intent(context, NotificationReceiver::class.java).apply {
+            putExtra("notificationId", notificationId)
+            putExtra("title", title)
+            putExtra("text", text)
+            putExtra("startTimeMillis", targetTime.time)
+            putExtra("minutesBefore", minutesBefore)
+            putExtra("deepLinkUri", deepLinkUri)
+            putExtra("userId", userId)
+            putExtra("isTeacher", isTeacher)
+            putExtra("notificationType", notificationType)
+            putExtra("relatedItemId", relatedItemId)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            notificationId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        try {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                notifyAtMillis,
+                pendingIntent
+            )
+            Log.d(TAG, "Scheduled alarm ID: $notificationId for ${Date(notifyAtMillis)}")
+            return notifyAtMillis
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Failed to schedule alarm: ${e.message}", e)
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Error scheduling alarm: ${e.message}", e)
+            throw e
+        }
+    }
+
+
     fun scheduleClassNotification(
         context: Context,
         deepLinkUri: String,
@@ -19,7 +80,11 @@ object NotificationScheduler {
         text: String,
         dayOfWeek: Int,
         startTime: Date,
-        minutesBefore: Int
+        minutesBefore: Int,
+        userId: String,
+        isTeacher: Boolean,
+        notificationType: String,
+        relatedItemId: String
     ): Long {
         Log.d(TAG, "Scheduling notification ID: $notificationId for dayOfWeek: $dayOfWeek, minutesBefore: $minutesBefore")
         val calendar = Calendar.getInstance().apply { time = startTime }
@@ -38,6 +103,10 @@ object NotificationScheduler {
             putExtra("startTimeMillis", startTime.time)
             putExtra("minutesBefore", minutesBefore)
             putExtra("deepLinkUri", deepLinkUri)
+            putExtra("userId", userId)
+            putExtra("isTeacher", isTeacher)
+            putExtra("notificationType", notificationType)
+            putExtra("relatedItemId", relatedItemId)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

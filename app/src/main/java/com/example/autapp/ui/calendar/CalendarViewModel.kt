@@ -1,5 +1,6 @@
 package com.example.autapp.ui.calendar
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -8,13 +9,17 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.autapp.AUTApplication
+import com.example.autapp.data.datastores.SettingsDataStore
 import com.example.autapp.data.firebase.*
+import com.example.autapp.util.NotificationScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import org.threeten.bp.LocalDate
 import org.threeten.bp.ZoneId
 import org.threeten.bp.Instant
@@ -45,7 +50,8 @@ data class CalendarUiState(
     val isLoading: Boolean = false, // Flag to indicate if data is currently being loaded.
     val isTeacher: Boolean,  // New field to track if user is a teacher
     val userId: String,
-    val courses: List<FirebaseCourse> = emptyList() // Added courses property
+    val courses: List<FirebaseCourse> = emptyList(), // Added courses property
+    val notificationPrefs: MutableMap<String, Int> = mutableMapOf() // classSessionId -> minutesBefore
 )
 
 class CalendarViewModel(
@@ -53,7 +59,11 @@ class CalendarViewModel(
     private val studentRepository: FirebaseStudentRepository,
     private val eventRepository: FirebaseEventRepository,
     private val bookingRepository: FirebaseBookingRepository,
-    private val courseRepository: FirebaseCourseRepository
+    private val courseRepository: FirebaseCourseRepository,
+    private val timetableNotificationPreferenceRepository: FirebaseTimetableNotificationPreferenceRepository,
+    private val eventNotificationPreferenceRepository: FirebaseEventNotificationPreferenceRepository,
+    private val bookingNotificationPreferenceRepository: FirebaseBookingNotificationPreferenceRepository,
+    private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState(isTeacher = false, userId = "")) // Private MutableStateFlow to hold the UI state.
@@ -63,6 +73,12 @@ class CalendarViewModel(
     private var _isTeacher: Boolean = false
     val userId: String get() = _userId
     val isTeacher: Boolean get() = _isTeacher
+
+    val notificationsEnabled = settingsDataStore.isNotificationsEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val remindersEnabled = settingsDataStore.isRemindersEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     // StateFlow to signal navigation to the ManageEventsScreen.
     private val _navigateToManageEvents = MutableStateFlow(false)
@@ -571,16 +587,213 @@ class CalendarViewModel(
         }
     }
 
+    /**
+     * Manages notification reminders for a specific item (Event, Timetable Entry, or Booking).
+     * This function updates the user's notification preference, cancels any existing alarm,
+     * and schedules a new alarm to deliver the notification `minutesBefore` the item's start time.
+     * Notifications for past times will not be scheduled.
+     */
+    suspend fun updateReminder(context: Context, event: FirebaseEvent, minutesBefore: Int
+    ): Long? = withContext(Dispatchers.IO) {
+        try {
+            val pref = FirebaseEventNotificationPreference(
+                studentId = event.studentId,
+                eventId = event.eventId,
+                notificationTime = minutesBefore,
+                isEnabled = true
+            )
+
+            // Save to DB
+            eventNotificationPreferenceRepository.insertOrUpdatePreference(pref)
+
+            // Cancel any existing alarm for this event session
+            val notificationId = event.eventId.hashCode()
+            NotificationScheduler.cancelScheduledNotification(context, notificationId)
+
+            // Schedule notification
+            val notificationText = when (minutesBefore) {
+                0 -> "Your event \"${event.title}\" is starting now!"
+                60 -> "Your event \"${event.title}\" is in an hour!"
+                else -> "Your event \"${event.title}\" is in $minutesBefore minutes!"
+            }
+
+            val startTimeMillis = event.startTime?.time
+            if (startTimeMillis  == null) {
+                _uiState.update {
+                    it.copy(errorMessage = "Cannot schedule notification: Event start time is missing.")
+                }
+                return@withContext null
+            }
+
+            val now = System.currentTimeMillis()
+            val scheduledTriggerTime = startTimeMillis - minutesBefore * 60 * 1000
+
+            if (scheduledTriggerTime <= now) {
+                _uiState.update {
+                    it.copy(errorMessage = "Cannot schedule notification for a past event/booking.")
+                }
+                return@withContext null
+            }
+
+            val currentUserId = _uiState.value.userId
+            val currentUserIsTeacher = _uiState.value.isTeacher
+
+            val scheduledTimeMillis = NotificationScheduler.scheduleNotificationAt(
+                context = context,
+                notificationId = notificationId,
+                title = "${event.title} starts soon!",
+                text = notificationText,
+                targetTime = event.startTime!!,
+                deepLinkUri = "myapp://dashboard/$currentUserId",
+                minutesBefore = minutesBefore,
+                userId = currentUserId,
+                isTeacher = currentUserIsTeacher,
+                notificationType = "EVENT",
+                relatedItemId = event.eventId
+
+            )
+            scheduledTimeMillis
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Failed to set event notification: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun updateReminder(
+            context: Context,
+            entry: FirebaseTimetableEntry,
+            minutesBefore: Int
+    ): Long? = withContext(Dispatchers.IO) {
+        try {
+            val classSessionId = entry.entryId
+            val courseName = courseRepository.getById(entry.courseId)?.name.orEmpty()
+
+            val currentUserId = _uiState.value.userId
+            val currentUserIsTeacher = _uiState.value.isTeacher
+
+            val pref = FirebaseTimetableNotificationPreference(
+                studentId = if (!currentUserIsTeacher) currentUserId else null, // only set for students
+                teacherId = if (currentUserIsTeacher) currentUserId else null,  // only set for teachers
+                classSessionId = classSessionId,
+                notificationTime = minutesBefore,
+                isEnabled = true,
+                isTeacher = currentUserIsTeacher
+            )
+
+            // Save to DB
+            timetableNotificationPreferenceRepository.insertOrUpdatePreference(pref)
+
+            // Update local state
+            _uiState.update { currentState ->
+                val updatedPrefs = currentState.notificationPrefs.apply {
+                    put(classSessionId, minutesBefore)
+                }
+                currentState.copy(notificationPrefs = updatedPrefs)
+            }
+
+            // Cancel any existing alarm for this class session
+            val notificationId = classSessionId.hashCode()
+            NotificationScheduler.cancelScheduledNotification(context, notificationId)
+
+            // Schedule notification
+            val notificationText = when (minutesBefore) {
+                0 -> "Your $courseName ${entry.type} at ${entry.room} is starting now!"
+                60 -> "Your $courseName ${entry.type} at ${entry.room} is coming up in an hour!"
+                else -> "Your $courseName ${entry.type} at ${entry.room} is coming up in $minutesBefore minutes!"
+            }
+            val scheduledTimeMillis = NotificationScheduler.scheduleClassNotification(
+                context = context,
+                notificationId = notificationId,
+                title = "$courseName starts soon!",
+                text = notificationText,
+                dayOfWeek = entry.dayOfWeek,
+                startTime = entry.startTime,
+                deepLinkUri = "myapp://dashboard/$currentUserId",
+                minutesBefore = minutesBefore,
+                userId = currentUserId,
+                isTeacher = currentUserIsTeacher,
+                notificationType = "TIMETABLE",
+                relatedItemId = entry.entryId
+            )
+            scheduledTimeMillis
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Failed to set class notification: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun updateReminder(context: Context, booking: FirebaseBooking, minutesBefore: Int
+    ): Long? = withContext(Dispatchers.IO) {
+        try {
+            val currentUserId = _uiState.value.userId
+            val currentUserIsTeacher = _uiState.value.isTeacher
+
+            val pref = FirebaseBookingNotificationPreference(
+                studentId = booking.studentId,
+                teacherId = null, // or use logic if needed
+                bookingId = booking.id,
+                notificationTime = minutesBefore,
+                isEnabled = true
+            )
+
+            // Save to DB
+            bookingNotificationPreferenceRepository.insertOrUpdatePreference(pref)
+
+            val startTimeMillis = booking.startTime.time
+            val now = System.currentTimeMillis()
+            val scheduledTriggerTime = startTimeMillis - minutesBefore * 60 * 1000
+
+            if (scheduledTriggerTime <= now) {
+                _uiState.update {
+                    it.copy(errorMessage = "Cannot schedule notification for a past event/booking.")
+                }
+                return@withContext null
+            }
+
+            // Cancel any existing alarm for this class session
+            val notificationId = booking.id.hashCode()
+            NotificationScheduler.cancelScheduledNotification(context, notificationId)
+
+            val notificationText = when (minutesBefore) {
+                0 -> "Your room booking at ${booking.building} is starting now!"
+                60 -> "Your room booking at ${booking.building} starts in an hour!"
+                else -> "Your room booking at ${booking.building} starts in $minutesBefore minutes!"
+            }
+            val scheduledTimeMillis = NotificationScheduler.scheduleNotificationAt(
+                context = context,
+                notificationId = notificationId,
+                title = "${booking.building} booking starts soon!",
+                text = notificationText,
+                targetTime = booking.startTime,
+                deepLinkUri = "myapp://dashboard/$currentUserId",
+                minutesBefore = minutesBefore,
+                userId = currentUserId,
+                isTeacher = currentUserIsTeacher,
+                notificationType = "BOOKING",
+                relatedItemId = booking.id
+            )
+            scheduledTimeMillis
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Failed to set booking notification: ${e.message}")
+            null
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = this[APPLICATION_KEY] as AUTApplication
+                val context = application.applicationContext
                 CalendarViewModel(
                     application.timetableEntryRepository,
                     application.studentRepository,
                     application.eventRepository,
                     application.bookingRepository,
-                    application.courseRepository
+                    application.courseRepository,
+                    application.timetableNotificationPreferenceRepository,
+                    application.eventNotificationPreferenceRepository,
+                    application.bookingNotificationPreferenceRepository,
+                    SettingsDataStore(context),
                 )
             }
         }

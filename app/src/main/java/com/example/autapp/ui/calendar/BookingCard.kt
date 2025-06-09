@@ -9,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
+import com.example.autapp.R
 import com.example.autapp.data.models.Booking
 import java.text.SimpleDateFormat
 import java.util.*
@@ -16,6 +18,7 @@ import java.util.*
 @Composable
 fun BookingCard(
     booking: Booking,
+    onReminderClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -30,12 +33,31 @@ fun BookingCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Room booking title
-            Text(
-                text = "Room Booking",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Room booking title
+                Text(
+                    text = "Room Booking",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.weight(1f)
+                )
+                val isPast = booking.startTime.time < System.currentTimeMillis()
+                IconButton(
+                    onClick = { if (!isPast) onReminderClick() },
+                    enabled = !isPast,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_notification),
+                        contentDescription = "Set Reminder",
+                        tint = if (isPast) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        else MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             // Time with icon
             Row(

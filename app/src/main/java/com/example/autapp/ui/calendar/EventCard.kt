@@ -1,28 +1,40 @@
 package com.example.autapp.ui.calendar
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.example.autapp.R
 import com.example.autapp.data.models.Event
-import java.util.Locale
-import java.util.Date
 import java.text.SimpleDateFormat
-import org.threeten.bp.Instant
-import org.threeten.bp.ZoneId
-import org.threeten.bp.LocalDate
+import java.util.Locale
 
 @Composable
 fun EventCard(
     event: Event,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onReminderClick: () -> Unit
 ) {
     // Card composable to display event information.
     // It's clickable to trigger the onClick lambda, likely for opening an edit/detail view.
@@ -43,11 +55,32 @@ fun EventCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
-                text = event.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Event title
+                Text(
+                    text = event.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
+                )
+                val isPast = event.startTime?.time?.let { it < System.currentTimeMillis() } == true
+                IconButton(
+                    onClick = { if (!isPast) onReminderClick() },
+                    enabled = !isPast,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_notification),
+                        contentDescription = "Set Reminder",
+                        tint = if (isPast) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        else MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
             if (event.isToDoList) {
                 Text(

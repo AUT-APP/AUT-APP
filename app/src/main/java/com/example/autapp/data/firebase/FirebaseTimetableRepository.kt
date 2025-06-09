@@ -1,6 +1,5 @@
 package com.example.autapp.data.firebase
 
-import com.example.autapp.data.models.TimetableEntry
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await

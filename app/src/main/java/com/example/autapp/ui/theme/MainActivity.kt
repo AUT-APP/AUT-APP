@@ -403,6 +403,7 @@ fun AppContent(
                     calendarViewModel.initialize(userId, isTeacher)
                 }
             }
+            val snackbarHostState = remember { SnackbarHostState() }
             Scaffold(
                 topBar = {
                     AUTTopAppBar(
@@ -432,6 +433,12 @@ fun AppContent(
                         },
                         currentUserRole = currentUserRole
                     )
+                },
+                snackbarHost = {
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(16.dp) // Ensure visibility
+                    )
                 }
             ) { paddingValues ->
                 CalendarScreen(
@@ -439,7 +446,8 @@ fun AppContent(
                     paddingValues = paddingValues,
                     onNavigateToManageEvents = {
                         navController.navigate("manage_events/$userId")
-                    }
+                    },
+                    snackbarHostState = snackbarHostState
                 )
             }
         }
@@ -779,10 +787,6 @@ fun AppContent(
                     viewModel = settingsViewModel,
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = onToggleTheme,
-                    isNotificationsEnabled = settingsViewModel.isNotificationsEnabled.collectAsState(initial = true).value,
-                    onToggleNotifications = { settingsViewModel.setNotificationsEnabled(it) },
-                    isClassRemindersEnabled = settingsViewModel.isClassRemindersEnabled.collectAsState(initial = true).value,
-                    onToggleClassReminders = { settingsViewModel.setClassRemindersEnabled(it) },
                     paddingValues = paddingValues
                 )
             }
@@ -794,7 +798,7 @@ fun AppContent(
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
             LaunchedEffect(userId, isTeacher) {
                 if (userId.isNotBlank()) {
-                    notificationViewModel.initialize(userId)
+                    notificationViewModel.initialize(userId, isTeacher)
                 }
             }
             val snackbarHostState = remember { SnackbarHostState() }

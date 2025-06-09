@@ -35,8 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.autapp.data.models.Event
-import com.example.autapp.data.models.Booking
 import com.example.autapp.data.firebase.FirebaseEvent
 import com.example.autapp.data.firebase.FirebaseBooking
 import com.example.autapp.data.firebase.FirebaseTimetableEntry
@@ -51,11 +49,24 @@ fun CalendarView(
     uiState: CalendarUiState,
     onDateSelected: (LocalDate) -> Unit,
     onEventClick: (FirebaseEvent) -> Unit,
+    onSetReminder: (Any, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // State to keep track of the currently displayed month and year.
     // Initialized with the month and year of the initially selected date from uiState.
     var currentYearMonth by remember { mutableStateOf(YearMonth.from(uiState.selectedDate)) }
+    var selectedEntryForReminder by remember { mutableStateOf<Any?>(null) }
+
+    selectedEntryForReminder?.let { selectedEntry ->
+        ReminderBottomSheet(
+            selectedEntry = selectedEntry,
+            onDismiss = { selectedEntryForReminder = null },
+            onSelectTime = { minutes ->
+                onSetReminder(selectedEntry, minutes)
+                selectedEntryForReminder = null
+            }
+        )
+    }
 
     Column(
         modifier = modifier.fillMaxWidth()
@@ -207,19 +218,33 @@ fun CalendarView(
                 items(selectedDateEntries) { entry: FirebaseTimetableEntry ->
                     val course = uiState.courses.find { it.courseId == entry.courseId.toString() }
                     if (course != null) {
-                        TimetableEntryCard(timetableEntry = entry, course = course)
+                        TimetableEntryCard(
+                            timetableEntry = entry,
+                            course = course,
+                            onReminderClick = {
+                                selectedEntryForReminder = entry
+                            }
+                        )
                     }
                 }
 
                 items(selectedDateEvents) { event: FirebaseEvent ->
                     EventCard(
                         event = event.toEvent(),
-                        onClick = { onEventClick(event) }
+                        onClick = { onEventClick(event) },
+                        onReminderClick = {
+                            selectedEntryForReminder = event
+                        }
                     )
                 }
 
                 items(selectedDateBookings) { booking: FirebaseBooking ->
-                    BookingCard(booking = booking.toBooking())
+                    BookingCard(
+                        booking = booking.toBooking(),
+                        onReminderClick = {
+                            selectedEntryForReminder = booking
+                        }
+                    )
                 }
             }
         } else {

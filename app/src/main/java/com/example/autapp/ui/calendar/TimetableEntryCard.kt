@@ -1,6 +1,8 @@
 package com.example.autapp.ui.calendar
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.LocationOn
@@ -12,12 +14,15 @@ import androidx.compose.ui.Alignment
 import com.example.autapp.data.firebase.FirebaseTimetableEntry
 import com.example.autapp.data.firebase.FirebaseCourse
 import java.text.SimpleDateFormat
+import androidx.compose.ui.res.painterResource
+import com.example.autapp.R
 
 @Composable
 fun TimetableEntryCard(
     timetableEntry: FirebaseTimetableEntry,
     course: FirebaseCourse,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onReminderClick: () -> Unit
 ) {
     Card(
         modifier = modifier,
@@ -31,12 +36,29 @@ fun TimetableEntryCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Course code and name
-            Text(
-                text = "${course.name} - ${course.title}",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Course code and name
+                Text(
+                    text = "${course.name} - ${course.title}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = onReminderClick,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_notification),
+                        contentDescription = "Set Reminder",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
             // Time with icon
             Row(
@@ -83,4 +105,4 @@ fun TimetableEntryCard(
             }
         }
     }
-} 
+}

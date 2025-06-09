@@ -1,24 +1,45 @@
 package com.example.autapp.ui.calendar
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.autapp.data.firebase.FirebaseEvent
-import com.example.autapp.data.models.Event
 
 @Composable
 fun CalendarScreen(
     viewModel: CalendarViewModel,
     paddingValues: PaddingValues,
     modifier: Modifier = Modifier,
-    onNavigateToManageEvents: () -> Unit
+    onNavigateToManageEvents: () -> Unit,
+    snackbarHostState: SnackbarHostState
 ) {
     // StateFlow for UI state from the ViewModel, collected as State
     val uiState by viewModel.uiState.collectAsState()
@@ -32,6 +53,10 @@ fun CalendarScreen(
     var showAddTodoDialog by remember { mutableStateOf(false) }
     // State to hold the currently selected event for editing or viewing details
     var selectedEvent by remember { mutableStateOf<FirebaseEvent?>(null) }
+
+    val notificationsEnabled: Boolean by viewModel.notificationsEnabled.collectAsState(initial = true)
+    val remindersEnabled: Boolean by viewModel.remindersEnabled.collectAsState(initial = true)
+
 
     // LaunchedEffect observes navigateToManageEvents. When true, it triggers navigation
     // and then calls a ViewModel function to reset the navigation trigger.
@@ -51,6 +76,14 @@ fun CalendarScreen(
             viewModel.fetchNextTwoWeeksData() // Fetch data for the next two weeks in Timetable View
         }
     }
+
+    val onSetReminder = rememberReminderScheduler(
+        snackbarHostState = snackbarHostState,
+        viewModel = viewModel,
+        uiState = uiState,
+        notificationsEnabled = notificationsEnabled,
+        remindersEnabled = remindersEnabled
+    )
 
     Column(
         modifier = modifier
@@ -137,11 +170,13 @@ fun CalendarScreen(
                 CalendarView(
                     uiState = uiState,
                     onDateSelected = viewModel::updateSelectedDate,
+                    onSetReminder = onSetReminder,
                     onEventClick = { selectedEvent = it }
                 )
             } else {
                 TimetableView(
                     uiState = uiState,
+                    onSetReminder = onSetReminder,
                     onEventClick = { selectedEvent = it }
                 )
             }

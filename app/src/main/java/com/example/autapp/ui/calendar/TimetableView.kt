@@ -6,6 +6,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
@@ -15,16 +19,26 @@ import com.example.autapp.data.firebase.FirebaseTimetableEntry
 import org.threeten.bp.LocalDate
 import org.threeten.bp.format.DateTimeFormatter
 import java.util.Date
-import java.util.Locale
-import java.text.SimpleDateFormat
-
 
 @Composable
 fun TimetableView(
     uiState: CalendarUiState,
     onEventClick: (FirebaseEvent) -> Unit,
+    onSetReminder: (Any, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var selectedEntryForReminder by remember { mutableStateOf<Any?>(null) }
+
+    selectedEntryForReminder?.let { selectedEntry ->
+        ReminderBottomSheet(
+            selectedEntry = selectedEntry,
+            onDismiss = { selectedEntryForReminder = null },
+            onSelectTime = { minutes ->
+                onSetReminder(selectedEntry, minutes)
+                selectedEntryForReminder = null
+            }
+        )
+    }
     val today = LocalDate.now()
     LazyColumn(
         modifier = modifier
@@ -46,11 +60,11 @@ fun TimetableView(
             }
 
             val eventsForDay = uiState.events.filter { event ->
-                event.date?.toLocalDate() == date
+                event.date.toLocalDate() == date
             }
 
             val bookingsForDay = uiState.bookings.filter { booking ->
-                booking.bookingDate?.toLocalDate() == date
+                booking.bookingDate.toLocalDate() == date
             }
 
             val entriesForThisDate = (timetableEntriesForDay + eventsForDay + bookingsForDay).sortedWith(compareBy { entry ->
@@ -103,7 +117,7 @@ fun TimetableView(
                 items(entries) { (date, entry) ->
                     when (entry) {
                         is FirebaseTimetableEntry -> {
-                            val timetableEntry = entry as FirebaseTimetableEntry
+                            val timetableEntry = entry
                             val course = uiState.courses.find { it.courseId == timetableEntry.courseId.toString() }
                             if (course != null) {
                                 TimetableEntryCard(
@@ -111,27 +125,36 @@ fun TimetableView(
                                     course = course,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
+                                        .padding(vertical = 4.dp),
+                                    onReminderClick = {
+                                        selectedEntryForReminder = entry
+                                    }
                                 )
                             }
                         }
                         is FirebaseEvent -> {
-                            val event = entry as FirebaseEvent
+                            val event = entry
                             EventCard(
                                 event = event.toEvent(),
                                 onClick = { onEventClick(event) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
+                                    .padding(vertical = 4.dp),
+                                onReminderClick = {
+                                    selectedEntryForReminder = entry
+                                }
                             )
                         }
                         is FirebaseBooking -> {
-                            val booking = entry as FirebaseBooking
+                            val booking = entry
                             BookingCard(
                                 booking = booking.toBooking(),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
+                                    .padding(vertical = 4.dp),
+                                onReminderClick = {
+                                    selectedEntryForReminder = entry
+                                }
                             )
                         }
                     }

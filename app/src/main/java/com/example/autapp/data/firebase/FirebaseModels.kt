@@ -7,6 +7,7 @@ import androidx.core.app.NotificationCompat
 import com.example.autapp.data.models.StudySpace
 import com.example.autapp.data.models.Booking
 import com.example.autapp.data.models.Notification
+import java.util.UUID
 
 // Base user model for authentication
 data class FirebaseUser(
@@ -225,11 +226,37 @@ data class FirebaseTimetableEntry(
 data class FirebaseTimetableNotificationPreference(
     @DocumentId
     val id: String = "",
-    val studentId: String = "", // Reference to FirebaseStudent
+    val studentId: String? = null, // Reference to FirebaseStudent
+    val teacherId: String? = null, // Reference to FirebaseTeacher
+    val isTeacher: Boolean = false,
     val classSessionId: String = "", // Reference to FirebaseTimetableEntry
     val notificationTime: Int = 15, // Minutes before class
     val isEnabled: Boolean = true
 )
+
+// Timetable Booking Preference
+data class FirebaseBookingNotificationPreference(
+    @DocumentId
+    val id: String = "",
+    val studentId: String = "", // Reference to FirebaseStudent
+    val teacherId: String? = "", // Reference to FirebaseTeacher
+    val isTeacher: Boolean = false,
+    val bookingId: String = "", // Reference to FirebaseBooking
+    val notificationTime: Int = 15, // Minutes before class
+    val isEnabled: Boolean = true
+)
+
+
+// Timetable Event Preference
+data class FirebaseEventNotificationPreference(
+    @DocumentId
+    val id: String = "",
+    val studentId: String = "", // Reference to FirebaseStudent
+    val eventId: String = "", // Reference to FirebaseEvent
+    val notificationTime: Int = 15, // Minutes before class
+    val isEnabled: Boolean = true
+)
+
 
 // Event model
 data class FirebaseEvent(
@@ -339,23 +366,20 @@ data class FirebaseStudySpace(
 
 // Notification model
 data class FirebaseNotification(
-    val notificationId: Int = 0,
-    var iconResId: Int,
-    var title: String,
-    var text: String,
+    @DocumentId
+    val notificationId: String = UUID.randomUUID().toString(),
+    val userId: String = "",
+    val isTeacher: Boolean = false,
+    val notificationType: String = "",
+    val relatedItemId: String = "",
+    val scheduledDeliveryTime: Date = Date(),
+    val title: String = "",
+    val text: String = "",
     var priority: Int = NotificationCompat.PRIORITY_DEFAULT,
     var deepLinkUri: String? = null,
     var channelId: String,
     var timestamp: Long = System.currentTimeMillis()
-) {
-    fun getFormattedTitle(vararg values: Any): String {
-        return title.format(*values)
-    }
-    
-    fun getFormattedText(vararg values: Any): String {
-        return text.format(*values)
-    }
-}
+)
 
 // Department model
 data class FirebaseDepartment(
@@ -398,4 +422,4 @@ fun FirebaseNotification.toNotification(): Notification {
         channelId = this.channelId,
         timestamp = this.timestamp
     )
-} 
+}
