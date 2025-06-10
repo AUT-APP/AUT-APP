@@ -378,7 +378,7 @@ data class FirebaseNotification(
     val text: String = "",
     var priority: Int = NotificationCompat.PRIORITY_DEFAULT,
     var deepLinkUri: String? = null,
-    var channelId: String,
+    var channelId: String = "default_channel",
     var iconResId: Int = 0,
     var timestamp: Long = System.currentTimeMillis()
 )
