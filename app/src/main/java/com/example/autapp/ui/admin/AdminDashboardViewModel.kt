@@ -9,22 +9,13 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.autapp.AUTApplication
 import com.example.autapp.data.firebase.*
-import com.example.autapp.data.firebase.FirebaseStudentRepository
-import com.example.autapp.data.firebase.FirebaseTeacherRepository
-import com.example.autapp.data.firebase.FirebaseCourseRepository
-import com.example.autapp.data.firebase.FirebaseDepartmentRepository
-import com.example.autapp.data.firebase.FirebaseActivityLogRepository
-import com.example.autapp.data.firebase.QueryCondition
-import com.example.autapp.data.firebase.QueryOperator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import kotlin.random.Random
-import com.example.autapp.ui.admin.TimetableEntryFormData
-import java.util.Date
-import java.util.Locale
+import java.util.*
 import java.util.Calendar
+import kotlin.random.Random
 
 class AdminDashboardViewModel(
     private val studentRepository: FirebaseStudentRepository,
@@ -67,7 +58,7 @@ class AdminDashboardViewModel(
                 _teachers.value = teacherRepository.getAll()
                 _courses.value = courseRepository.getAll()
                 _departments.value = departmentRepository.getAll()
-                _activities.value = activityLogRepository.getAll()
+                _activities.value = activityLogRepository.getAll().sortedByDescending { it.timestamp }
             } catch (e: Exception) {
                 _errorMessage.value = "Error loading data: ${e.message}"
             }
@@ -123,9 +114,9 @@ class AdminDashboardViewModel(
     }
 
     private fun generatePassword(firstName: String, dob: String): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         val date = dateFormat.parse(dob)
-        val monthDayFormat = SimpleDateFormat("MMdd")
+        val monthDayFormat = SimpleDateFormat("MMdd", Locale.US)
         return "${firstName.lowercase()}${monthDayFormat.format(date)}"
     }
 
@@ -160,14 +151,12 @@ class AdminDashboardViewModel(
     ) {
         viewModelScope.launch {
             try {
-                // Add logging for majorId
                 Log.d("AdminDashboardViewModel", "Attempting to create student with majorId: $majorId")
 
                 if (firstName.isBlank() || lastName.isBlank()) {
                     throw IllegalArgumentException("First name and last name cannot be empty")
                 }
 
-                // Fetch all departments and filter manually as a workaround for query issue
                 val allDepartments = departmentRepository.getAll()
                 val majorDepartment = allDepartments.find { it.departmentId == majorId && it.type == "Major" }
 
@@ -182,35 +171,37 @@ class AdminDashboardViewModel(
                     }
                 }
 
-                if (yearOfStudy < 1) {
-                    throw IllegalArgumentException("Year of study must be at least 1")
+                if (yearOfStudy < 1 || yearOfStudy > 5) {
+                    throw IllegalArgumentException("Year of study must be between 1 and 5")
                 }
                 if (dob.isBlank()) {
                     throw IllegalArgumentException("Date of birth is required")
                 }
                 val generatedUsernamePart = generateUniqueUsername()
-                val generatedEmail = "${generatedUsernamePart}@aut.com" // Generate a valid email
+                val generatedEmail = "${generatedUsernamePart}@aut.com"
                 val generatedStudentId = generateUniqueStudentId()
                 val generatedPassword = generatePassword(firstName, dob)
 
-                // Create user in Firebase Authentication using the generated email
-                val authUserId = userRepository.registerUser(generatedEmail, generatedPassword, FirebaseUser(
-                    firstName = firstName,
-                    lastName = lastName,
-                    role = role,
-                    username = generatedEmail, // Use generated email as username
-                    password = generatedPassword // It's generally not recommended to store passwords in Firestore, but keeping for now based on existing model
-                ))
+                val authUserId = userRepository.registerUser(
+                    generatedEmail,
+                    generatedPassword,
+                    FirebaseUser(
+                        firstName = firstName,
+                        lastName = lastName,
+                        role = role,
+                        username = generatedEmail,
+                        password = generatedPassword
+                    )
+                )
 
-                // Create student document in Firestore using the authUserId as the document ID
                 val student = FirebaseStudent(
-                    id = authUserId, // Use authUserId as document ID
+                    id = authUserId,
                     firstName = firstName,
                     lastName = lastName,
-                    username = generatedEmail, // Use generated email as username
+                    username = generatedEmail,
                     password = generatedPassword,
                     role = role,
-                    studentId = generatedStudentId, // Keep generatedStudentId for the specific app ID
+                    studentId = generatedStudentId,
                     enrollmentDate = enrollmentDate,
                     majorId = majorId,
                     minorId = minorId,
@@ -218,7 +209,6 @@ class AdminDashboardViewModel(
                     gpa = gpa,
                     dob = dob
                 )
-                // Use createWithId to set the document ID explicitly
                 studentRepository.createWithId(authUserId, student)
 
                 selectedCourses.forEach { (courseId, year, semester) ->
@@ -264,32 +254,34 @@ class AdminDashboardViewModel(
                     throw IllegalArgumentException("Date of birth is required")
                 }
                 val generatedUsernamePart = generateUniqueUsername()
-                val generatedEmail = "${generatedUsernamePart}@aut.com" // Generate a valid email
+                val generatedEmail = "${generatedUsernamePart}@aut.com"
                 val generatedTeacherId = generateUniqueTeacherId()
                 val generatedPassword = generatePassword(firstName, dob)
 
-                // Create user in Firebase Authentication using the generated email
-                val authUserId = userRepository.registerUser(generatedEmail, generatedPassword, FirebaseUser(
-                    firstName = firstName,
-                    lastName = lastName,
-                    role = role,
-                    username = generatedEmail, // Use generated email as username
-                    password = generatedPassword
-                ))
+                val authUserId = userRepository.registerUser(
+                    generatedEmail,
+                    generatedPassword,
+                    FirebaseUser(
+                        firstName = firstName,
+                        lastName = lastName,
+                        role = role,
+                        username = generatedEmail,
+                        password = generatedPassword
+                    )
+                )
 
-                // Create teacher document in Firestore using the authUserId as the document ID
                 val teacher = FirebaseTeacher(
-                    id = authUserId, // Use authUserId as document ID
+                    id = authUserId,
                     firstName = firstName,
                     lastName = lastName,
-                    username = generatedEmail, // Use generated email as username
+                    username = generatedEmail,
                     password = generatedPassword,
                     role = role,
                     teacherId = generatedTeacherId,
                     departmentId = departmentId,
                     title = title,
                     officeNumber = officeNumber,
-                    email = generatedEmail, // Use generated email
+                    email = generatedEmail,
                     phoneNumber = phoneNumber,
                     dob = dob,
                     courses = courseAssignments.map { it.first }
@@ -328,12 +320,10 @@ class AdminDashboardViewModel(
                 )
                 val courseId = courseRepository.create(course)
 
-                // Create and save timetable entries
                 timetableEntries.forEach { entryData ->
                     val startTime = SimpleDateFormat("HH:mm", Locale.US).parse(entryData.startTime)
                     val endTime = SimpleDateFormat("HH:mm", Locale.US).parse(entryData.endTime)
 
-                    // Combine with current date
                     val today = Calendar.getInstance()
                     val startDateTime = Calendar.getInstance().apply {
                         time = startTime
@@ -357,6 +347,7 @@ class AdminDashboardViewModel(
 
                 addActivity("Created new course: ${course.name} (${courseId})")
                 _successMessage.value = "Course ${course.name} (${courseId}) created successfully"
+                loadData()
             } catch (e: Exception) {
                 _errorMessage.value = "Error creating course: ${e.message}"
             }
@@ -378,10 +369,12 @@ class AdminDashboardViewModel(
                 if (type !in listOf("Major", "Minor", "Department")) {
                     throw IllegalArgumentException("Invalid department type")
                 }
-                val existingDepartments = departmentRepository.query(listOf(
-                    QueryCondition("name", QueryOperator.EQUAL_TO, name),
-                    QueryCondition("type", QueryOperator.EQUAL_TO, type)
-                ))
+                val existingDepartments = departmentRepository.query(
+                    listOf(
+                        QueryCondition("name", QueryOperator.EQUAL_TO, name),
+                        QueryCondition("type", QueryOperator.EQUAL_TO, type)
+                    )
+                )
                 if (existingDepartments.isNotEmpty()) {
                     throw IllegalArgumentException("$type with name '$name' already exists")
                 }
@@ -416,11 +409,38 @@ class AdminDashboardViewModel(
     ) {
         viewModelScope.launch {
             try {
+                if (student.yearOfStudy < 1 || student.yearOfStudy > 5) {
+                    throw IllegalArgumentException("Year of study must be between 1 and 5")
+                }
+
                 studentRepository.update(student.id, student)
-                // Note: Updating course enrollments requires separate logic, potentially deleting and recreating or finding and updating.
-                // For simplicity here, we'll just update the student details.
+
+                val existingEnrollments = studentRepository.getEnrollmentsByStudent(student.id)
+
+                existingEnrollments.forEach { enrollment ->
+                    if (courseEnrollments.none { it.first == enrollment.courseId && it.second == enrollment.year && it.third.toString() == enrollment.semester }) {
+                        studentRepository.deleteEnrollment(enrollment.studentId, enrollment.courseId, enrollment.year, enrollment.semester)
+                    }
+                }
+
+                courseEnrollments.forEach { (courseId, year, semester) ->
+                    val existingEnrollment = existingEnrollments.find {
+                        it.courseId == courseId && it.year == year && it.semester == semester.toString()
+                    }
+                    if (existingEnrollment == null) {
+                        val enrollment = FirebaseStudentCourse(
+                            studentId = student.id,
+                            courseId = courseId,
+                            year = year,
+                            semester = semester.toString()
+                        )
+                        studentRepository.enrollStudentInCourse(enrollment)
+                    }
+                }
+
                 addActivity("Updated student: ${student.firstName} ${student.lastName} (ID: ${student.studentId})")
                 _successMessage.value = "Student ${student.firstName} ${student.lastName} updated successfully"
+                loadData()
             } catch (e: Exception) {
                 _errorMessage.value = "Error updating student: ${e.message}"
             }
@@ -435,6 +455,7 @@ class AdminDashboardViewModel(
                     addActivity("Deleted student: ${student.firstName} ${student.lastName} (ID: ${student.studentId})")
                 }
                 _successMessage.value = "${students.size} student(s) deleted successfully"
+                loadData()
             } catch (e: Exception) {
                 _errorMessage.value = "Error deleting student(s): ${e.message}"
             }
@@ -444,11 +465,18 @@ class AdminDashboardViewModel(
     fun bulkEnroll(studentIds: List<String>, courseId: String, year: Int, semester: Int) {
         viewModelScope.launch {
             try {
-                // This implementation assumes you have a method in your repository to handle bulk enrollments.
-                // You might need to implement the actual bulk enrollment logic based on your data model and requirements.
-                // For now, this is a placeholder.
-                addActivity("Bulk enrolled students: ${studentIds.joinToString()} into course $courseId")
-                _successMessage.value = "Bulk enrollment initiated for ${studentIds.size} student(s) in course $courseId"
+                studentIds.forEach { studentId ->
+                    val enrollment = FirebaseStudentCourse(
+                        studentId = studentId,
+                        courseId = courseId,
+                        year = year,
+                        semester = semester.toString()
+                    )
+                    studentRepository.enrollStudentInCourse(enrollment)
+                }
+                addActivity("Bulk enrolled ${studentIds.size} students into course $courseId")
+                _successMessage.value = "Bulk enrollment completed for ${studentIds.size} student(s) in course $courseId"
+                loadData()
             } catch (e: Exception) {
                 _errorMessage.value = "Error during bulk enrollment: ${e.message}"
             }
@@ -461,6 +489,7 @@ class AdminDashboardViewModel(
                 teacherRepository.update(teacher.teacherId, teacher)
                 addActivity("Updated teacher: ${teacher.firstName} ${teacher.lastName} (ID: ${teacher.teacherId})")
                 _successMessage.value = "Teacher ${teacher.firstName} ${teacher.lastName} updated successfully"
+                loadData()
             } catch (e: Exception) {
                 _errorMessage.value = "Error updating teacher: ${e.message}"
             }
@@ -475,6 +504,7 @@ class AdminDashboardViewModel(
                     addActivity("Deleted teacher: ${teacher.firstName} ${teacher.lastName} (ID: ${teacher.teacherId})")
                 }
                 _successMessage.value = "${teachers.size} teacher(s) deleted successfully"
+                loadData()
             } catch (e: Exception) {
                 _errorMessage.value = "Error deleting teacher(s): ${e.message}"
             }
@@ -489,33 +519,30 @@ class AdminDashboardViewModel(
             try {
                 courseRepository.update(course.courseId, course)
 
-                // Delete existing timetable entries for this course
                 val existingEntries = timetableEntryRepository.getTimetableByCourse(course.courseId)
                 existingEntries.forEach { entry ->
                     timetableEntryRepository.delete(entry.entryId)
                 }
 
-                // Create and save new timetable entries
                 timetableEntries.forEach { entryData ->
                     val startTime = SimpleDateFormat("HH:mm", Locale.US).parse(entryData.startTime)
                     val endTime = SimpleDateFormat("HH:mm", Locale.US).parse(entryData.endTime)
-                   
-                   // Combine with current date
-                   val today = Calendar.getInstance()
-                   val startDateTime = Calendar.getInstance().apply {
-                       time = startTime
-                       set(today.get(Calendar.YEAR), today.get(Calendar.MONTH), today.get(Calendar.DAY_OF_MONTH))
-                   }.time
-                   val endDateTime = Calendar.getInstance().apply {
-                       time = endTime
-                       set(today.get(Calendar.YEAR), today.get(Calendar.MONTH), today.get(Calendar.DAY_OF_MONTH))
-                   }.time
+
+                    val today = Calendar.getInstance()
+                    val startDateTime = Calendar.getInstance().apply {
+                        time = startTime
+                        set(today.get(Calendar.YEAR), today.get(Calendar.MONTH), today.get(Calendar.DAY_OF_MONTH))
+                    }.time
+                    val endDateTime = Calendar.getInstance().apply {
+                        time = endTime
+                        set(today.get(Calendar.YEAR), today.get(Calendar.MONTH), today.get(Calendar.DAY_OF_MONTH))
+                    }.time
 
                     val timetableEntry = FirebaseTimetableEntry(
                         courseId = course.courseId,
                         dayOfWeek = entryData.dayOfWeek,
-                       startTime = startDateTime,
-                       endTime = endDateTime,
+                        startTime = startDateTime,
+                        endTime = endDateTime,
                         room = entryData.room,
                         type = entryData.type
                     )
@@ -524,6 +551,7 @@ class AdminDashboardViewModel(
 
                 addActivity("Updated course: ${course.name} (${course.courseId})")
                 _successMessage.value = "Course ${course.name} updated successfully"
+                loadData()
             } catch (e: Exception) {
                 _errorMessage.value = "Error updating course: ${e.message}"
             }
@@ -538,6 +566,7 @@ class AdminDashboardViewModel(
                     addActivity("Deleted course: ${course.name} (${course.courseId})")
                 }
                 _successMessage.value = "${courses.size} course(s) deleted successfully"
+                loadData()
             } catch (e: Exception) {
                 _errorMessage.value = "Error deleting course(s): ${e.message}"
             }
@@ -550,6 +579,7 @@ class AdminDashboardViewModel(
                 departmentRepository.update(department.departmentId, department)
                 addActivity("Updated department: ${department.name} (${department.departmentId})")
                 _successMessage.value = "Department ${department.name} updated successfully"
+                loadData()
             } catch (e: Exception) {
                 _errorMessage.value = "Error updating department: ${e.message}"
             }
@@ -562,6 +592,7 @@ class AdminDashboardViewModel(
                 departmentRepository.delete(department.departmentId)
                 addActivity("Deleted department: ${department.name} (${department.departmentId})")
                 _successMessage.value = "Department ${department.name} deleted successfully"
+                loadData()
             } catch (e: Exception) {
                 _errorMessage.value = "Error deleting department: ${e.message}"
             }
