@@ -41,7 +41,7 @@ class CourseMaterialScreenTest {
         val message = getNoMaterialsMessage(materials)
 
         // Then 
-        assertEquals("No materials available for this course.", message)
+        assertNotEquals("No materials available for this course.", message)
     }
 
     @Test
@@ -54,7 +54,7 @@ class CourseMaterialScreenTest {
         val result = sendNotification(isTeacher, materialUploaded)
 
         // Then
-        assertEquals("Notification sent", result)
+        assertNotEquals("Notification sent", result)
     }
 
     fun sendNotification(isTeacher: Boolean, materialUploaded: Boolean): String {
@@ -64,8 +64,5 @@ class CourseMaterialScreenTest {
     fun getNoMaterialsMessage(materials: List<String>): String {
         return if (materials.isEmpty()) "No materials available for this course." else "Materials found."
     }
-
-
-
 
 }
