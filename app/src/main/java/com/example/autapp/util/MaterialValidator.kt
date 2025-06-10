@@ -14,6 +14,7 @@ object MaterialValidator {
             else -> false
         }
     }
+
     private fun isValidGoogleDriveLink(url: String): Boolean {
         return url.contains("drive.google.com") ||
                 url.contains("docs.google.com")
