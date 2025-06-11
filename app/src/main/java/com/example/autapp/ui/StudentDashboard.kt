@@ -68,64 +68,8 @@ fun StudentDashboard(
     val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
     val context = LocalContext.current
-    val sharedPrefs = remember {
-        context.getSharedPreferences("material_notifications", Context.MODE_PRIVATE)
-    }
-    val lastShownTimestampKey = "last_shown_material_notification"
-
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = viewModel.isRefreshing)
     val dateFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
-
-    val materialNotifications = viewModel.notifications.filter {
-        it.deepLinkUri?.startsWith("myapp://materials/") == true
-    }
-
-    // Track the last notification IDs to avoid duplicate system notifications
-    var lastNotificationIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
-
-    // Request notification permission
-    var hasNotificationPermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            } else {
-                true
-            }
-        )
-    }
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted -> hasNotificationPermission = granted }
-    )
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-
-    // Only show system notification for new material notifications
-    LaunchedEffect(viewModel.notifications) {
-        val lastShown = sharedPrefs.getLong(lastShownTimestampKey, 0L)
-        val newNotifications = viewModel.notifications.filter {
-            it.deepLinkUri?.startsWith("myapp://materials/") == true &&
-            (it.timestamp ?: 0L) > lastShown
-        }
-        if (newNotifications.isNotEmpty()) {
-            // Show only the most recent new notification
-            val latest = newNotifications.maxByOrNull { it.timestamp ?: 0L }
-            latest?.let { notif ->
-                NotificationHelper.pushNotification(
-                    context,
-                    notif.toNotification()
-                )
-                // Update last shown timestamp
-                sharedPrefs.edit().putLong(lastShownTimestampKey, notif.timestamp ?: 0L).apply()
-            }
-        }
-    }
 
     SwipeRefresh(
         state = swipeRefreshState,
@@ -143,61 +87,6 @@ fun StudentDashboard(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                // Notifications Section
-                if (materialNotifications.isNotEmpty()) {
-                    Text(
-                        text = "Recent Notifications",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textColor,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-                    )
-
-                    materialNotifications.take(5).forEach { notification ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable {
-                                    notification.deepLinkUri?.let { uri ->
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Log.e("StudentDashboard", "Error opening deep link: ${e.message}")
-                                        }
-                                    }
-                                },
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
-                                Text(
-                                    text = notification.title,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textColor
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = notification.text,
-                                    fontSize = 14.sp,
-                                    color = textColor.copy(alpha = 0.8f)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = dateFormat.format(Date(notification.timestamp)),
-                                    fontSize = 12.sp,
-                                    color = textColor.copy(alpha = 0.6f)
-                                )
-                            }
-                        }
-                    }
-                }
-
                 Text(
                     text = "Upcoming...",
                     fontSize = 24.sp,
