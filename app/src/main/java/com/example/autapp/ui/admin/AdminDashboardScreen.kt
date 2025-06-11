@@ -1,5 +1,6 @@
 package com.example.autapp.ui.admin
 
+import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -200,7 +201,6 @@ fun AdminDashboardScreen(
                             majorId = majorId.toString(),
                             minorId = minorId?.toString(),
                             yearOfStudy = yearOfStudy,
-                            gpa = 0.0,
                             dob = dob,
                             selectedCourses = selectedCourses,
                             enrollmentYear = 2025,
@@ -287,9 +287,10 @@ fun AdminDashboardScreen(
             if (showCreateTeacherDialog) {
                 TeacherFormDialog(
                     departments = departments,
+                    courses = courses, // Pass courses
                     isEditing = false,
                     onDismiss = { showCreateTeacherDialog = false },
-                    onSave = { firstName, lastName, role, departmentId, officeHours, courses, dob ->
+                    onSave = { firstName, lastName, role, departmentId, officeHours, selectedCourses, dob ->
                         viewModel.createTeacher(
                             firstName = firstName,
                             lastName = lastName,
@@ -300,7 +301,7 @@ fun AdminDashboardScreen(
                             email = "",
                             phoneNumber = "",
                             dob = dob,
-                            courseAssignments = courses.map { Triple(it, 0, 0) }
+                            courseAssignments = selectedCourses.map { Triple(it, 0, 0) }
                         )
                         showCreateTeacherDialog = false
                     }
@@ -311,9 +312,10 @@ fun AdminDashboardScreen(
                 TeacherFormDialog(
                     teacher = teacher,
                     departments = departments,
+                    courses = courses, // Pass courses
                     isEditing = true,
                     onDismiss = { showEditTeacherDialog = null },
-                    onSave = { firstName, lastName, role, departmentId, officeHours, courses, dob ->
+                    onSave = { firstName, lastName, role, departmentId, officeHours, selectedCourses, dob ->
                         viewModel.updateTeacher(
                             teacher.copy(
                                 firstName = firstName,
@@ -321,7 +323,7 @@ fun AdminDashboardScreen(
                                 role = role,
                                 departmentId = departmentId.toString(),
                                 officeHours = officeHours,
-                                courses = courses,
+                                courses = selectedCourses,
                                 dob = dob
                             )
                         )
@@ -844,7 +846,7 @@ fun CourseFormDialog(
                         expanded = departmentExpanded,
                         onDismissRequest = { departmentExpanded = false }
                     ) {
-                        departments.forEach { department ->
+                        departments.filter { it.type == "Department" }.forEach { department ->
                             DropdownMenuItem(
                                 text = { Text(department.name) },
                                 onClick = {
@@ -1398,7 +1400,8 @@ fun ActivityTab(
                 ) {
                     Text(
                         activity.description,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.wrapContentWidth() // Ensure text wraps
                     )
                     Text(
                         "Time: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date(activity.timestamp))}",
@@ -1567,28 +1570,74 @@ fun StudentFormDialog(
     var minorId by remember { mutableStateOf(student?.minorId) }
     var yearOfStudy by remember { mutableStateOf(student?.yearOfStudy?.toString() ?: "") }
     var dob by remember { mutableStateOf(student?.dob ?: "") }
-    var selectedCourses by remember { mutableStateOf<List<Triple<String, Int, Int>>>(emptyList()) }
+    val selectedCourses = remember { mutableStateListOf<Triple<String, Int, Int>>() }
     var majorExpanded by remember { mutableStateOf(false) }
     var minorExpanded by remember { mutableStateOf(false) }
+    var yearOfStudyExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    // Initialize selectedCourses when student data is available
-    LaunchedEffect(student, isEditing) {
-        if (isEditing && student != null) {
-            try {
-                val enrollments = studentRepository.getEnrollmentsByStudent(student.studentId)
-                selectedCourses = enrollments.mapNotNull { enrollment ->
-                    val course = courseRepository.getCourseByCourseId(enrollment.courseId)
-                    val semesterInt = enrollment.semester.toIntOrNull() ?: return@mapNotNull null
-                    course?.let { Triple(it.courseId, enrollment.year, semesterInt) }
+    // State for valid courses
+    var validCourses by remember { mutableStateOf<List<FirebaseCourse>>(emptyList()) }
+    var isLoadingCourses by remember { mutableStateOf(true) }
+
+    // Load valid courses asynchronously
+    LaunchedEffect(courses) {
+        isLoadingCourses = true
+        try {
+            val validatedCourses = mutableListOf<FirebaseCourse>()
+            for (course in courses) {
+                val courseFromRepo = courseRepository.getCourseByCourseId(course.courseId)
+                if (courseFromRepo != null) {
+                    validatedCourses.add(courseFromRepo)
+                } else {
+                    Log.w("StudentFormDialog", "Invalid course ID: ${course.courseId}, skipping")
                 }
+            }
+            validCourses = validatedCourses
+            Log.d("StudentFormDialog", "Filtered ${validCourses.size} valid courses out of ${courses.size}")
+        } catch (e: Exception) {
+            Log.e("StudentFormDialog", "Error filtering courses", e)
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Error loading courses: ${e.message}")
+            }
+        } finally {
+            isLoadingCourses = false
+        }
+    }
+
+    // Load enrollments only when editing
+    LaunchedEffect(student?.id, isEditing, validCourses) {
+        if (isEditing && student != null && validCourses.isNotEmpty()) {
+            try {
+                val enrollments = studentRepository.getEnrollmentsByStudent(student.id)
+                selectedCourses.clear()
+                enrollments.forEach { enrollment ->
+                    val course = courseRepository.getCourseByCourseId(enrollment.courseId)
+                    val semesterInt = enrollment.semester.toIntOrNull()
+                    if (course != null && semesterInt != null && validCourses.any { it.courseId == course.courseId }) {
+                        selectedCourses.add(Triple(course.courseId, enrollment.year, semesterInt))
+                    } else {
+                        Log.w("StudentFormDialog", "Skipping invalid enrollment: courseId=${enrollment.courseId}, semester=${enrollment.semester}")
+                    }
+                }
+                Log.d("StudentFormDialog", "Loaded ${selectedCourses.size} enrollments for student ${student.id}")
             } catch (e: Exception) {
+                Log.e("StudentFormDialog", "Error loading enrollments", e)
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar("Failed to load courses: ${e.message}")
                 }
             }
+        } else {
+            selectedCourses.clear()
+        }
+    }
+
+    // Reset state when dialog is dismissed
+    DisposableEffect(Unit) {
+        onDispose {
+            selectedCourses.clear()
         }
     }
 
@@ -1615,195 +1664,201 @@ fun StudentFormDialog(
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
         title = { Text(if (isEditing) "Edit Student" else "Create Student") },
+        onDismissRequest = onDismiss,
         text = {
             Column(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
-                    .padding(vertical = 8.dp),
+                    .padding(top = 8.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedTextField(
-                    value = firstName,
-                    onValueChange = { firstName = it },
-                    label = { Text("First Name *") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    label = { Text("Last Name *") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = role,
-                    onValueChange = { role = it },
-                    label = { Text("Role") },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = isEditing
-                )
-                OutlinedTextField(
-                    value = enrollmentDate,
-                    onValueChange = { enrollmentDate = it },
-                    label = { Text("Enrollment Date (yyyy-MM-dd) *") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Box {
-                    OutlinedTextField(
-                        value = departments.find { it.departmentId == majorId }?.name ?: "Select Major",
-                        onValueChange = {},
-                        label = { Text("Major *") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { majorExpanded = true },
-                        readOnly = true
+                if (isLoadingCourses) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
-                    DropdownMenu(
-                        expanded = majorExpanded,
-                        onDismissRequest = { majorExpanded = false }
-                    ) {
-                        departments.filter { it.type == "Major" }.forEach { department ->
-                            DropdownMenuItem(
-                                text = { Text(department.name) },
-                                onClick = {
-                                    majorId = department.departmentId
-                                    majorExpanded = false
-                                },
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                            )
+                } else {
+                    OutlinedTextField(
+                        value = firstName,
+                        onValueChange = { firstName = it },
+                        label = { Text("First Name *") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        label = { Text("Last Name *") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = role,
+                        onValueChange = { role = it },
+                        label = { Text("Role") },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isEditing
+                    )
+                    OutlinedTextField(
+                        value = enrollmentDate,
+                        onValueChange = { enrollmentDate = it },
+                        label = { Text("Enrollment Date (yyyy-MM-dd) *") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Box {
+                        OutlinedTextField(
+                            value = departments.find { it.departmentId == majorId }?.name ?: "Select Major",
+                            onValueChange = {},
+                            label = { Text("Major *") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { majorExpanded = true },
+                            readOnly = true
+                        )
+                        DropdownMenu(
+                            expanded = majorExpanded,
+                            onDismissRequest = { majorExpanded = false }
+                        ) {
+                            departments.filter { it.type == "Major" }.forEach { department ->
+                                DropdownMenuItem(
+                                    text = { Text(department.name) },
+                                    onClick = {
+                                        majorId = department.departmentId
+                                        majorExpanded = false
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
                         }
                     }
-                }
-                Box {
-                    OutlinedTextField(
-                        value = minorId?.let { departments.find { it.departmentId == minorId }?.name } ?: "Select Minor (Optional)",
-                        onValueChange = {},
-                        label = { Text("Minor") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { minorExpanded = true },
-                        readOnly = true
-                    )
-                    DropdownMenu(
-                        expanded = minorExpanded,
-                        onDismissRequest = { minorExpanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("None") },
-                            onClick = {
-                                minorId = null
-                                minorExpanded = false
-                            },
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    Box {
+                        OutlinedTextField(
+                            value = minorId?.let { departments.find { it.departmentId == minorId }?.name } ?: "Select Minor (Optional)",
+                            onValueChange = {},
+                            label = { Text("Minor") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { minorExpanded = true },
+                            readOnly = true
                         )
-                        departments.filter { it.type == "Minor" }.forEach { department ->
+                        DropdownMenu(
+                            expanded = minorExpanded,
+                            onDismissRequest = { minorExpanded = false }
+                        ) {
                             DropdownMenuItem(
-                                text = { Text(department.name) },
+                                text = { Text("None") },
                                 onClick = {
-                                    minorId = department.departmentId
+                                    minorId = null
                                     minorExpanded = false
                                 },
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                             )
+                            departments.filter { it.type == "Minor" }.forEach { department ->
+                                DropdownMenuItem(
+                                    text = { Text(department.name) },
+                                    onClick = {
+                                        minorId = department.departmentId
+                                        minorExpanded = false
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
                         }
                     }
-                }
-                OutlinedTextField(
-                    value = yearOfStudy,
-                    onValueChange = { yearOfStudy = it },
-                    label = { Text("Year of Study *") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (isEditing) {
+                    Box {
+                        OutlinedTextField(
+                            value = yearOfStudy.ifEmpty { "Select Year of Study" },
+                            onValueChange = {},
+                            label = { Text("Year of Study *") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { yearOfStudyExpanded = true },
+                            readOnly = true
+                        )
+                        DropdownMenu(
+                            expanded = yearOfStudyExpanded,
+                            onDismissRequest = { yearOfStudyExpanded = false }
+                        ) {
+                            (1..5).forEach { year ->
+                                DropdownMenuItem(
+                                    text = { Text("Year $year") },
+                                    onClick = {
+                                        yearOfStudy = year.toString()
+                                        yearOfStudyExpanded = false
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                    }
                     OutlinedTextField(
-                        value = student?.gpa?.toString() ?: "0.0",
+                        value = dob,
                         onValueChange = {},
-                        label = { Text("GPA (Calculated)") },
-                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Date of Birth *") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showDatePicker = true },
                         readOnly = true
                     )
-                }
-                OutlinedTextField(
-                    value = dob,
-                    onValueChange = {},
-                    label = { Text("Date of Birth *") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showDatePicker = true },
-                    readOnly = true
-                )
-                Text(
-                    "Select Courses",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-                courses.forEach { course ->
-                    val courseState = selectedCourses.find { it.first == course.courseId }
-                    var isChecked by remember(courseState) { mutableStateOf(courseState != null) }
-                    var year by remember(courseState) { mutableStateOf(courseState?.second?.toString() ?: "2025") }
-                    var semester by remember(courseState) { mutableStateOf(courseState?.third?.toString() ?: "1") }
+                    Text(
+                        "Select Courses",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    validCourses.forEach { course ->
+                        val isChecked = selectedCourses.any { it.first == course.courseId }
+                        val courseEnrollment = selectedCourses.find { it.first == course.courseId }
+                        var year by remember(course.courseId) { mutableStateOf(courseEnrollment?.second?.toString() ?: "2025") }
+                        var semester by remember(course.courseId) { mutableStateOf(courseEnrollment?.third?.toString() ?: "1") }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    ) {
-                        Checkbox(
-                            checked = isChecked,
-                            onCheckedChange = { checked: Boolean ->
-                                isChecked = checked
-                                selectedCourses = if (checked) {
-                                    selectedCourses + Triple(course.courseId, year.toIntOrNull() ?: 2025, semester.toIntOrNull() ?: 1)
-                                } else {
-                                    selectedCourses.filter { it.first != course.courseId }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            Checkbox(
+                                checked = isChecked,
+                                onCheckedChange = { checked ->
+                                    if (checked) {
+                                        selectedCourses.add(Triple(course.courseId, year.toIntOrNull() ?: 2025, semester.toIntOrNull() ?: 1))
+                                    } else {
+                                        selectedCourses.removeAll { it.first == course.courseId }
+                                    }
                                 }
+                            )
+                            Text(course.name, modifier = Modifier.weight(1f))
+                            if (isChecked) {
+                                OutlinedTextField(
+                                    value = year,
+                                    onValueChange = { newYear ->
+                                        year = newYear
+                                        selectedCourses.removeAll { it.first == course.courseId }
+                                        selectedCourses.add(Triple(course.courseId, newYear.toIntOrNull() ?: 2025, semester.toIntOrNull() ?: 1))
+                                    },
+                                    label = { Text("Year") },
+                                    modifier = Modifier.width(100.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                OutlinedTextField(
+                                    value = semester,
+                                    onValueChange = { newSemester ->
+                                        semester = newSemester
+                                        selectedCourses.removeAll { it.first == course.courseId }
+                                        selectedCourses.add(Triple(course.courseId, year.toIntOrNull() ?: 2025, newSemester.toIntOrNull() ?: 1))
+                                    },
+                                    label = { Text("Sem") },
+                                    modifier = Modifier.width(80.dp)
+                                )
                             }
-                        )
-                        Text(course.name, modifier = Modifier.weight(1f))
-                        if (isChecked) {
-                            OutlinedTextField(
-                                value = year,
-                                onValueChange = { newYear ->
-                                    year = newYear
-                                    selectedCourses = selectedCourses.map { courseEnrollment ->
-                                        if (courseEnrollment.first == course.courseId) {
-                                            Triple(courseEnrollment.first, newYear.toIntOrNull() ?: courseEnrollment.second, courseEnrollment.third)
-                                        } else {
-                                            courseEnrollment
-                                        }
-                                    }
-                                },
-                                label = { Text("Year") },
-                                modifier = Modifier.width(100.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            OutlinedTextField(
-                                value = semester,
-                                onValueChange = { newSemester ->
-                                    semester = newSemester
-                                    selectedCourses = selectedCourses.map { courseEnrollment ->
-                                        if (courseEnrollment.first == course.courseId) {
-                                            Triple(courseEnrollment.first, courseEnrollment.second, newSemester.toIntOrNull() ?: courseEnrollment.third)
-                                        } else {
-                                            courseEnrollment
-                                        }
-                                    }
-                                },
-                                label = { Text("Sem") },
-                                modifier = Modifier.width(80.dp)
-                            )
                         }
                     }
+                    Text(
+                        "* indicates required field",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
                 }
-                Text(
-                    "* indicates required field",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
             }
         },
         confirmButton = {
@@ -1815,7 +1870,10 @@ fun StudentFormDialog(
                         ) {
                             throw IllegalArgumentException("Please fill all required fields")
                         }
-
+                        val yearOfStudyInt = yearOfStudy.toIntOrNull() ?: throw IllegalArgumentException("Invalid year of study")
+                        if (yearOfStudyInt !in 1..5) {
+                            throw IllegalArgumentException("Year of study must be between 1 and 5")
+                        }
                         if (selectedCourses.any { it.second <= 0 || it.third <= 0 }) {
                             throw IllegalArgumentException("Year and semester must be positive")
                         }
@@ -1826,16 +1884,17 @@ fun StudentFormDialog(
                             enrollmentDate,
                             majorId,
                             minorId,
-                            yearOfStudy.toInt(),
+                            yearOfStudyInt,
                             dob,
-                            selectedCourses
+                            selectedCourses.toList()
                         )
                     } catch (e: Exception) {
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(e.message ?: "Invalid input")
                         }
                     }
-                }
+                },
+                enabled = !isLoadingCourses
             ) { Text("Save") }
         },
         dismissButton = {
@@ -1982,6 +2041,7 @@ fun BulkEnrollDialog(
 fun TeacherFormDialog(
     teacher: FirebaseTeacher? = null,
     departments: List<FirebaseDepartment>,
+    courses: List<FirebaseCourse>,
     isEditing: Boolean,
     onDismiss: () -> Unit,
     onSave: (String, String, String, String, String, List<String>, String) -> Unit
@@ -1991,7 +2051,7 @@ fun TeacherFormDialog(
     var role by remember { mutableStateOf(teacher?.role ?: "Teacher") }
     var departmentId by remember { mutableStateOf(teacher?.departmentId ?: "") }
     var officeHours by remember { mutableStateOf(teacher?.officeHours ?: "") }
-    var courses by remember { mutableStateOf(teacher?.courses?.joinToString(", ") ?: "") }
+    val selectedCourseIds = remember { mutableStateListOf<String>().apply { addAll(teacher?.courses ?: emptyList()) } }
     var dob by remember { mutableStateOf(teacher?.dob ?: "") }
     var expanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -2081,12 +2141,29 @@ fun TeacherFormDialog(
                     label = { Text("Office Hours *") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
-                    value = courses,
-                    onValueChange = { courses = it },
-                    label = { Text("Courses (comma-separated)") },
-                    modifier = Modifier.fillMaxWidth()
+                Text(
+                    "Select Courses",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
+                courses.forEach { course ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Checkbox(
+                            checked = selectedCourseIds.contains(course.courseId),
+                            onCheckedChange = { isChecked ->
+                                if (isChecked) {
+                                    selectedCourseIds.add(course.courseId)
+                                } else {
+                                    selectedCourseIds.remove(course.courseId)
+                                }
+                            }
+                        )
+                        Text(course.name, modifier = Modifier.weight(1f))
+                    }
+                }
                 OutlinedTextField(
                     value = dob,
                     onValueChange = {},
@@ -2122,7 +2199,7 @@ fun TeacherFormDialog(
                             role,
                             departmentId,
                             officeHours,
-                            courses.split(",").map { it.trim() }.filter { it.isNotEmpty() },
+                            selectedCourseIds.toList(),
                             dob
                         )
                     } catch (e: Exception) {

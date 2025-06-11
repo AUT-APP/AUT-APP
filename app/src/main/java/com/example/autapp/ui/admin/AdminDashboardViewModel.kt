@@ -143,7 +143,6 @@ class AdminDashboardViewModel(
         majorId: String,
         minorId: String?,
         yearOfStudy: Int,
-        gpa: Double,
         dob: String,
         selectedCourses: List<Triple<String, Int, Int>>,
         enrollmentYear: Int,
@@ -151,7 +150,7 @@ class AdminDashboardViewModel(
     ) {
         viewModelScope.launch {
             try {
-                Log.d("AdminDashboardViewModel", "Attempting to create student with majorId: $majorId")
+                Log.d("AdminDashboardViewModel", "Attempting to create student with majorId: $majorId, selectedCourses: $selectedCourses")
 
                 if (firstName.isBlank() || lastName.isBlank()) {
                     throw IllegalArgumentException("First name and last name cannot be empty")
@@ -206,24 +205,44 @@ class AdminDashboardViewModel(
                     majorId = majorId,
                     minorId = minorId,
                     yearOfStudy = yearOfStudy,
-                    gpa = gpa,
+                    gpa = 0.0,
                     dob = dob
                 )
                 studentRepository.createWithId(authUserId, student)
+                Log.d("AdminDashboardViewModel", "Student created with ID: $authUserId, Student ID: $generatedStudentId")
 
+                val invalidCourses = mutableListOf<String>()
                 selectedCourses.forEach { (courseId, year, semester) ->
-                    val enrollment = FirebaseStudentCourse(
-                        studentId = student.id,
-                        courseId = courseId,
-                        year = year,
-                        semester = semester.toString()
-                    )
-                    studentRepository.enrollStudentInCourse(enrollment)
+                    val course = courseRepository.getCourseByCourseId(courseId)
+                    if (course == null) {
+                        Log.w("AdminDashboardViewModel", "Invalid course ID: $courseId, skipping enrollment")
+                        invalidCourses.add(courseId)
+                    } else {
+                        try {
+                            val enrollment = FirebaseStudentCourse(
+                                studentId = student.id,
+                                courseId = courseId,
+                                year = year,
+                                semester = semester.toString()
+                            )
+                            studentRepository.enrollStudentInCourse(enrollment)
+                            Log.d("AdminDashboardViewModel", "Enrolled student $authUserId in course $courseId (Year: $year, Semester: $semester)")
+                        } catch (e: Exception) {
+                            Log.e("AdminDashboardViewModel", "Failed to enroll in course $courseId: ${e.message}")
+                            invalidCourses.add(courseId)
+                        }
+                    }
                 }
-                addActivity("Created new student: $firstName $lastName (ID: ${student.id})")
+                if (invalidCourses.isNotEmpty()) {
+                    _errorMessage.value = "Student created, but failed to enroll in some courses: ${invalidCourses.joinToString()}"
+                }
+
+                val maskedPassword = "${generatedPassword.first()}****${generatedPassword.last()}"
+                addActivity("Created new student: $firstName $lastName (Student ID: $generatedStudentId, Email: $generatedEmail, Username: $generatedEmail, Default Password: $maskedPassword)")
                 _successMessage.value = "Student $firstName $lastName created successfully"
                 loadData()
             } catch (e: Exception) {
+                Log.e("AdminDashboardViewModel", "Error creating student: ${e.message}")
                 _errorMessage.value = "Error creating student: ${e.message}"
             }
         }
@@ -287,7 +306,7 @@ class AdminDashboardViewModel(
                     courses = courseAssignments.map { it.first }
                 )
                 teacherRepository.createWithId(authUserId, teacher)
-                addActivity("Created new teacher: ${teacher.firstName} ${teacher.lastName} (ID: ${teacher.teacherId})")
+                addActivity("Created new teacher: $firstName $lastName (Teacher ID: $generatedTeacherId, Email: $generatedEmail, Username: $generatedEmail, Default Password: $generatedPassword)")
                 _successMessage.value = "Teacher $firstName $lastName created successfully"
                 loadData()
             } catch (e: Exception) {
@@ -310,9 +329,9 @@ class AdminDashboardViewModel(
                 if (name.isBlank() || code.isBlank()) {
                     throw IllegalArgumentException("Course name and code cannot be empty")
                 }
-                val departmentConditions = listOf(QueryCondition("id", QueryOperator.EQUAL_TO, departmentId))
-                if (departmentId.isBlank() || departmentRepository.query(departmentConditions).isEmpty()) {
-                    throw IllegalArgumentException("Invalid or missing department")
+                val department = departmentRepository.getById(departmentId)
+                if (departmentId.isBlank() || department == null || department.type != "Department") {
+                    throw IllegalArgumentException("Invalid or missing department. Must be a Department type.")
                 }
                 val course = FirebaseCourse(
                     name = name,
@@ -414,34 +433,57 @@ class AdminDashboardViewModel(
                 }
 
                 studentRepository.update(student.id, student)
+                Log.d("AdminDashboardViewModel", "Updated student: ${student.id}")
 
                 val existingEnrollments = studentRepository.getEnrollmentsByStudent(student.id)
+                Log.d("AdminDashboardViewModel", "Existing enrollments: $existingEnrollments")
 
+                // Remove enrollments that are no longer selected
                 existingEnrollments.forEach { enrollment ->
                     if (courseEnrollments.none { it.first == enrollment.courseId && it.second == enrollment.year && it.third.toString() == enrollment.semester }) {
                         studentRepository.deleteEnrollment(enrollment.studentId, enrollment.courseId, enrollment.year, enrollment.semester)
+                        Log.d("AdminDashboardViewModel", "Deleted enrollment: ${enrollment.courseId}, Year: ${enrollment.year}, Semester: ${enrollment.semester}")
                     }
                 }
 
+                // Add or update selected enrollments
+                val invalidCourses = mutableListOf<String>()
                 courseEnrollments.forEach { (courseId, year, semester) ->
-                    val existingEnrollment = existingEnrollments.find {
-                        it.courseId == courseId && it.year == year && it.semester == semester.toString()
+                    val course = courseRepository.getCourseByCourseId(courseId)
+                    if (course == null) {
+                        Log.w("AdminDashboardViewModel", "Invalid course ID: $courseId, skipping enrollment")
+                        invalidCourses.add(courseId)
+                    } else {
+                        val existingEnrollment = existingEnrollments.find {
+                            it.courseId == courseId && it.year == year && it.semester == semester.toString()
+                        }
+                        if (existingEnrollment == null) {
+                            try {
+                                val enrollment = FirebaseStudentCourse(
+                                    studentId = student.id,
+                                    courseId = courseId,
+                                    year = year,
+                                    semester = semester.toString()
+                                )
+                                studentRepository.enrollStudentInCourse(enrollment)
+                                Log.d("AdminDashboardViewModel", "Enrolled student ${student.id} in course $courseId (Year: $year, Semester: $semester)")
+                            } catch (e: Exception) {
+                                Log.e("AdminDashboardViewModel", "Failed to enroll in course $courseId: ${e.message}")
+                                invalidCourses.add(courseId)
+                            }
+                        }
                     }
-                    if (existingEnrollment == null) {
-                        val enrollment = FirebaseStudentCourse(
-                            studentId = student.id,
-                            courseId = courseId,
-                            year = year,
-                            semester = semester.toString()
-                        )
-                        studentRepository.enrollStudentInCourse(enrollment)
-                    }
+                }
+
+                if (invalidCourses.isNotEmpty()) {
+                    _errorMessage.value = "Student updated, but failed to enroll in some courses: ${invalidCourses.joinToString()}"
                 }
 
                 addActivity("Updated student: ${student.firstName} ${student.lastName} (ID: ${student.studentId})")
                 _successMessage.value = "Student ${student.firstName} ${student.lastName} updated successfully"
                 loadData()
             } catch (e: Exception) {
+                Log.e("AdminDashboardViewModel", "Error updating student: ${e.message}")
                 _errorMessage.value = "Error updating student: ${e.message}"
             }
         }

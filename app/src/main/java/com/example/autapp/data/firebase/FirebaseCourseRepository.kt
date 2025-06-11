@@ -39,10 +39,16 @@ class FirebaseCourseRepository(
      */
     suspend fun getCourseByCourseId(courseId: String): FirebaseCourse? {
         return try {
-            val result = collection.whereEqualTo("courseId", courseId).get().await()
-            result.documents.firstOrNull()?.data?.let { documentToObject(courseId, it) }
+            val document = collection.document(courseId).get().await()
+            if (document.exists()) {
+                document.data?.let { documentToObject(document.id, it) }
+            } else {
+                Log.w("FirebaseCourseRepo", "Course not found for ID: $courseId")
+                null
+            }
         } catch (e: Exception) {
-            throw FirebaseException("Error getting course by ID", e)
+            Log.e("FirebaseCourseRepo", "Error getting course by ID: $courseId", e)
+            null
         }
     }
 
@@ -69,7 +75,8 @@ class FirebaseCourseRepository(
             Log.d("FirebaseCourseRepo", "Courses by name query result size: ${result.documents.size}")
             result.documents.mapNotNull { doc -> doc.data?.let { documentToObject(doc.id, it) } }
         } catch (e: Exception) {
-            throw FirebaseException("Error getting courses by teacher", e)
+            Log.e("FirebaseCourseRepo", "Error getting courses by teacher", e)
+            emptyList()
         }
     }
 
@@ -82,6 +89,7 @@ class FirebaseCourseRepository(
             course.updateCourseDescription(title, description, objectives)
             update(courseId, course)
         } catch (e: Exception) {
+            Log.e("FirebaseCourseRepo", "Error updating course description", e)
             throw FirebaseException("Error updating course description", e)
         }
     }
@@ -94,6 +102,7 @@ class FirebaseCourseRepository(
             val course = getById(courseId) ?: throw FirebaseException("Course not found")
             update(courseId, course.copy(location = location))
         } catch (e: Exception) {
+            Log.e("FirebaseCourseRepo", "Error updating course location", e)
             throw FirebaseException("Error updating course location", e)
         }
     }
@@ -112,7 +121,7 @@ class FirebaseCourseRepository(
             Log.d("FirebaseCourseRepo", "Course query result size: ${result.documents.size}")
             result.documents.mapNotNull { doc -> doc.data?.let { documentToObject(doc.id, it) } }
         } catch (e: Exception) {
-            Log.e("FirebaseCourseRepo", "Error getting courses by IDs:", e)
+            Log.e("FirebaseCourseRepo", "Error getting courses by IDs", e)
             emptyList()
         }
     }
@@ -123,13 +132,12 @@ class FirebaseCourseRepository(
     suspend fun deleteCourse(courseId: String) {
         try {
             val course = getById(courseId) ?: throw FirebaseException("Course not found")
-            
             // Delete course document
             delete(courseId)
-            
             // Note: You might want to handle associated data like enrollments, assignments, etc.
             // This would be done in a transaction or through Cloud Functions
         } catch (e: Exception) {
+            Log.e("FirebaseCourseRepo", "Error deleting course", e)
             throw FirebaseException("Error deleting course", e)
         }
     }
