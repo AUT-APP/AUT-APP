@@ -71,6 +71,15 @@ fun StudentDashboard(
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = viewModel.isRefreshing)
     val dateFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
 
+    // --- Search and filter state ---
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedStatus by remember { mutableStateOf("All") }
+    var statusExpanded by remember { mutableStateOf(false) }
+    var selectedType by remember { mutableStateOf("All") }
+    var typeExpanded by remember { mutableStateOf(false) }
+    val assignmentTypes = listOf("All") + viewModel.assignments.map { it.type }.distinct().sorted()
+    val statusOptions = listOf("All", "Upcoming", "Overdue")
+
     // --- Course filter state ---
     var selectedCourseId by remember { mutableStateOf<String?>(null) }
     var expanded by remember { mutableStateOf(false) }
@@ -120,8 +129,17 @@ fun StudentDashboard(
                     }
                 }
 
+                // --- Search Bar ---
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Search Courses") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                )
+
+                // --- Course Filter Dropdown ---
                 if (viewModel.courses.isNotEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                         OutlinedButton(
                             onClick = { expanded = true },
                             modifier = Modifier.fillMaxWidth()
@@ -139,7 +157,10 @@ fun StudentDashboard(
                                     expanded = false
                                 }
                             )
-                            viewModel.courses.forEach { course ->
+                            viewModel.courses.filter {
+                                it.title.contains(searchQuery.trim(), ignoreCase = true) ||
+                                it.name.contains(searchQuery.trim(), ignoreCase = true)
+                            }.forEach { course ->
                                 DropdownMenuItem(
                                     text = { Text(course.title) },
                                     onClick = {
@@ -199,6 +220,42 @@ fun StudentDashboard(
                     }
                 }
 
+                // --- Assignment Status and Type Filters ---
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box {
+                        OutlinedButton(onClick = { statusExpanded = true }) {
+                            Text(selectedStatus)
+                        }
+                        DropdownMenu(expanded = statusExpanded, onDismissRequest = { statusExpanded = false }) {
+                            statusOptions.forEach { status ->
+                                DropdownMenuItem(
+                                    text = { Text(status) },
+                                    onClick = {
+                                        selectedStatus = status
+                                        statusExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Box {
+                        OutlinedButton(onClick = { typeExpanded = true }) {
+                            Text(selectedType)
+                        }
+                        DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
+                            assignmentTypes.forEach { type ->
+                                DropdownMenuItem(
+                                    text = { Text(type) },
+                                    onClick = {
+                                        selectedType = type
+                                        typeExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Text(
                     text = "Upcoming Assignments",
                     fontSize = 24.sp,
@@ -209,10 +266,15 @@ fun StudentDashboard(
 
                 val today = Calendar.getInstance().time
                 // --- Filtered assignments ---
-                val filteredAssignments = if (selectedCourseId != null)
-                    viewModel.assignments.filter { it.courseId == selectedCourseId && it.due.after(today) }
-                else
-                    viewModel.assignments.filter { it.due.after(today) }
+                val filteredAssignments = viewModel.assignments.filter { assignment ->
+                    (selectedCourseId == null || assignment.courseId == selectedCourseId) &&
+                    (selectedType == "All" || assignment.type == selectedType) &&
+                    (
+                        selectedStatus == "All" ||
+                        (selectedStatus == "Upcoming" && assignment.due.after(today)) ||
+                        (selectedStatus == "Overdue" && assignment.due.before(today))
+                    )
+                }
 
                 filteredAssignments.forEach { assignment ->
                     val courseName = viewModel.courses.find { it.courseId == assignment.courseId }?.name ?: "Unknown"
