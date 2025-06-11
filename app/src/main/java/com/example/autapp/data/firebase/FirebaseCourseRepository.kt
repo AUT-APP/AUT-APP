@@ -57,25 +57,32 @@ class FirebaseCourseRepository(
      */
     suspend fun getCoursesByTeacher(teacherId: String): List<FirebaseCourse> {
         return try {
-            // Fetch the teacher document to get the list of course names
+            // Fetch the teacher document to get the list of course IDs
             val teacher = teacherRepository.getById(teacherId)
             if (teacher == null || teacher.courses.isEmpty()) {
-                Log.d("FirebaseCourseRepo", "Teacher not found or has no courses.")
+                Log.d("FirebaseCourseRepo", "Teacher not found or has no courses for teacherId: $teacherId")
                 return emptyList()
             }
-            val courseNames = teacher.courses
-            Log.d("FirebaseCourseRepo", "Course names for teacher $teacherId: $courseNames")
+            val courseIds = teacher.courses
+            Log.d("FirebaseCourseRepo", "Course IDs for teacher $teacherId: $courseIds")
 
-            // Fetch courses by name
-            if (courseNames.isEmpty()) {
-                Log.d("FirebaseCourseRepo", "Course name list is empty, returning empty list.")
+            // Fetch courses by ID
+            if (courseIds.isEmpty()) {
+                Log.d("FirebaseCourseRepo", "Course ID list is empty, returning empty list.")
                 return emptyList()
             }
-            val result = collection.whereIn("name", courseNames).get().await()
-            Log.d("FirebaseCourseRepo", "Courses by name query result size: ${result.documents.size}")
-            result.documents.mapNotNull { doc -> doc.data?.let { documentToObject(doc.id, it) } }
+            // Firestore limits whereIn to 10 items, so split into chunks if necessary
+            val chunkedCourseIds = courseIds.chunked(10)
+            val courses = mutableListOf<FirebaseCourse>()
+            for (chunk in chunkedCourseIds) {
+                val result = collection.whereIn(FieldPath.documentId(), chunk).get().await()
+                Log.d("FirebaseCourseRepo", "Fetched ${result.documents.size} courses for chunk: $chunk")
+                courses.addAll(result.documents.mapNotNull { doc -> doc.data?.let { documentToObject(doc.id, it) } })
+            }
+            Log.d("FirebaseCourseRepo", "Total courses fetched for teacher $teacherId: ${courses.size}")
+            courses
         } catch (e: Exception) {
-            Log.e("FirebaseCourseRepo", "Error getting courses by teacher", e)
+            Log.e("FirebaseCourseRepo", "Error getting courses by teacher $teacherId", e)
             emptyList()
         }
     }
@@ -117,9 +124,15 @@ class FirebaseCourseRepository(
             return emptyList()
         }
         return try {
-            val result = collection.whereIn(FieldPath.documentId(), courseIds).get().await()
-            Log.d("FirebaseCourseRepo", "Course query result size: ${result.documents.size}")
-            result.documents.mapNotNull { doc -> doc.data?.let { documentToObject(doc.id, it) } }
+            // Handle Firestore whereIn limit of 10 items
+            val chunkedCourseIds = courseIds.chunked(10)
+            val courses = mutableListOf<FirebaseCourse>()
+            for (chunk in chunkedCourseIds) {
+                val result = collection.whereIn(FieldPath.documentId(), chunk).get().await()
+                Log.d("FirebaseCourseRepo", "Course query result size: ${result.documents.size} for chunk: $chunk")
+                courses.addAll(result.documents.mapNotNull { doc -> doc.data?.let { documentToObject(doc.id, it) } })
+            }
+            courses
         } catch (e: Exception) {
             Log.e("FirebaseCourseRepo", "Error getting courses by IDs", e)
             emptyList()
@@ -134,8 +147,12 @@ class FirebaseCourseRepository(
             val course = getById(courseId) ?: throw FirebaseException("Course not found")
             // Delete course document
             delete(courseId)
-            // Note: You might want to handle associated data like enrollments, assignments, etc.
-            // This would be done in a transaction or through Cloud Functions
+            // Optionally remove course from teacher's course list
+            val teacherId = course.teacherId
+            if (teacherId.isNotEmpty()) {
+                teacherRepository.removeCourse(teacherId, courseId)
+                Log.d("FirebaseCourseRepo", "Removed course $courseId from teacher $teacherId")
+            }
         } catch (e: Exception) {
             Log.e("FirebaseCourseRepo", "Error deleting course", e)
             throw FirebaseException("Error deleting course", e)
