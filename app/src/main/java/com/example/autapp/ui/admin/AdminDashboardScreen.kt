@@ -33,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.text.style.TextOverflow
 
 // Helper function to parse enrollmentDate (String) to LocalDate for sorting
 fun parseEnrollmentDate(date: String): LocalDate {
@@ -125,12 +126,21 @@ fun AdminDashboardScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            TabRow(selectedTabIndex = selectedTab) {
+            ScrollableTabRow(
+                selectedTabIndex = selectedTab,
+                edgePadding = 0.dp
+            ) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = { Text(title) }
+                        text = {
+                            Text(
+                                text = title,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     )
                 }
             }
