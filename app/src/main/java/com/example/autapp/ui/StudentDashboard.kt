@@ -46,6 +46,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 data class AssignmentGradeDisplay(
     val assignmentName: String,
@@ -71,10 +73,6 @@ fun StudentDashboard(
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = viewModel.isRefreshing)
     val dateFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
 
-    // --- Course filter state ---
-    var selectedCourseId by remember { mutableStateOf<String?>(null) }
-    var expanded by remember { mutableStateOf(false) }
-
     // --- Search and filter state ---
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf("All") }
@@ -83,6 +81,15 @@ fun StudentDashboard(
     var typeExpanded by remember { mutableStateOf(false) }
     val assignmentTypes = listOf("All") + viewModel.assignments.map { it.type }.distinct().sorted()
     val statusOptions = listOf("All", "Upcoming", "Overdue")
+
+    // --- Course filter state ---
+    var selectedCourseId by remember { mutableStateOf<String?>(null) }
+    var expanded by remember { mutableStateOf(false) }
+
+    // --- Assignment Sorting State ---
+    var sortOption by remember { mutableStateOf("Due Date") }
+    val sortOptions = listOf("Due Date", "Name", "Type", "Weight")
+    var sortExpanded by remember { mutableStateOf(false) }
 
     SwipeRefresh(
         state = swipeRefreshState,
@@ -254,6 +261,23 @@ fun StudentDashboard(
                             }
                         }
                     }
+                    // --- Assignment Sorting Dropdown ---
+                    Box {
+                        OutlinedButton(onClick = { sortExpanded = true }) {
+                            Text("Sort: $sortOption")
+                        }
+                        DropdownMenu(expanded = sortExpanded, onDismissRequest = { sortExpanded = false }) {
+                            sortOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        sortOption = option
+                                        sortExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Text(
@@ -276,7 +300,16 @@ fun StudentDashboard(
                     )
                 }
 
-                filteredAssignments.forEach { assignment ->
+                // --- Assignment Sorting Logic ---
+                val sortedAssignments = when (sortOption) {
+                    "Due Date" -> filteredAssignments.sortedBy { it.due }
+                    "Name" -> filteredAssignments.sortedBy { it.name }
+                    "Type" -> filteredAssignments.sortedBy { it.type }
+                    "Weight" -> filteredAssignments.sortedByDescending { it.weight }
+                    else -> filteredAssignments
+                }
+
+                sortedAssignments.forEach { assignment ->
                     val courseName = viewModel.courses.find { it.courseId == assignment.courseId }?.name ?: "Unknown"
                     val courseTitle = viewModel.courses.find { it.courseId == assignment.courseId }?.title ?: "Untitled"
                     AssignmentCard(
