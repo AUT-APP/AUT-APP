@@ -241,15 +241,15 @@ private fun NavigationButton(location: String?) {
             context.startActivity(intent)
         },
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
     ) {
         Icon(
             painter = painterResource(id = android.R.drawable.ic_dialog_map),
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSecondary
+            tint = MaterialTheme.colorScheme.onPrimary
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text("Navigate to Location", color = MaterialTheme.colorScheme.onSecondary)
+        Text("Navigate to Location", color = MaterialTheme.colorScheme.onPrimary)
     }
 }
 
