@@ -99,6 +99,7 @@ fun LoginScreen(
                 Text(
                     text = "Hello!\nPlease login using your AUT credentials",
                     fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
                     textAlign = TextAlign.Center,
                     color = colorScheme.onBackground
@@ -172,7 +173,7 @@ fun LoginScreen(
                         color = colorScheme.onPrimary
                     )
                 }
-                
+
 
                 Text(
                     text = "Remember to always log out by\n" +
@@ -181,6 +182,7 @@ fun LoginScreen(
                             "your personal information from being\n" +
                             "accessed by subsequent users.",
                     fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
                     color = colorScheme.onBackground.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,
@@ -201,6 +203,7 @@ fun LoginScreen(
                 Text(
                     text = "ICT SERVICE DESK | (09)921 9888",
                     fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
                     color = colorScheme.onPrimary
                 )
