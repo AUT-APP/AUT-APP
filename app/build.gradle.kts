@@ -112,8 +112,11 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.inline)
     testImplementation("org.robolectric:robolectric:4.14.1")
-    testImplementation ("androidx.test:core:1.4.0")
-    testImplementation ("androidx.test:core-ktx:1.4.0")
+    testImplementation("androidx.test:core:1.4.0")
+    testImplementation("androidx.test:core-ktx:1.4.0")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("io.mockk:mockk:1.13.8")
 
     // For instrumented tests (androidTest)
     androidTestImplementation("org.mockito:mockito-android:5.2.0")
@@ -132,6 +135,24 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0") // Use the latest stable version
 
     implementation("com.google.accompanist:accompanist-swiperefresh:0.36.0")
+    testImplementation(kotlin("test"))
 
+    // Testing dependencies
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestImplementation("androidx.test:rules:1.5.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+
+    // Compose Testing
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.5.4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.5.4")
+    
+    // Mockito for mocking
+    androidTestImplementation("org.mockito:mockito-android:5.3.1")
+    androidTestImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
+    
+    // Coroutines Testing
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
 }
 

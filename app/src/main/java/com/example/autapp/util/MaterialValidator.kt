@@ -6,13 +6,15 @@ object MaterialValidator {
         val lower = url.lowercase()
 
         return when (type) {
-            "Link" -> lower.startsWith("http://") || lower.startsWith("https://")
+            "Link" -> (lower.startsWith("http://") || lower.startsWith("https://")) &&
+                      !listOf(".pdf", ".doc", ".docx", ".mp4", ".mov", ".avi", ".mkv", ".ppt", ".pptx").any { lower.endsWith(it) }
             "PDF" -> listOf(".pdf", ".doc", ".docx").any { lower.endsWith(it) } || isValidGoogleDriveLink(url)
             "Video" -> listOf(".mp4", ".mov", ".avi", ".mkv").any { lower.endsWith(it) } || url.contains("drive.google.com")
             "Slides" -> listOf(".ppt", ".pptx").any { lower.endsWith(it) } || url.contains("docs.google.com")
             else -> false
         }
     }
+
     private fun isValidGoogleDriveLink(url: String): Boolean {
         return url.contains("drive.google.com") ||
                 url.contains("docs.google.com")
