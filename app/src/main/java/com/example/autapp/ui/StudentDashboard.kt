@@ -71,6 +71,10 @@ fun StudentDashboard(
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = viewModel.isRefreshing)
     val dateFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
 
+    // --- Course filter state ---
+    var selectedCourseId by remember { mutableStateOf<String?>(null) }
+    var expanded by remember { mutableStateOf(false) }
+
     SwipeRefresh(
         state = swipeRefreshState,
         onRefresh = { viewModel.fetchDashboardData() }
@@ -116,6 +120,38 @@ fun StudentDashboard(
                     }
                 }
 
+                if (viewModel.courses.isNotEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+                        OutlinedButton(
+                            onClick = { expanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = viewModel.courses.find { it.courseId == selectedCourseId }?.title ?: "Filter by Course")
+                        }
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("All Courses") },
+                                onClick = {
+                                    selectedCourseId = null
+                                    expanded = false
+                                }
+                            )
+                            viewModel.courses.forEach { course ->
+                                DropdownMenuItem(
+                                    text = { Text(course.title) },
+                                    onClick = {
+                                        selectedCourseId = course.courseId
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Text(
                     text = "Grades",
                     fontSize = 24.sp,
@@ -128,10 +164,15 @@ fun StudentDashboard(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Group grades by course
-                val gradesByCourse = viewModel.grades.groupBy { it.courseId }
+                // --- Filtered grades ---
+                val filteredGrades = if (selectedCourseId != null)
+                    viewModel.grades.filter { it.courseId == selectedCourseId }
+                else
+                    viewModel.grades
+
+                val gradesByCourse = filteredGrades.groupBy { it.courseId }
                 val assignmentsByCourse = viewModel.courses.associateWith { course ->
-                    viewModel.grades.filter { it.courseId == course.courseId }
+                    filteredGrades.filter { it.courseId == course.courseId }
                 }
                 assignmentsByCourse.forEach { (course, gradeList) ->
                     if (gradeList.isNotEmpty()) {
@@ -167,8 +208,13 @@ fun StudentDashboard(
                 )
 
                 val today = Calendar.getInstance().time
-                val upcomingAssignments = viewModel.assignments.filter { it.due.after(today) }
-                upcomingAssignments.forEach { assignment ->
+                // --- Filtered assignments ---
+                val filteredAssignments = if (selectedCourseId != null)
+                    viewModel.assignments.filter { it.courseId == selectedCourseId && it.due.after(today) }
+                else
+                    viewModel.assignments.filter { it.due.after(today) }
+
+                filteredAssignments.forEach { assignment ->
                     val courseName = viewModel.courses.find { it.courseId == assignment.courseId }?.name ?: "Unknown"
                     val courseTitle = viewModel.courses.find { it.courseId == assignment.courseId }?.title ?: "Untitled"
                     AssignmentCard(
