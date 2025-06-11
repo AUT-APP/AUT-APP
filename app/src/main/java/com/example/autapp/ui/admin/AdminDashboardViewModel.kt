@@ -237,8 +237,7 @@ class AdminDashboardViewModel(
                     _errorMessage.value = "Student created, but failed to enroll in some courses: ${invalidCourses.joinToString()}"
                 }
 
-                val maskedPassword = "${generatedPassword.first()}****${generatedPassword.last()}"
-                addActivity("Created new student: $firstName $lastName (Student ID: $generatedStudentId, Email: $generatedEmail, Username: $generatedEmail, Default Password: $maskedPassword)")
+                addActivity("Created new student: $firstName $lastName (Student ID: $generatedStudentId, Email: $generatedEmail, Username: $generatedEmail, Default Password: $generatedPassword)")
                 _successMessage.value = "Student $firstName $lastName created successfully"
                 loadData()
             } catch (e: Exception) {
