@@ -172,17 +172,7 @@ fun LoginScreen(
                         color = colorScheme.onPrimary
                     )
                 }
-
-                Text(
-                    text = "Forgotten password?",
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily(Font(R.font.montserrat_variablefont_wght)),
-                    color = Color(0xFF0466D6),
-                    textDecoration = TextDecoration.Underline,
-                    modifier = Modifier
-                        .clickable { /* Handle forgotten password click */ }
-                        .padding(vertical = 8.dp)
-                )
+                
 
                 Text(
                     text = "Remember to always log out by\n" +
